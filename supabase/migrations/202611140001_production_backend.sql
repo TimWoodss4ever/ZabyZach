@@ -115,7 +115,7 @@ begin
   end if;
 
   v_order_no := 'PR-'
-    || pg_catalog.right((pg_catalog.floor(extract(epoch from pg_catalog.clock_timestamp()) * 1000)::pg_catalog.bigint)::pg_catalog.text, 6)
+    || pg_catalog.right((pg_catalog.floor(extract(epoch from pg_catalog.clock_timestamp()) * 1000)::pg_catalog.int8)::pg_catalog.text, 6)
     || '-'
     || v_id::pg_catalog.text;
 
