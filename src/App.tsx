@@ -39,7 +39,7 @@ function App(){
     {page==='Returns'&&<ReturnsPage state={state} onCommit={mutate} flash={flash}/>}
     {page==='Inventory'&&<InventoryPage search={search} flash={flash} safetyDays={state.settings.safetyDays}/>}
     {page==='Transfers & Counts'&&<Movements flash={flash}/>}
-    {page==='Production'&&<ProductionPage state={state} onCommit={mutate} flash={flash}/>}
+    {page==='Production'&&<SupabaseProductionPage flash={flash}/>}
     {page==='Purchase Orders'&&<Purchasing state={state} onCommit={mutate} flash={flash}/>}
     {page==='Supplier Scorecards'&&<Scorecards state={state}/>}
     {page==='MRP'&&<MRP state={state} onCommit={mutate} flash={flash}/>}
@@ -388,5 +388,135 @@ function Financials({state}:{state:AppState}){const gross=state.sales.reduce((a,
 function Reports({state,location}:{state:AppState;location:Location}){const chart=Array.from({length:7},(_,idx)=>{const d=new Date(Date.now()-(6-idx)*86400000),key=d.toISOString().slice(0,10);return{date:d.toLocaleDateString('en-US',{weekday:'short'}),gross:state.sales.filter(s=>s.date===key&&s.location===location).reduce((a,s)=>a+s.total,0)};});const top=items.filter(i=>i.price>0).map(i=>({item:i,units:state.sales.reduce((a,s)=>a+s.lines.filter(l=>l.sku===i.sku).reduce((n,l)=>n+l.qty,0),0)})).sort((a,b)=>b.units-a.units).slice(0,6);const lows=items.filter(i=>!i.recipe&&inventory(state,i.sku)<reorderPoint(state,i));return <><div className="report-controls"><span className="computed-tag">{location} · Sales through {dateLabel(today())}</span><span className="computed-tag">Figures calculated from stored demo transactions</span></div><div className="reports-grid"><section className="panel report-chart"><div className="panel-head"><div><h2>Sales by day</h2><p>Gross ticket value · past 7 days</p></div><BarChart3 size={17} className="muted-icon"/></div><div className="chart-box tall"><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} margin={{top:8,right:8,left:-20,bottom:0}}><CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#edf1f5"/><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#8894a2'}}/><YAxis axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#8894a2'}} tickFormatter={v=>`$${Math.round(v/1000)}k`}/><Tooltip formatter={(v:any)=>usd(v)}/><Bar dataKey="gross" fill="#1d67a6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div></section><section className="panel report-top"><div className="panel-head"><div><h2>Top-selling items</h2><p>Units sold · all recorded history</p></div><span className="computed-tag">Ranked</span></div><div className="top-items">{top.map(({item,units},idx)=><div className="top-item" key={item.sku}><span className="top-rank">{String(idx+1).padStart(2,'0')}</span><div className="top-item-copy"><b>{item.name}</b><small>{units.toLocaleString()} units</small></div><div className="top-bar"><i style={{width:`${top[0]?.units?units/top[0].units*100:0}%`}}/></div></div>)}</div></section><section className="panel report-low"><div className="panel-head"><div><h2>Low stock</h2><p>Items below calculated reorder point</p></div><AlertTriangle size={17} className="amber-text"/></div>{lows.length?lows.map(i=><div className="low-row" key={i.sku}><div><b>{i.name}</b><small>ROP {Math.ceil(reorderPoint(state,i)).toLocaleString()} {i.unit}</small></div><span className="text-red">{Math.round(inventory(state,i.sku)).toLocaleString()} on hand</span><b>{Math.ceil(eoq(state,i)/i.factor)} {i.pack}</b></div>):<div className="empty-inline">All items are at or above their reorder points.</div>}</section><section className="panel report-waste"><div className="panel-head"><div><h2>Waste & quality</h2><p>Losses posted by reason code</p></div><RotateCcw size={17} className="muted-icon"/></div><div className="waste-summary"><b>{usd(state.ledger.filter(t=>t.type==='Waste').reduce((a,t)=>a+Math.abs(t.qty*t.unitCost),0))}</b><span>Recorded waste cost</span></div><div className="reason-chips">{['Spoiled/Expired','Damaged','Cycle count correction'].map(reason=><div key={reason}><span>{reason}</span><b>{state.ledger.filter(t=>t.reason===reason).length}</b></div>)}</div></section></div></>}
 function SettingsPage({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>void;flash:(m:string)=>void}){const [tax,setTax]=useState(state.settings.tax*100);const [order,setOrder]=useState(state.settings.orderCost);const [holding,setHolding]=useState(state.settings.holding*100);const [safety,setSafety]=useState(state.settings.safetyDays);const save=()=>{state.settings={tax:tax/100,orderCost:order,holding:holding/100,safetyDays:safety};onCommit(state);flash('Settings saved. Reorder points and EOQs recalculated.');};return <div className="settings-layout"><section className="panel settings-panel"><div className="panel-head"><div><h2>Operating assumptions</h2><p>These values drive checkout, reorder points, and EOQ calculations.</p></div><Settings2 size={18} className="muted-icon"/></div><div className="settings-grid"><div className="setting-row"><div><b>Sales tax rate</b><small>Applied to each completed ticket after discounts</small></div><div className="setting-control"><input type="number" step=".01" min="0" max="20" value={tax} onChange={e=>setTax(Number(e.target.value))}/><span>%</span></div></div><div className="setting-row"><div><b>Ordering cost per PO</b><small>Used as S in the EOQ calculation</small></div><div className="setting-control"><span>$</span><input type="number" min="0" value={order} onChange={e=>setOrder(Number(e.target.value))}/></div></div><div className="setting-row"><div><b>Annual holding cost</b><small>Percentage of current weighted average cost</small></div><div className="setting-control"><input type="number" min="0" max="100" value={holding} onChange={e=>setHolding(Number(e.target.value))}/><span>%</span></div></div><div className="setting-row"><div><b>Safety stock coverage</b><small>Additional average usage days in reorder point</small></div><div className="setting-control"><input type="number" min="0" max="90" value={safety} onChange={e=>setSafety(Number(e.target.value))}/><span>days</span></div></div></div><div className="settings-formula"><b>Current formulas</b><span>Reorder point = average daily usage × (lead time + safety stock days)</span><span>EOQ = √(2 × annual demand × ordering cost ÷ annual holding cost)</span><span>Perishable cap = daily usage × shelf life</span></div><button className="button primary" onClick={save}>Save assumptions <Check size={15}/></button></section><section className="panel reason-panel"><div className="panel-head"><div><h2>Reason codes</h2><p>Recorded on stock loss and quality events</p></div></div><div className="reason-group"><b>Adjustments</b>{['Cycle count correction','Spoiled/Expired','Damaged','Dropped/Spilled','Theft/Unknown loss'].map(x=><span key={x}><Check size={13}/>{x}</span>)}</div><div className="reason-group"><b>Returns</b>{['Burnt','Undercooked','Wrong order','Cold on pickup','Damaged packaging','Customer changed mind'].map(x=><span key={x}><Check size={13}/>{x}</span>)}</div></section></div>}
 function About({state,onCommit,flash,role}:{state:AppState;onCommit:(s:AppState)=>void;flash:(m:string)=>void;role:Role}){const integrity=items.filter(i=>!i.recipe||i.makeToStock).flatMap(i=>locations.map(l=>({sku:i.sku,loc:l,ledger:inventory(state,i.sku,l)})));const runIntegrity=()=>{const bad=integrity.filter(x=>!Number.isFinite(x.ledger));flash(bad.length?'Integrity check found a quantity issue.':'Integrity check passed: on-hand is calculated directly from ledger entries.');};const reset=()=>{if(role!=='Manager'){flash('Only a manager can reset demo data.');return;}if(window.confirm('Reset all demo transactions and reload the seeded data? This clears changes saved in this browser.')){const fresh=resetState();onCommit(fresh);flash('Demo data reset to the seeded opening state.');}};return <><div className="about-banner"><div className="about-brand-mark">Z<span>+</span></div><div><span className="eyebrow">SYSTEM OVERVIEW</span><h2>Za by Zack ERP</h2><p>A connected restaurant operations demo built for ERP coursework and live scenario walkthroughs.</p></div><span className="version-pill">DEMO · 1.0</span></div><div className="about-grid"><section className="panel about-card"><span className="about-icon blue"><Boxes size={18}/></span><h3>Integrated data model</h3><p>Nested bills of material connect sales, in-house dough production, component usage, stock balances, purchase receipts, and cost rollups. The inventory transaction ledger is the source used to calculate on-hand quantity.</p><div className="about-tags"><span>{items.length} items</span><span>{items.filter(i=>i.recipe).length} recipes</span><span>{locations.length} locations</span><span>{suppliers.length} suppliers</span></div></section><section className="panel about-card"><span className="about-icon green"><Activity size={18}/></span><h3>Calculation rules</h3><p>Menu-item cost rolls through nested bills of material, including the current in-house dough recipe. Reorder points use trailing demand and supplier lead time; EOQ includes editable ordering and holding costs and a shelf-life cap.</p><div className="about-tags"><span>Weighted average</span><span>Ledger-derived stock</span><span>Four-week dough + ingredient MRP</span></div></section><section className="panel about-card"><span className="about-icon purple"><ShieldCheck size={18}/></span><h3>Tools & libraries</h3><p>The demo UI uses React, TypeScript, Vite, Recharts, and Lucide icons. It generates Code 128 labels directly and uses the browser BarcodeDetector API for camera scans where supported. A Supabase schema and RPC migration is included as a starting backend.</p><div className="about-tags"><span>React</span><span>Recharts</span><span>Code 128</span><span>Supabase SQL</span></div></section><section className="panel about-card"><span className="about-icon amber"><Activity size={18}/></span><h3>Demo data & persistence</h3><p>This published demo stores its working dataset in this browser’s local storage, including a reproducible 180-day sales history. It is not connected to a Supabase project, server authentication, or cross-device Realtime.</p><div className="about-tags"><span>Browser-local demo</span><span>{state.ledger.length.toLocaleString()} ledger rows</span><span>Multi-tab sync</span></div></section></div><section className="panel admin-tools"><div><span className="eyebrow">MANAGER TOOLS</span><h2>Verify and restore demo data</h2><p>Run the stock balance check or return the browser demo to its original scenario.</p></div><div className="admin-actions"><button className="button secondary" onClick={runIntegrity}><ShieldCheck size={15}/> Run integrity check</button><button className="button danger-outline" onClick={reset}><RotateCcw size={15}/> Reset demo data</button></div></section><div className="about-note"><AlertTriangle size={16}/><span>Authentication, role separation, Postgres RPC transactions, and true multi-user Realtime require a configured Supabase project. The current hosted demo is intentionally usable without external credentials.</span></div></>}
+
+type ProductionItemRecord={sku:string;name:string;unit_cost:number;active:boolean;hasBom:boolean;unitCost:number};
+type ProductionLocationRecord={id:string;name:string};
+type ProductionOrderRecord={id:string;order_no:string;parent_sku:string;location_id:string;quantity_started:number;quantity_good:number;quantity_scrapped:number;status:string;started_at:string|null;finished_at:string|null;reason_code:string|null};
+type ProductionOrderView={id:string;orderNo:string;sku:string;location:string;qty:number;good:number;scrap:number;status:'Planned'|'In Progress'|'Completed';started?:string;reason?:string;unitCost:number};
+type ProductionSnapshot={items:ProductionItemRecord[];locations:ProductionLocationRecord[];orders:ProductionOrderView[]};
+type ProductionBomRecord={parent_sku:string;component_sku:string;quantity:number};
+const productionPageSize=1000;
+function isProductionOrderStatus(status:string):status is ProductionOrderView['status']{return status==='Planned'||status==='In Progress'||status==='Completed';}
+async function loadProductionSnapshot():Promise<ProductionSnapshot>{
+ const [itemsResult,bomResult,locationsResult]=await Promise.all([
+  supabase.from('items').select('sku,name,unit_cost,active').order('sku'),
+  supabase.from('bom_lines').select('parent_sku,component_sku,quantity'),
+  supabase.from('locations').select('id,name').order('name')
+ ]);
+ if(itemsResult.error)throw Error(`Unable to load production items: ${itemsResult.error.message}`);
+ if(bomResult.error)throw Error(`Unable to load production bill of materials: ${bomResult.error.message}`);
+ if(locationsResult.error)throw Error(`Unable to load production locations: ${locationsResult.error.message}`);
+ const itemRows=(itemsResult.data??[]) as {sku:string;name:string;unit_cost:number;active:boolean}[];
+ const bomRows=(bomResult.data??[]) as ProductionBomRecord[];
+ const locationRows=(locationsResult.data??[]) as ProductionLocationRecord[];
+ const orderRows:ProductionOrderRecord[]=[];
+ for(let offset=0;;offset+=productionPageSize){
+  const {data,error}=await supabase.from('production_orders').select('id,order_no,parent_sku,location_id,quantity_started,quantity_good,quantity_scrapped,status,started_at,finished_at,reason_code').order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+productionPageSize-1);
+  if(error)throw Error(`Unable to load production orders: ${error.message}`);
+  const page=(data??[]) as ProductionOrderRecord[];
+  orderRows.push(...page);
+  if(page.length<productionPageSize)break;
+ }
+ const itemBySku=new Map(itemRows.map(item=>[item.sku,item] as const));
+ const locationById=new Map(locationRows.map(location=>[location.id,location] as const));
+ const unitCostBySku:Record<string,number>={};
+ const hasBomBySku=new Set<string>();
+ for(const line of bomRows){
+  const parent=itemBySku.get(line.parent_sku),component=itemBySku.get(line.component_sku),quantity=Number(line.quantity),componentCost=Number(component?.unit_cost);
+  if(!parent||!component)throw Error(`Production bill of materials references an unknown item: ${line.parent_sku} → ${line.component_sku}.`);
+  if(!Number.isFinite(quantity)||quantity<=0||!Number.isFinite(componentCost)||componentCost<0)throw Error(`Production bill of materials has an invalid quantity or cost for ${line.parent_sku} → ${line.component_sku}.`);
+  hasBomBySku.add(line.parent_sku);
+  unitCostBySku[line.parent_sku]=(unitCostBySku[line.parent_sku]??0)+quantity*componentCost;
+ }
+ const items:ProductionItemRecord[]=itemRows.map(item=>({sku:item.sku,name:item.name,unit_cost:Number(item.unit_cost),active:item.active,hasBom:hasBomBySku.has(item.sku),unitCost:unitCostBySku[item.sku]??0}));
+ for(const item of items)if(!Number.isFinite(item.unit_cost)||item.unit_cost<0)throw Error(`Production item ${item.sku} has an invalid unit cost.`);
+ const orders:ProductionOrderView[]=orderRows.map(order=>{
+  const item=itemBySku.get(order.parent_sku),location=locationById.get(order.location_id),qty=Number(order.quantity_started),good=Number(order.quantity_good),scrap=Number(order.quantity_scrapped);
+  if(!item)throw Error(`Production order ${order.order_no} references an unknown item ${order.parent_sku}.`);
+  if(!location)throw Error(`Production order ${order.order_no} references an unknown location.`);
+  if(!isProductionOrderStatus(order.status))throw Error(`Production order ${order.order_no} has an unsupported status "${order.status}".`);
+  if(!Number.isFinite(qty)||!Number.isFinite(good)||!Number.isFinite(scrap))throw Error(`Production order ${order.order_no} has invalid quantities.`);
+  return{id:order.id,orderNo:order.order_no,sku:order.parent_sku,location:location.name,qty,good,scrap,status:order.status,started:order.started_at?.slice(0,10),reason:order.reason_code??undefined,unitCost:unitCostBySku[order.parent_sku]??0};
+ });
+ return{items,locations:locationRows,orders};
+}
+function SupabaseProductionPage({flash}:{flash:(message:string)=>void}){
+ const [snapshot,setSnapshot]=useState<ProductionSnapshot|null>(null);
+ const [loading,setLoading]=useState(true);
+ const [loadError,setLoadError]=useState('');
+ const [actionError,setActionError]=useState('');
+ const [busy,setBusy]=useState(false);
+ const [showNew,setShowNew]=useState(false);
+ const [sku,setSku]=useState('1030');
+ const [qty,setQty]=useState(20);
+ const [locationId,setLocationId]=useState('');
+ const [completion,setCompletion]=useState<string|null>(null);
+ const [good,setGood]=useState(18);
+ const [scrap,setScrap]=useState(2);
+ const [reason,setReason]=useState('Burnt');
+ const load=useCallback(async()=>{
+  setLoading(true);setLoadError('');
+  try{setSnapshot(await loadProductionSnapshot());return null;}
+  catch(error){const message=error instanceof Error?error.message:'Unable to load production data from Supabase.';setLoadError(message);return message;}
+  finally{setLoading(false);}
+ },[]);
+ useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  if(!snapshot)return;
+  const makeItems=snapshot.items.filter(item=>item.active&&item.hasBom);
+  if(!makeItems.some(item=>item.sku===sku))setSku(makeItems[0]?.sku??'');
+  if(!snapshot.locations.some(location=>location.id===locationId))setLocationId(snapshot.locations.find(location=>location.name==='Central Commissary')?.id??snapshot.locations[0]?.id??'');
+ },[snapshot,sku,locationId]);
+ const refreshAfterWrite=async(successMessage:string,writeDescription:string)=>{
+  const error=await load();
+  if(error){setActionError(`${writeDescription} succeeded, but production data could not be refreshed: ${error}`);return;}
+  flash(successMessage);
+ };
+ const create=async()=>{
+  if(busy)return;
+  setActionError('');setLoadError('');
+  setBusy(true);
+  try{
+   const {error}=await supabase.rpc('create_production_order',{p_parent_sku:sku,p_location:locationId,p_quantity:qty});
+   if(error)throw Error(error.message);
+   setShowNew(false);
+   await refreshAfterWrite('Production order created.','Production order creation');
+  }catch(error){setActionError(`Unable to create production order: ${error instanceof Error?error.message:'Unexpected Supabase error.'}`);}
+  finally{setBusy(false);}
+ };
+ const issue=async(order:ProductionOrderView)=>{
+  if(busy)return;
+  setActionError('');setLoadError('');setBusy(true);
+  try{
+   const {error}=await supabase.rpc('issue_production_order',{p_order:order.id});
+   if(error)throw Error(error.message);
+   await refreshAfterWrite(`${order.orderNo} issued; components consumed from the ledger.`,'Issuing the production order');
+  }catch(error){setActionError(`Unable to issue ${order.orderNo}: ${error instanceof Error?error.message:'Unexpected Supabase error.'}`);}
+  finally{setBusy(false);}
+ };
+ const complete=async()=>{
+  if(!completion||busy)return;
+  const order=snapshot?.orders.find(candidate=>candidate.id===completion);
+  if(!order){setActionError('The selected production order is no longer available. Refresh and try again.');return;}
+  setActionError('');setLoadError('');setBusy(true);
+  try{
+   const {error}=await supabase.rpc('complete_production_order',{p_order:order.id,p_good:good,p_scrapped:scrap,p_reason:reason});
+   if(error)throw Error(error.message);
+   setCompletion(null);
+   await refreshAfterWrite(`${order.orderNo} completed. Good units received at rolled-up cost.`,'Completing the production order');
+  }catch(error){setActionError(`Unable to complete ${order.orderNo}: ${error instanceof Error?error.message:'Unexpected Supabase error.'}`);}
+  finally{setBusy(false);}
+ };
+ if(!snapshot)return <section className="panel">{loading?<div className="empty-inline">Loading production from Supabase…</div>:<><div className="login-error" role="alert">{loadError||'Unable to load production data from Supabase.'}</div><button className="button secondary" onClick={()=>void load()}>Retry</button></>}</section>;
+ const itemBySku=new Map(snapshot.items.map(item=>[item.sku,item] as const));
+ const makeItems=snapshot.items.filter(item=>item.active&&item.hasBom);
+ const selectedItem=makeItems.find(item=>item.sku===sku)??makeItems[0];
+ const selectedOrder=snapshot.orders.find(order=>order.id===completion);
+ const completed=snapshot.orders.filter(order=>order.status==='Completed');
+ const completedStarted=completed.reduce((sum,order)=>sum+order.qty,0);
+ const yieldPct=completedStarted?completed.reduce((sum,order)=>sum+order.good,0)/completedStarted*100:0;
+ const scrapCost=completed.reduce((sum,order)=>sum+order.scrap*order.unitCost,0);
+ return <>{(actionError||loadError)&&<div className="login-error" role="alert">{actionError||loadError}{loadError&&<button className="table-action" onClick={()=>{setActionError('');void load();}}>Retry</button>}</div>}<div className="stats-grid compact-stats"><StatCard label="Production orders" value={String(snapshot.orders.length)} icon={Pizza} sub="Planned + completed"/><StatCard label="Yield" value={`${yieldPct.toFixed(1)}%`} icon={Activity} accent="green" sub="Good units ÷ started units"/><StatCard label="Units scrapped" value={String(snapshot.orders.reduce((sum,order)=>sum+order.scrap,0))} icon={AlertTriangle} accent="amber" sub="By recorded reason"/><StatCard label="Scrap cost" value={usd(scrapCost)} icon={CircleDollarSign} accent="red" sub="Rolled-up recipe cost"/></div><section className="panel"><div className="panel-head table-header"><div><h2>Production orders</h2><p>Make dough and prepared items in house; issue their bill of materials and receive good units at rolled-up cost.</p></div><button className="button primary" disabled={busy||!makeItems.length||!snapshot.locations.length} onClick={()=>setShowNew(true)}><Plus size={15}/> New production order</button></div><div className="table-scroll"><table><thead><tr><th>ORDER</th><th>ITEM</th><th>LOCATION</th><th className="right">STARTED</th><th className="right">GOOD / SCRAP</th><th>STATUS</th><th></th></tr></thead><tbody>{snapshot.orders.length?snapshot.orders.map(order=><tr key={order.id}><td><b className="mono">{order.orderNo}</b><small className="cell-sub">{order.started?`Started ${dateLabel(order.started)}`:'Batch production'}</small></td><td><b>{itemBySku.get(order.sku)?.name??order.sku}</b><small className="cell-sub">Cost {usd(order.unitCost)} / unit</small></td><td>{order.location.split(' ')[0]}</td><td className="right">{order.qty}</td><td className="right">{order.status==='Completed'?`${order.good} / ${order.scrap}`:'—'}</td><td><span className={`status-chip ${order.status==='Completed'?'good':order.status==='In Progress'?'warn':'info'}`}>{order.status}</span></td><td className="right">{order.status==='Planned'?<button className="table-action" disabled={busy} onClick={()=>void issue(order)}><PackageCheck size={14}/> Issue</button>:order.status==='In Progress'?<button className="table-action" disabled={busy} onClick={()=>{setCompletion(order.id);setGood(order.qty);setScrap(0);}}><Check size={14}/> Complete</button>:<span className="text-muted">{order.reason||'—'}</span>}</td></tr>):<tr><td colSpan={7}><div className="empty-inline">No production orders yet. Create a batch or run a production acceptance scenario.</div></td></tr>}</tbody></table></div></section>{showNew&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" disabled={busy} onClick={()=>setShowNew(false)}><X size={18}/></button><span className="eyebrow">IN-HOUSE PREP</span><h2>Create production order</h2><p>Components will be checked when the order is issued.</p><label className="field-label">Item to make</label><select value={selectedItem?.sku??''} onChange={event=>setSku(event.target.value)}>{makeItems.map(item=><option value={item.sku} key={item.sku}>{item.name} · {usd(item.unitCost)}/unit</option>)}</select><div className="form-grid two"><div><label className="field-label">Quantity to start</label><input type="number" min="1" value={qty} onChange={event=>setQty(Number(event.target.value))}/></div><div><label className="field-label">Location</label><select value={locationId} onChange={event=>setLocationId(event.target.value)}>{snapshot.locations.map(location=><option key={location.id} value={location.id}>{location.name}</option>)}</select></div></div><div className="modal-actions"><button className="button secondary" disabled={busy} onClick={()=>setShowNew(false)}>Cancel</button><button className="button primary" disabled={busy||!selectedItem||!locationId||!Number.isFinite(qty)||qty<=0} onClick={()=>void create()}>{busy?'Saving…':'Create order'}</button></div></div></div>}{completion&&selectedOrder&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" disabled={busy} onClick={()=>setCompletion(null)}><X size={18}/></button><span className="eyebrow">COMPLETE PRODUCTION</span><h2>Record good units and scrap</h2><p>Started {selectedOrder.qty} units. Record the final disposition.</p><div className="form-grid two"><div><label className="field-label">Good units</label><input type="number" min="0" value={good} onChange={event=>setGood(Number(event.target.value))}/></div><div><label className="field-label">Scrapped units</label><input type="number" min="0" value={scrap} onChange={event=>setScrap(Number(event.target.value))}/></div></div><label className="field-label mt">Scrap reason</label><select value={reason} onChange={event=>setReason(event.target.value)}>{['Burnt','Dropped','Wrong toppings','Undercooked','Other'].map(value=><option key={value}>{value}</option>)}</select><div className="modal-actions"><button className="button secondary" disabled={busy} onClick={()=>setCompletion(null)}>Cancel</button><button className="button primary" disabled={busy||!Number.isFinite(good)||!Number.isFinite(scrap)||good<0||scrap<0||good+scrap>selectedOrder.qty} onClick={()=>void complete()}>{busy?'Saving…':'Complete order'}</button></div></div></div>}</>;
+}
 
 export default App;
