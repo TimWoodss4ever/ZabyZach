@@ -2,7 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronDown, ClipboardList, CircleDollarSign, Cog, FileText, Gauge, Home, LogOut, PackageCheck, Pizza, Printer, Search, ShoppingCart, Truck, UserRound, Users, Warehouse, X, ScanLine, ArrowLeftRight, RotateCcw, AlertTriangle, Plus, Minus, ArrowUpRight, Clock3, Settings2, ShieldCheck, Menu, Activity, Sparkles, MapPin, CheckCircle2 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { renderCode128 } from './barcode';
-import { AppState, Item, LoyaltyCustomer, SaleInput, Ledger, Location, PurchaseOrder, Role, Sale, SalesOrder, applyAdjustment, applyReturn, applySale, completeCustomerOrder, fulfillSalesOrder, applyTransfer, findLoyaltyCustomer, formatCustomerPhone, normalizeCustomerPhone, saveLoyaltyCustomer, loyaltySummary, customizedItem, sauceOptions, toppingOptions, toppingPortion, toppingCharge, avgDaily, completeProductionOrder, createProductionOrder, customers, eoq, fmt, inventory, issueProductionOrder, items, loadState, locations, maxMake, mrpRows, recipeCost, receivePO, reorderPoint, resetState, saveState, suppliers, today } from './domain';
+import { AppState, Item, LoyaltyCustomer, SaleInput, Ledger, Location, PurchaseOrder, Role, Sale, SalesOrder, applyReturn, applySale, completeCustomerOrder, fulfillSalesOrder, findLoyaltyCustomer, formatCustomerPhone, normalizeCustomerPhone, saveLoyaltyCustomer, loyaltySummary, customizedItem, sauceOptions, toppingOptions, toppingPortion, toppingCharge, avgDaily, completeProductionOrder, createProductionOrder, customers, eoq, fmt, inventory, issueProductionOrder, items, loadState, locations, maxMake, mrpRows, recipeCost, receivePO, reorderPoint, resetState, saveState, suppliers, today } from './domain';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
@@ -38,7 +38,7 @@ function App(){
     {page==='Sales Orders'&&<Orders state={state} onCommit={mutate} flash={flash}/>}
     {page==='Returns'&&<ReturnsPage state={state} onCommit={mutate} flash={flash}/>}
     {page==='Inventory'&&<InventoryPage search={search} flash={flash} safetyDays={state.settings.safetyDays}/>}
-    {page==='Transfers & Counts'&&<Movements state={state} onCommit={mutate} flash={flash}/>}
+    {page==='Transfers & Counts'&&<Movements flash={flash}/>}
     {page==='Production'&&<ProductionPage state={state} onCommit={mutate} flash={flash}/>}
     {page==='Purchase Orders'&&<Purchasing state={state} onCommit={mutate} flash={flash}/>}
     {page==='Supplier Scorecards'&&<Scorecards state={state}/>}
@@ -228,10 +228,141 @@ function InventoryPage({search,flash,safetyDays}:{search:string;flash:(s:string)
  const categories=[...new Set(snapshot.items.map(item=>item.category))];
  return <>{error&&<div className="login-error" role="alert">{error}</div>}<div className="stats-grid compact-stats"><StatCard label="Tracked items" value={String(snapshot.items.length)} icon={Boxes} sub={`Across ${snapshot.locations.length} locations`}/><StatCard label="Inventory value" value={usd(value)} icon={CircleDollarSign} accent="green" sub="Weighted average cost"/><StatCard label="Need replenishment" value={String(snapshot.items.filter(item=>!item.recipe&&onHand(item.sku)<reorderPointFor(item)).length)} icon={AlertTriangle} accent="amber" sub="Below reorder point"/><StatCard label="Active locations" value={String(snapshot.locations.length)} icon={Warehouse} sub="Supabase locations"/></div><section className="panel"><div className="panel-head table-header"><div><h2>Inventory by location</h2><p>Quantities reconcile to the Supabase transaction ledger</p></div><div className="table-controls"><button className="button secondary" onClick={()=>void load()} disabled={loading}><RotateCcw size={15}/>{loading?'Refreshing…':'Refresh'}</button><select value={category} onChange={event=>setCategory(event.target.value)}><option>All categories</option>{categories.map(value=><option key={value}>{value}</option>)}</select><button className="button secondary" onClick={()=>setShowLabels(true)}><Printer size={15}/> Print barcode labels</button></div></div><div className="table-scroll"><table><thead><tr><th>ITEM</th><th>SKU / BARCODE</th>{snapshot.locations.map(location=><th className="right" key={location.id}>{location.name==='Central Commissary'?'COMMISSARY':location.name.split(' ')[0].toUpperCase()}</th>)}<th className="right">TOTAL</th><th className="right">AVG COST</th><th className="right">REORDER</th><th></th></tr></thead><tbody>{filtered.map(item=>{const total=onHand(item.sku),reorder=item.recipe?0:reorderPointFor(item),below=!item.recipe&&total<reorder;return <tr key={item.sku} className="click-row" onClick={()=>setSelected(item)}><td><div className="item-cell"><span className="item-emoji">{item.category==='Pizza'?'🍕':item.category==='Beverage'?'🥤':item.category==='Packaging'?'📦':item.category==='Sides'?'🥣':'🥬'}</span><span><b>{item.name}</b><small>{item.category}</small></span></div></td><td><b className="mono">{item.sku}</b><small className="cell-sub">{item.barcode}</small></td>{snapshot.locations.map(location=><td className="right" key={location.id}>{onHand(item.sku,location.name).toLocaleString()} <span className="unit-mini">{item.unit}</span></td>)}<td className="right"><b>{total.toLocaleString()}</b> <span className="unit-mini">{item.unit}</span></td><td className="right">{usd(itemCost(item))}/{item.unit}</td><td className="right">{item.recipe?'—':<span className={below?'text-red':'text-muted'}>{Math.ceil(reorder).toLocaleString()}</span>}</td><td><span className={`status-chip ${below?'warn':'good'}`}>{item.recipe?(item.makeToStock?'Make-to-stock':'Make-to-order'):below?'Reorder':'Healthy'}</span></td></tr>})}</tbody></table></div><div className="table-bottom"><span>Showing <b>{filtered.length}</b> of {snapshot.items.length} items</span><span>Values derived from {snapshot.transactionCount.toLocaleString()} Supabase ledger entries</span></div></section>{selected&&<div className="modal-backdrop" onClick={()=>setSelected(null)}><div className="modal item-modal" onClick={event=>event.stopPropagation()}><button className="modal-x" onClick={()=>setSelected(null)}><X size={18}/></button><div className="item-modal-top"><div className="big-item-emoji">{selected.category==='Pizza'?'🍕':'📦'}</div><div><span className="eyebrow">{selected.category.toUpperCase()} · SKU {selected.sku}</span><h2>{selected.name}</h2><p>{selected.barcode} · {selected.pack} × {selected.factor} {selected.unit}</p></div></div><div className="item-detail-stats">{snapshot.locations.map(location=><div key={location.id}><span>{location.name}</span><b>{onHand(selected.sku,location.name).toLocaleString()} {selected.unit}</b></div>)}</div><div className="detail-cost"><span>Weighted average cost</span><b>{usd(itemCost(selected))} / {selected.unit}</b></div>{selected.recipe&&<><h3 className="detail-section-title">Bill of materials · per unit</h3><div className="bom-lines">{Object.entries(selected.recipe).map(([sku,quantity])=>{const component=itemBySku.get(sku)!;return <div key={sku}><span>{component.name} <small>{quantity} {component.unit} × {usd(itemCost(component))}</small></span><b>{usd(quantity*itemCost(component))}</b></div>})}<div className="bom-total"><b>Rolled-up cost</b><b>{usd(itemCost(selected))}</b></div></div>{selected.price>0&&<div className="margin-strip"><span>Gross margin</span><b>{usd(selected.price-itemCost(selected))} · {((selected.price-itemCost(selected))/selected.price*100).toFixed(1)}%</b></div>}</>}<button className="button secondary full" onClick={()=>setSelected(null)}>Close item details</button></div></div>}{showLabels&&<BarcodeModal catalog={snapshot.items} onClose={()=>setShowLabels(false)} flash={flash}/>}</>;
 }
+type MovementItemRow={sku:string;name:string;category:string;barcode:string;base_unit:string;purchase_unit:string;conversion_factor:number;unit_cost:number;selling_price:number;shelf_life_days:number|null;lead_days:number};
+type MovementLocationRow={id:string;name:string};
+type MovementBomRow={parent_sku:string;component_sku:string;quantity:number};
+type MovementTransactionRow={id:string;item_sku:string;location_id:string;quantity:number;transaction_type:string;reason_code:string|null;reference_document:string|null;occurred_at:string};
+type MovementSnapshot={items:Item[];locations:MovementLocationRow[];stockBySku:Record<string,Record<string,number>>;recent:MovementTransactionRow[];transactionCount:number};
+async function loadMovementSnapshot():Promise<MovementSnapshot>{
+ const [itemsResult,locationsResult,bomResult]=await Promise.all([
+  supabase.from('items').select('sku,name,category,barcode,base_unit,purchase_unit,conversion_factor,unit_cost,selling_price,shelf_life_days,lead_days').order('sku'),
+  supabase.from('locations').select('id,name').order('name'),
+  supabase.from('bom_lines').select('parent_sku,component_sku,quantity')
+ ]);
+ if(itemsResult.error)throw Error(`Unable to load the item catalog: ${itemsResult.error.message}`);
+ if(locationsResult.error)throw Error(`Unable to load locations: ${locationsResult.error.message}`);
+ if(bomResult.error)throw Error(`Unable to load the item bill of materials: ${bomResult.error.message}`);
+ const itemRows=(itemsResult.data??[]) as MovementItemRow[];
+ const locations=(locationsResult.data??[]) as MovementLocationRow[];
+ const bomRows=(bomResult.data??[]) as MovementBomRow[];
+ const recipes:Record<string,Record<string,number>>={};
+ for(const line of bomRows)(recipes[line.parent_sku]??={})[line.component_sku]=line.quantity;
+ const itemSkus=new Set(itemRows.map(row=>row.sku));
+ for(const line of bomRows)if(!itemSkus.has(line.parent_sku)||!itemSkus.has(line.component_sku))throw Error(`Item bill of materials references an unknown SKU: ${line.parent_sku} → ${line.component_sku}.`);
+ const catalog:Item[]=itemRows.map(row=>{
+  if(!isInventoryCategory(row.category))throw Error(`Unsupported inventory category "${row.category}" for SKU ${row.sku}.`);
+  if(row.base_unit!=='oz'&&row.base_unit!=='each')throw Error(`Unsupported inventory unit "${row.base_unit}" for SKU ${row.sku}.`);
+  return{sku:row.sku,name:row.name,category:row.category,barcode:row.barcode,unit:row.base_unit,pack:row.purchase_unit,factor:row.conversion_factor,cost:row.unit_cost,price:row.selling_price,shelf:row.shelf_life_days,supplier:'',lead:row.lead_days,recipe:recipes[row.sku],makeToStock:row.category==='Ingredient'&&!!recipes[row.sku]};
+ });
+ if(!catalog.length)throw Error('No inventory items are available.');
+ if(!locations.length)throw Error('No inventory locations are available.');
+ const locationNames=new Map<string,string>(locations.map(location=>[location.id,location.name] as const));
+ const stockBySku:Record<string,Record<string,number>>={};
+ const recent:MovementTransactionRow[]=[];
+ let transactionCount=0;
+ for(let offset=0;;offset+=inventoryPageSize){
+  const {data,error}=await supabase.from('inventory_transactions').select('id,item_sku,location_id,quantity,transaction_type,reason_code,reference_document,occurred_at').order('occurred_at',{ascending:true}).order('id',{ascending:true}).range(offset,offset+inventoryPageSize-1);
+  if(error)throw Error(`Unable to load inventory transactions: ${error.message}`);
+  const page=(data??[]) as MovementTransactionRow[];
+  transactionCount+=page.length;
+  for(const transaction of page){
+   if(!itemSkus.has(transaction.item_sku))throw Error(`Inventory transaction ${transaction.id} references unknown SKU ${transaction.item_sku}.`);
+   const locationName=locationNames.get(transaction.location_id);
+   if(!locationName)throw Error(`Inventory transaction ${transaction.id} references an unknown location.`);
+   const byLocation=stockBySku[transaction.item_sku]??(stockBySku[transaction.item_sku]={});
+   byLocation[locationName]=(byLocation[locationName]??0)+transaction.quantity;
+   recent.push(transaction);
+   if(recent.length>12)recent.shift();
+  }
+  if(page.length<inventoryPageSize)break;
+ }
+ return{items:catalog,locations,stockBySku,recent:recent.reverse(),transactionCount};
+}
+function Movements({flash}:{flash:(s:string)=>void}){
+ const [mode,setMode]=useState<'Transfer'|'Cycle count'>('Transfer');
+ const [sku,setSku]=useState('1003');
+ const [qty,setQty]=useState(200);
+ const [fromId,setFromId]=useState('');
+ const [toId,setToId]=useState('');
+ const [count,setCount]=useState(0);
+ const [reason,setReason]=useState('Cycle count correction');
+ const [barcode,setBarcode]=useState('');
+ const [snapshot,setSnapshot]=useState<MovementSnapshot|null>(null);
+ const [loading,setLoading]=useState(true);
+ const [submitting,setSubmitting]=useState(false);
+ const [loadError,setLoadError]=useState('');
+ const [actionError,setActionError]=useState('');
+ const load=useCallback(async()=>{
+  setLoading(true);
+  setLoadError('');
+  try{setSnapshot(await loadMovementSnapshot());return true;}
+  catch(error){setLoadError(error instanceof Error?error.message:'Unable to load inventory from Supabase.');return false;}
+  finally{setLoading(false);}
+ },[]);
+ useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  if(!snapshot)return;
+  const selectable=snapshot.items.filter(item=>!item.recipe||item.makeToStock);
+  if(!snapshot.items.some(item=>item.sku===sku))setSku(selectable[0]?.sku??snapshot.items[0].sku);
+  if(!snapshot.locations.some(location=>location.id===fromId)){
+   const defaultFrom=snapshot.locations.find(location=>location.name==='Central Commissary')??snapshot.locations[0];
+   setFromId(defaultFrom.id);
+  }
+  if(!snapshot.locations.some(location=>location.id===toId)||toId===fromId){
+   const defaultTo=snapshot.locations.find(location=>location.name==='Orem Store'&&location.id!==fromId)??snapshot.locations.find(location=>location.id!==fromId)??snapshot.locations[0];
+   setToId(defaultTo.id);
+  }
+ },[snapshot,sku,fromId,toId]);
+ if(!snapshot)return <section className="panel">{loading?<div className="empty-inline">Loading transfers and counts from Supabase…</div>:<><div className="login-error" role="alert">{loadError}</div><button className="button secondary" onClick={()=>void load()}>Retry</button></>}</section>;
+ const itemBySku=new Map<string,Item>(snapshot.items.map(item=>[item.sku,item] as const));
+ const selectedItem=itemBySku.get(sku)??snapshot.items[0];
+ const locationById=new Map(snapshot.locations.map(location=>[location.id,location] as const));
+ const from=locationById.get(fromId)??snapshot.locations[0];
+ const to=locationById.get(toId)??snapshot.locations.find(location=>location.id!==from.id)??from;
+ const selectableItems=snapshot.items.filter(item=>!item.recipe||item.makeToStock);
+ const onHand=(itemSku:string,location:MovementLocationRow)=>snapshot.stockBySku[itemSku]?.[location.name]??0;
+ const itemCost=(item:Item,seen=new Set<string>()):number=>{
+  if(!item.recipe)return item.cost;
+  if(seen.has(item.sku))throw Error(`Inventory bill of materials contains a recipe cycle at SKU ${item.sku}.`);
+  const next=new Set(seen).add(item.sku);
+  return Object.entries(item.recipe).reduce((sum,[componentSku,quantity])=>{
+   const component=itemBySku.get(componentSku);
+   if(!component)throw Error(`Inventory bill of materials references missing item ${componentSku}.`);
+   return sum+quantity*itemCost(component,next);
+  },0);
+ };
+ const resolve=()=>{
+  const item=snapshot.items.find(candidate=>candidate.barcode===barcode||candidate.sku===barcode);
+  if(item){setSku(item.sku);flash(`${item.name} selected`);setBarcode('');}
+  else flash('No matching barcode or SKU.');
+ };
+ const submit=async()=>{
+  if(submitting)return;
+  setActionError('');
+  setSubmitting(true);
+  try{
+   let variance=0;
+   if(mode==='Transfer'){
+    const {error}=await supabase.rpc('post_transfer',{p_item_sku:sku,p_from:from.id,p_to:to.id,p_quantity:qty});
+    if(error)throw Error(error.message);
+   }else{
+    const {data,error}=await supabase.rpc('post_adjustment',{p_item_sku:sku,p_location:from.id,p_counted:count,p_reason:reason});
+    if(error)throw Error(error.message);
+    variance=Number(data);
+    if(!Number.isFinite(variance))throw Error('The adjustment RPC returned an invalid variance.');
+   }
+   if(!await load())return;
+   if(mode==='Transfer')flash(`${qty} ${selectedItem.unit} transferred to ${to.name}.`);
+   else if(variance===0)flash('Count matches on-hand; no adjustment was posted.');
+   else flash(`Cycle count posted: ${variance>0?'+':''}${variance} ${selectedItem.unit}.`);
+  }catch(error){setActionError(`Unable to post ${mode.toLowerCase()}: ${error instanceof Error?error.message:'Unexpected Supabase error.'}`);}
+  finally{setSubmitting(false);}
+ };
+ return <div className="movement-layout">{loadError&&<div className="login-error" role="alert">{loadError}</div>}<section className="panel movement-form"><div className="tab-switch">{(['Transfer','Cycle count'] as const).map(x=><button key={x} className={mode===x?'selected':''} onClick={()=>setMode(x)}>{x==='Transfer'?<ArrowLeftRight size={15}/>:<RotateCcw size={15}/>} {x}</button>)}</div><div className="form-section-title"><span className="step-index">01</span><div><h2>{mode==='Transfer'?'Move inventory':'Reconcile a cycle count'}</h2><p>{mode==='Transfer'?'Create a paired stock movement between locations.':'Enter the physical count; the system posts the variance.'}</p></div></div><label className="field-label">Scan item barcode or enter SKU</label><div className="scan-input"><ScanLine size={16}/><input value={barcode} onChange={event=>setBarcode(event.target.value)} onKeyDown={event=>event.key==='Enter'&&resolve()} placeholder="e.g. ZBZ-1003"/><kbd>ENTER</kbd><button onClick={resolve}>Find item</button></div><label className="field-label mt">Item</label><select value={selectedItem.sku} onChange={event=>setSku(event.target.value)}>{selectableItems.map(item=><option value={item.sku} key={item.sku}>{item.name} · {item.sku}</option>)}</select><div className="form-grid two"><div><label className="field-label">{mode==='Transfer'?'From location':'Count at'}</label><select value={from.id} onChange={event=>{const nextId=event.target.value;setFromId(nextId);if(to.id===nextId)setToId(snapshot.locations.find(location=>location.id!==nextId)?.id??nextId);}}>{snapshot.locations.map(location=><option key={location.id} value={location.id}>{location.name}</option>)}</select><small className="helper">Current: {onHand(selectedItem.sku,from).toLocaleString()} {selectedItem.unit}</small></div>{mode==='Transfer'?<div><label className="field-label">To location</label><select value={to.id} onChange={event=>setToId(event.target.value)}>{snapshot.locations.filter(location=>location.id!==from.id).map(location=><option key={location.id} value={location.id}>{location.name}</option>)}</select></div>:<div><label className="field-label">Physical count · {selectedItem.unit}</label><input type="number" min="0" value={count} onChange={event=>setCount(Number(event.target.value))}/></div>}</div><div className="form-grid two"><div><label className="field-label">{mode==='Transfer'?'Quantity':'Reason code'}</label>{mode==='Transfer'?<input type="number" min="1" value={qty} onChange={event=>setQty(Number(event.target.value))}/>:<select value={reason} onChange={event=>setReason(event.target.value)}>{['Cycle count correction','Spoiled/Expired','Damaged','Dropped/Spilled','Theft/Unknown loss'].map(value=><option key={value}>{value}</option>)}</select>}</div>{mode==='Transfer'&&<div><label className="field-label">Unit cost</label><div className="readonly-input">{usd(itemCost(selectedItem))} / {selectedItem.unit}</div></div>}</div>{mode==='Transfer'&&<div className="transfer-note"><Check size={15}/><span>Transfer out and transfer in post together. Total inventory value stays constant.</span></div>}{actionError&&<div className="login-error" role="alert">{actionError}</div>}<button className="button primary form-submit" onClick={()=>void submit()} disabled={submitting||loading||!from.id||!to.id}>{submitting?'Posting…':mode==='Transfer'?'Post transfer':'Post cycle count'} <ArrowUpRight size={16}/></button></section>
+ <section className="panel movement-side"><div className="panel-head"><div><h2>Recent stock movements</h2><p>From the Supabase transaction ledger</p></div><span className="ledger-badge"><Activity size={14}/>{snapshot.transactionCount.toLocaleString()} entries</span></div><div className="movement-list">{snapshot.recent.map(transaction=>{const item=itemBySku.get(transaction.item_sku)!;const location=locationById.get(transaction.location_id)!;const isTransfer=transaction.transaction_type.toLowerCase().startsWith('transfer');return <div className="movement-item" key={transaction.id}><div className={`movement-icon ${transaction.quantity>0?'positive':isTransfer?'transfer':'negative'}`}>{isTransfer?<ArrowLeftRight size={15}/>:transaction.quantity>0?<Plus size={15}/>:<Minus size={15}/>}</div><div className="movement-copy"><b>{item.name}</b><span>{transaction.transaction_type} · {transaction.reference_document??'—'}{transaction.reason_code?` · ${transaction.reason_code}`:''}</span></div><div className="movement-qty"><b className={transaction.quantity>0?'text-green':'text-red'}>{transaction.quantity>0?'+':''}{transaction.quantity.toLocaleString()} {item.unit}</b><span>{location.name.split(' ')[0]} · {dateLabel(transaction.occurred_at.slice(0,10))}</span></div></div>;})}</div></section></div>;
+}
 function BarcodeModal({catalog,onClose,flash}:{catalog:Item[];onClose:()=>void;flash:(m:string)=>void}){const [chosen,setChosen]=useState(catalog.slice(0,8).map(i=>i.sku));const svgRefs=useRef<Record<string,SVGSVGElement|null>>({});useEffect(()=>{for(const i of catalog.filter(x=>chosen.includes(x.sku))){const el=svgRefs.current[i.sku];if(el)renderCode128(el,i.barcode);}},[catalog,chosen]);return <div className="modal-backdrop"><div className="modal labels-modal"><button className="modal-x" onClick={onClose}><X size={18}/></button><span className="eyebrow">BARCODE LABELS</span><h2>Print item labels</h2><p>Select products to print Code 128 labels for demo props.</p><div className="label-picker">{catalog.map(i=><label key={i.sku}><input type="checkbox" checked={chosen.includes(i.sku)} onChange={e=>setChosen(v=>e.target.checked?[...v,i.sku]:v.filter(s=>s!==i.sku))}/>{i.name}</label>)}</div><div className="label-sheet">{catalog.filter(i=>chosen.includes(i.sku)).map(i=><div className="barcode-label" key={i.sku}><b>ZA BY ZACK</b><span>{i.name}</span><svg ref={el=>{svgRefs.current[i.sku]=el}}/><small>SKU {i.sku}</small></div>)}</div><div className="modal-actions"><button className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" onClick={()=>{window.print();flash('Barcode labels sent to print.');}}><Printer size={15}/> Print labels</button></div></div></div>}
 function CameraScanner({onClose,onResult}:{onClose:()=>void;onResult:(value:string)=>void}){const video=useRef<HTMLVideoElement>(null);const [message,setMessage]=useState('Starting camera…');useEffect(()=>{let stream:MediaStream|undefined,stopped=false,timer:number|undefined;const start=async()=>{try{const Detector=(window as any).BarcodeDetector;if(!Detector){setMessage('Camera scanning is not supported by this browser. Use the barcode input and press Enter.');return;}stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});if(!video.current)return;video.current.srcObject=stream;await video.current.play();const detector=new Detector({formats:['code_128']});setMessage('Point the camera at a Za by Zack item label.');const scan=async()=>{if(stopped||!video.current)return;try{const codes=await detector.detect(video.current);if(codes.length){stopped=true;onResult(codes[0].rawValue);return;}}catch{}timer=window.setTimeout(scan,250);};scan();}catch{setMessage('Camera access is unavailable. Check browser permissions or enter the barcode manually.');}};start();return()=>{stopped=true;if(timer)clearTimeout(timer);stream?.getTracks().forEach(t=>t.stop());};},[onResult]);return <div className="modal-backdrop"><div className="modal camera-modal"><button className="modal-x" onClick={onClose}><X size={18}/></button><span className="eyebrow">CAMERA SCAN</span><h2>Scan an item label</h2><video ref={video} muted playsInline/><div className="camera-message"><ScanLine size={15}/>{message}</div><button className="button secondary full" onClick={onClose}>Close scanner</button></div></div>}
-function Movements({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>void;flash:(s:string)=>void}){const [mode,setMode]=useState<'Transfer'|'Cycle count'>('Transfer');const [sku,setSku]=useState('1003');const [qty,setQty]=useState(200);const [from,setFrom]=useState<Location>('Central Commissary');const [to,setTo]=useState<Location>('Orem Store');const [count,setCount]=useState(0);const [reason,setReason]=useState('Cycle count correction');const [barcode,setBarcode]=useState('');const resolve=()=>{const i=items.find(x=>x.barcode===barcode||x.sku===barcode);if(i){setSku(i.sku);flash(`${i.name} selected`);setBarcode('');}else flash('No matching barcode or SKU.');};const submit=()=>{try{if(mode==='Transfer'){applyTransfer(state,sku,qty,from,to);onCommit(state);flash(`${qty} ${itm(sku).unit} transferred to ${to}.`);}else{const variance=applyAdjustment(state,sku,from,count,reason);onCommit(state);flash(`Cycle count posted: ${variance>0?'+':''}${variance} ${itm(sku).unit}.`);}}catch(e){flash((e as Error).message);}};return <div className="movement-layout"><section className="panel movement-form"><div className="tab-switch">{(['Transfer','Cycle count'] as const).map(x=><button key={x} className={mode===x?'selected':''} onClick={()=>setMode(x)}>{x==='Transfer'?<ArrowLeftRight size={15}/>:<RotateCcw size={15}/>} {x}</button>)}</div><div className="form-section-title"><span className="step-index">01</span><div><h2>{mode==='Transfer'?'Move inventory':'Reconcile a cycle count'}</h2><p>{mode==='Transfer'?'Create a paired stock movement between locations.':'Enter the physical count; the system posts the variance.'}</p></div></div><label className="field-label">Scan item barcode or enter SKU</label><div className="scan-input"><ScanLine size={16}/><input value={barcode} onChange={e=>setBarcode(e.target.value)} onKeyDown={e=>e.key==='Enter'&&resolve()} placeholder="e.g. ZBZ-1003"/><kbd>ENTER</kbd><button onClick={resolve}>Find item</button></div><label className="field-label mt">Item</label><select value={sku} onChange={e=>setSku(e.target.value)}>{items.filter(i=>!i.recipe||i.makeToStock).map(i=><option value={i.sku} key={i.sku}>{i.name} · {i.sku}</option>)}</select><div className="form-grid two"><div><label className="field-label">{mode==='Transfer'?'From location':'Count at'}</label><select value={from} onChange={e=>setFrom(e.target.value as Location)}>{locations.map(x=><option key={x}>{x}</option>)}</select><small className="helper">Current: {inventory(state,sku,from).toLocaleString()} {itm(sku).unit}</small></div>{mode==='Transfer'?<div><label className="field-label">To location</label><select value={to} onChange={e=>setTo(e.target.value as Location)}>{locations.filter(x=>x!==from).map(x=><option key={x}>{x}</option>)}</select></div>:<div><label className="field-label">Physical count · {itm(sku).unit}</label><input type="number" min="0" value={count} onChange={e=>setCount(Number(e.target.value))}/></div>}</div><div className="form-grid two"><div><label className="field-label">{mode==='Transfer'?'Quantity':'Reason code'}</label>{mode==='Transfer'?<input type="number" min="1" value={qty} onChange={e=>setQty(Number(e.target.value))}/>:<select value={reason} onChange={e=>setReason(e.target.value)}>{['Cycle count correction','Spoiled/Expired','Damaged','Dropped/Spilled','Theft/Unknown loss'].map(x=><option key={x}>{x}</option>)}</select>}</div>{mode==='Transfer'&&<div><label className="field-label">Unit cost</label><div className="readonly-input">{usd(itm(sku).recipe?recipeCost(itm(sku)):itm(sku).cost)} / {itm(sku).unit}</div></div>}</div>{mode==='Transfer'&&<div className="transfer-note"><Check size={15}/><span>Transfer out and transfer in post together. Total inventory value stays constant.</span></div>}<button className="button primary form-submit" onClick={submit}>{mode==='Transfer'?'Post transfer':'Post cycle count'} <ArrowUpRight size={16}/></button></section>
- <section className="panel movement-side"><div className="panel-head"><div><h2>Recent stock movements</h2><p>From the transaction ledger</p></div><span className="ledger-badge"><Activity size={14}/>{state.ledger.length.toLocaleString()} entries</span></div><div className="movement-list">{state.ledger.slice(-12).reverse().map(t=><div className="movement-item" key={t.id}><div className={`movement-icon ${t.qty>0?'positive':t.type==='Transfer'?'transfer':'negative'}`}>{t.type==='Transfer'?<ArrowLeftRight size={15}/>:t.qty>0?<Plus size={15}/>:<Minus size={15}/>}</div><div className="movement-copy"><b>{itm(t.item).name}</b><span>{t.type} · {t.reference}{t.reason?` · ${t.reason}`:''}</span></div><div className="movement-qty"><b className={t.qty>0?'text-green':'text-red'}>{t.qty>0?'+':''}{t.qty.toLocaleString()} {itm(t.item).unit}</b><span>{t.location.split(' ')[0]} · {dateLabel(t.date)}</span></div></div>)}</div></section></div>}
 function Orders({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>void;flash:(s:string)=>void}){
  const [showNew,setShowNew]=useState(false),[customer,setCustomer]=useState(customers[6]),[sku,setSku]=useState('2002'),[qty,setQty]=useState(40),[pickup,setPickup]=useState(new Date(Date.now()+7*86400000).toISOString().slice(0,10)),[pickupTime,setPickupTime]=useState('17:00'),[location,setLocation]=useState<Location>('Provo Campus Store');
  const create=()=>{const order:SalesOrder={id:'SO-'+Date.now().toString().slice(-6),customer,location,pickup,pickupTime,status:'Order Placed',lines:[{sku,qty}],notes:'Pickup order'};onCommit({...state,salesOrders:[order,...state.salesOrders]});setShowNew(false);flash(order.id+' created and added to MRP demand.');};
