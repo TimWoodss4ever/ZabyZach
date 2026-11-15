@@ -2,7 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronDown, ClipboardList, CircleDollarSign, Cog, FileText, Gauge, Home, LogOut, PackageCheck, Pizza, Printer, Search, ShoppingCart, Truck, UserRound, Users, Warehouse, X, ScanLine, ArrowLeftRight, RotateCcw, AlertTriangle, Plus, Minus, ArrowUpRight, Clock3, Settings2, ShieldCheck, Menu, Activity, Sparkles, MapPin, CheckCircle2 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { renderCode128 } from './barcode';
-import { AppState, Item, LoyaltyCustomer, SaleInput, Ledger, Location, PurchaseOrder, Role, Sale, SalesOrder, applyReturn, applySale, completeCustomerOrder, fulfillSalesOrder, findLoyaltyCustomer, formatCustomerPhone, normalizeCustomerPhone, saveLoyaltyCustomer, loyaltySummary, customizedItem, sauceOptions, toppingOptions, toppingPortion, toppingCharge, avgDaily, completeProductionOrder, createProductionOrder, customers, eoq, fmt, inventory, issueProductionOrder, items, loadState, locations, maxMake, mrpRows, recipeCost, receivePO, reorderPoint, resetState, saveState, suppliers, today } from './domain';
+import { AppState, Item, LoyaltyCustomer, SaleInput, Ledger, Location, PurchaseOrder, Role, Sale, SalesOrder, applySale, completeCustomerOrder, fulfillSalesOrder, findLoyaltyCustomer, formatCustomerPhone, normalizeCustomerPhone, saveLoyaltyCustomer, loyaltySummary, customizedItem, sauceOptions, toppingOptions, toppingPortion, toppingCharge, avgDaily, completeProductionOrder, createProductionOrder, customers, eoq, fmt, inventory, issueProductionOrder, items, loadState, locations, maxMake, mrpRows, recipeCost, receivePO, reorderPoint, resetState, saveState, suppliers, today } from './domain';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
@@ -13,6 +13,18 @@ const groups:[string,{label:Page;icon:any}[]][]=[['Workspace',[{label:'Dashboard
 const usd=(n:number)=>fmt(n);const itm=(sku:string)=>items.find(i=>i.sku===sku)!;const componentUsage=(sku:string,target:string,qty=1,seen=new Set<string>()):number=>{if(seen.has(sku))return 0;const current=itm(sku);if(!current.recipe)return sku===target?qty:0;const next=new Set(seen).add(sku);return Object.entries(current.recipe).reduce((sum,[component,amount])=>sum+componentUsage(component,target,qty*amount,next),0);};const dateLabel=(s:string)=>new Date(`${s}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric'});const pickupSlots=Array.from({length:22},(_,i)=>{const minutes=11*60+i*30;return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');});const pickupTimeLabel=(time?:string)=>time?new Date('2000-01-01T'+time+':00').toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'Time not selected';
 type RecordSaleResult={sale_id:string;receipt_no:string;subtotal:number;discount:number;tax:number;total:number;cogs:number};
 type PosReceipt={receiptNo:string;saleId:string;date:string;location:Location;lines:{sku:string;qty:number}[];subtotal:number;discount:number;tax:number;total:number};
+type ReturnSaleLine={id:string;item_sku:string;quantity:number};
+type ReturnSale={id:string;receipt_no:string;location_id:string;location_name:string;customer_id:string|null;total:number;status:string;created_at:string;lines:ReturnSaleLine[]};
+type ReturnHistoryLine={id:string;return_id:string;original_sale_id:string;original_sale_line_id:string;item_sku:string;quantity:number;reason_code:string;disposition:'Restock'|'Waste';refund_total:number;cost_amount:number};
+type ReturnHistory={id:string;transaction_type:'Return'|'Exchange';original_sale_id:string;replacement_sale_id:string|null;refund_total:number;replacement_total:number;settlement_net:number;settlement_mode:string;created_at:string;lines:ReturnHistoryLine[]};
+type ReturnRpcResult={return_id:string;transaction_type:'Return'|'Exchange';refund_total:number;replacement_total:number;settlement_net:number;settlement_mode:'Manual/Simulated'};
+function isReturnRpcResult(value:unknown):value is ReturnRpcResult{
+ if(!value||typeof value!=='object')return false;
+ const result=value as Record<string,unknown>;
+ return typeof result.return_id==='string'&&(result.transaction_type==='Return'||result.transaction_type==='Exchange')&&
+  ['refund_total','replacement_total','settlement_net'].every(key=>typeof result[key]==='number'&&Number.isFinite(result[key]))&&
+  result.settlement_mode==='Manual/Simulated';
+}
 function isRecordSaleResult(value:unknown):value is RecordSaleResult{
  if(!value||typeof value!=='object')return false;
  const result=value as Record<string,unknown>;
@@ -44,7 +56,7 @@ function App(){
     {page==='Dashboard'&&<Dashboard state={state} location={location} setPage={setPage}/>}
     {page==='POS'&&<POS state={state} location={location} setLocation={setLocation} onCommit={mutate} flash={flash}/>}
     {page==='Sales Orders'&&<Orders state={state} onCommit={mutate} flash={flash}/>}
-    {page==='Returns'&&<ReturnsPage state={state} onCommit={mutate} flash={flash}/>}
+    {page==='Returns'&&<SupabaseReturnsPage flash={flash}/>}
     {page==='Inventory'&&<InventoryPage search={search} flash={flash} safetyDays={state.settings.safetyDays}/>}
     {page==='Transfers & Counts'&&<Movements flash={flash}/>}
     {page==='Production'&&<SupabaseProductionPage flash={flash}/>}
@@ -413,7 +425,6 @@ function Orders({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>vo
  <section className="panel"><div className="panel-head table-header"><div><h2>Sales orders</h2><p>Confirmed demand feeds the material requirements plan.</p></div><button className="button primary" onClick={()=>setShowNew(true)}><Plus size={15}/> Create order</button></div><div className="table-scroll"><table><thead><tr><th>ORDER</th><th>CUSTOMER</th><th>PICKUP</th><th>LOCATION</th><th>ITEMS</th><th>STATUS</th><th></th></tr></thead><tbody>{state.salesOrders.map(o=><tr key={o.id}><td><b className="mono">{o.id}</b><small className="cell-sub">{(o.notes||'Pickup')+(o.saleId?' · '+o.saleId:'')}{(o.discountPct||o.discountAmount)?' · '+(o.discountPct?o.discountPct+'% off':usd(o.discountAmount||0)+' off'):''}</small></td><td>{o.orderName||o.customer}{o.payment&&<small className="cell-sub">Paid · {usd(o.payment.amount)}</small>}</td><td>{dateLabel(o.pickup)}<small className="cell-sub">{pickupTimeLabel(o.pickupTime)} · {Math.max(0,Math.ceil((new Date(o.pickup).getTime()-Date.now())/86400000))} days</small></td><td>{o.location.split(' ')[0]}</td><td>{o.lines.reduce((a,l)=>a+l.qty,0)} {o.lines.length===1?itm(o.lines[0].sku).name:''}</td><td><span className={'status-chip '+(o.status==='Fulfilled'?'good':o.status==='Cancelled'?'bad':'info')}>{o.status}</span></td><td className="right">{o.status==='Order Placed'&&<button className="table-action" onClick={()=>fulfill(o)}><Check size={14}/> Mark picked up</button>}</td></tr>)}</tbody></table></div></section>
  {showNew&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" onClick={()=>setShowNew(false)}><X size={18}/></button><span className="eyebrow">SALES ORDER</span><h2>Create a pickup order</h2><p>Confirmed orders become visible to MRP immediately.</p><label className="field-label">Customer</label><select value={customer} onChange={e=>setCustomer(e.target.value)}>{customers.map(c=><option key={c}>{c}</option>)}</select><div className="form-grid two"><div><label className="field-label">Pickup location</label><select value={location} onChange={e=>setLocation(e.target.value as Location)}>{locations.slice(0,2).map(x=><option key={x}>{x}</option>)}</select></div><div><label className="field-label">Pickup date</label><input type="date" min={today()} value={pickup} onChange={e=>setPickup(e.target.value)}/></div></div><div className="form-grid two"><div><label className="field-label">Pickup time</label><select value={pickupTime} onChange={e=>setPickupTime(e.target.value)}>{pickupSlots.map(t=><option key={t} value={t}>{pickupTimeLabel(t)}</option>)}</select></div><div><label className="field-label">Menu item</label><select value={sku} onChange={e=>setSku(e.target.value)}>{items.filter(i=>i.price>0).map(i=><option value={i.sku} key={i.sku}>{i.name}</option>)}</select></div></div><div className="form-grid two"><div><label className="field-label">Quantity</label><input type="number" min="1" value={qty} onChange={e=>setQty(Number(e.target.value))}/></div></div><div className="modal-actions"><button className="button secondary" onClick={()=>setShowNew(false)}>Cancel</button><button className="button primary" onClick={create}>Create order</button></div></div></div>}</>;
 }
-function ReturnsPage({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>void;flash:(m:string)=>void}){const eligible=state.sales.filter(s=>s.status==='Completed').slice(0,40);const [saleId,setSaleId]=useState(eligible[0]?.id??'');const sale=state.sales.find(s=>s.id===saleId);const [lineKey,setLineKey]=useState(sale?.lines[0]?.id??sale?.lines[0]?.sku??'2002');const line=sale?.lines.find(l=>(l.id??l.sku)===lineKey);const sku=line?.sku??'';const [qty,setQty]=useState(1);const [reason,setReason]=useState('Burnt');const [disposition,setDisposition]=useState<'Restock'|'Waste'>('Waste');const chooseSale=(id:string)=>{setSaleId(id);const s=state.sales.find(x=>x.id===id);setLineKey(s?.lines[0]?.id??s?.lines[0]?.sku??'2002');};const restockable=sku==='1017'||itm(sku)?.category==='Beverage';const eligibleQty=line?line.qty-state.returns.filter(r=>r.saleId===saleId&&r.sku===sku&&(!line.id||r.lineId===line.id)).reduce((a,r)=>a+r.qty,0):0;const submit=()=>{try{const r=applyReturn(state,saleId,sku,qty,reason,restockable?disposition:'Waste',line?.id);onCommit(state);flash(`${r.id} processed. Refund ${usd(r.refund)}.`);}catch(e){flash((e as Error).message);}};return <><div className="stats-grid compact-stats"><StatCard label="Returns recorded" value={String(state.returns.length)} icon={RotateCcw} sub="Saved transactions"/><StatCard label="Refunds issued" value={usd(state.returns.reduce((a,r)=>a+r.refund,0))} icon={CircleDollarSign} accent="amber" sub="Including estimated tax"/><StatCard label="Waste disposition" value={String(state.returns.filter(r=>r.disposition==='Waste').length)} icon={AlertTriangle} accent="red" sub="Quality & spoilage events"/><StatCard label="Restocked" value={String(state.returns.filter(r=>r.disposition==='Restock').length)} icon={PackageCheck} accent="green" sub="Sealed items only"/></div><div className="movement-layout"><section className="panel movement-form"><div className="form-section-title"><span className="step-index">01</span><div><h2>Process a return</h2><p>Find the original ticket, select a line, and record the disposition.</p></div></div><label className="field-label">Original receipt</label><select value={saleId} onChange={e=>chooseSale(e.target.value)}>{eligible.map(s=><option key={s.id} value={s.id}>{s.id} · {s.location.split(' ')[0]} · {dateLabel(s.date)} · {usd(s.total)}</option>)}</select>{sale&&<><div className="return-sale-summary"><span>Original order total</span><b>{usd(sale.total)}</b><small>{sale.customer||'Walk-in'} · {sale.location}</small></div><label className="field-label mt">Item to return</label><select value={lineKey} onChange={e=>setLineKey(e.target.value)}>{sale.lines.map(l=><option key={l.id??l.sku} value={l.id??l.sku}>{itm(l.sku).name} · {l.modifiers?.join(", ")||"Standard"} · sold {l.qty}</option>)}</select><div className="form-grid two"><div><label className="field-label">Return quantity · up to {eligibleQty}</label><input type="number" min="1" max={eligibleQty} value={qty} onChange={e=>setQty(Number(e.target.value))}/></div><div><label className="field-label">Reason code</label><select value={reason} onChange={e=>setReason(e.target.value)}>{['Burnt','Undercooked','Wrong order','Cold on pickup','Damaged packaging','Customer changed mind'].map(x=><option key={x}>{x}</option>)}</select></div></div><label className="field-label mt">Disposition</label><div className="disposition-choice"><button className={!restockable||disposition==='Waste'?'selected':''} onClick={()=>setDisposition('Waste')}><AlertTriangle size={15}/><span><b>Waste</b><small>Write off item cost</small></span></button><button disabled={!restockable} className={restockable&&disposition==='Restock'?'selected':''} onClick={()=>setDisposition('Restock')}><PackageCheck size={15}/><span><b>Restock</b><small>{restockable?'Return sealed item to stock':'Only sealed soda / ranch'}</small></span></button></div><button className="button primary form-submit" disabled={!eligibleQty} onClick={submit}>Process refund · {line?usd((line.price*qty)*(1+state.settings.tax)):usd(0)} <ArrowUpRight size={16}/></button></>}</section><section className="panel movement-side"><div className="panel-head"><div><h2>Recent returns</h2><p>Refund, reason, and disposition history</p></div></div><div className="movement-list">{state.returns.length?state.returns.slice(0,12).map(r=><div className="movement-item" key={r.id}><div className={`movement-icon ${r.disposition==='Restock'?'positive':'negative'}`}>{r.disposition==='Restock'?<PackageCheck size={15}/>:<AlertTriangle size={15}/>}</div><div className="movement-copy"><b>{itm(r.sku).name}</b><span>{r.saleId} · {r.reason} · {r.disposition}</span></div><div className="movement-qty"><b>{usd(r.refund)}</b><span>{r.qty} returned · {dateLabel(r.date)}</span></div></div>):<div className="empty-inline">No returns have been processed yet.</div>}</div></section></div></>}
 function ProductionPage({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>void;flash:(m:string)=>void}){const [showNew,setShowNew]=useState(false);const [sku,setSku]=useState('1030');const [qty,setQty]=useState(20);const [location,setLocation]=useState<Location>('Central Commissary');const [completion,setCompletion]=useState<string|null>(null);const [good,setGood]=useState(18);const [scrap,setScrap]=useState(2);const [reason,setReason]=useState('Burnt');const create=()=>{try{createProductionOrder(state,sku,qty,location);onCommit(state);setShowNew(false);flash('Production order created.');}catch(e){flash((e as Error).message);}};const issue=(id:string)=>{try{issueProductionOrder(state,id);onCommit(state);flash(`${id} issued; components consumed from the ledger.`);}catch(e){flash((e as Error).message);}};const complete=()=>{if(!completion)return;try{completeProductionOrder(state,completion,good,scrap,reason);onCommit(state);setCompletion(null);flash(`${completion} completed. Good units received at rolled-up cost.`);}catch(e){flash((e as Error).message);}};const completed=state.productionOrders.filter(o=>o.status==='Completed'),started=state.productionOrders.reduce((a,o)=>a+o.qty,0),yieldPct=started?state.productionOrders.reduce((a,o)=>a+o.good,0)/started*100:0,scrapCost=completed.reduce((a,o)=>a+o.scrap*recipeCost(itm(o.sku)),0);return <><div className="stats-grid compact-stats"><StatCard label="Production orders" value={String(state.productionOrders.length)} icon={Pizza} sub="Planned + completed"/><StatCard label="Yield" value={`${yieldPct.toFixed(1)}%`} icon={Activity} accent="green" sub="Good units ÷ started units"/><StatCard label="Units scrapped" value={String(state.productionOrders.reduce((a,o)=>a+o.scrap,0))} icon={AlertTriangle} accent="amber" sub="By recorded reason"/><StatCard label="Scrap cost" value={usd(scrapCost)} icon={CircleDollarSign} accent="red" sub="Rolled-up recipe cost"/></div><section className="panel"><div className="panel-head table-header"><div><h2>Production orders</h2><p>Make dough and prepared items in house; issue their bill of materials and receive good units at rolled-up cost.</p></div><button className="button primary" onClick={()=>setShowNew(true)}><Plus size={15}/> New production order</button></div><div className="table-scroll"><table><thead><tr><th>ORDER</th><th>ITEM</th><th>LOCATION</th><th className="right">STARTED</th><th className="right">GOOD / SCRAP</th><th>STATUS</th><th></th></tr></thead><tbody>{state.productionOrders.length?state.productionOrders.map(o=><tr key={o.id}><td><b className="mono">{o.id}</b><small className="cell-sub">{o.started?`Started ${dateLabel(o.started)}`:'Batch production'}</small></td><td><b>{itm(o.sku).name}</b><small className="cell-sub">Cost {usd(recipeCost(itm(o.sku)))} / unit</small></td><td>{o.location.split(' ')[0]}</td><td className="right">{o.qty}</td><td className="right">{o.status==='Completed'?`${o.good} / ${o.scrap}`:'—'}</td><td><span className={`status-chip ${o.status==='Completed'?'good':o.status==='In Progress'?'warn':'info'}`}>{o.status}</span></td><td className="right">{o.status==='Planned'?<button className="table-action" onClick={()=>issue(o.id)}><PackageCheck size={14}/> Issue</button>:o.status==='In Progress'?<button className="table-action" onClick={()=>{setCompletion(o.id);setGood(o.qty);setScrap(0);}}><Check size={14}/> Complete</button>:<span className="text-muted">{o.reason||'—'}</span>}</td></tr>):<tr><td colSpan={7}><div className="empty-inline">No production orders yet. Create a batch or run a production acceptance scenario.</div></td></tr>}</tbody></table></div></section>{showNew&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" onClick={()=>setShowNew(false)}><X size={18}/></button><span className="eyebrow">IN-HOUSE PREP</span><h2>Create production order</h2><p>Components will be checked when the order is issued.</p><label className="field-label">Item to make</label><select value={sku} onChange={e=>setSku(e.target.value)}>{items.filter(i=>i.recipe).map(i=><option value={i.sku} key={i.sku}>{i.name} · {usd(recipeCost(i))}/unit</option>)}</select><div className="form-grid two"><div><label className="field-label">Quantity to start</label><input type="number" min="1" value={qty} onChange={e=>setQty(Number(e.target.value))}/></div><div><label className="field-label">Location</label><select value={location} onChange={e=>setLocation(e.target.value as Location)}>{locations.map(x=><option key={x}>{x}</option>)}</select></div></div><div className="modal-actions"><button className="button secondary" onClick={()=>setShowNew(false)}>Cancel</button><button className="button primary" onClick={create}>Create order</button></div></div></div>}{completion&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" onClick={()=>setCompletion(null)}><X size={18}/></button><span className="eyebrow">COMPLETE PRODUCTION</span><h2>Record good units and scrap</h2><p>Started {state.productionOrders.find(o=>o.id===completion)?.qty} units. Record the final disposition.</p><div className="form-grid two"><div><label className="field-label">Good units</label><input type="number" min="0" value={good} onChange={e=>setGood(Number(e.target.value))}/></div><div><label className="field-label">Scrapped units</label><input type="number" min="0" value={scrap} onChange={e=>setScrap(Number(e.target.value))}/></div></div><label className="field-label mt">Scrap reason</label><select value={reason} onChange={e=>setReason(e.target.value)}>{['Burnt','Dropped','Wrong toppings','Undercooked','Other'].map(x=><option key={x}>{x}</option>)}</select><div className="modal-actions"><button className="button secondary" onClick={()=>setCompletion(null)}>Cancel</button><button className="button primary" onClick={complete}>Complete order</button></div></div></div>}</>}
 function Purchasing({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>void;flash:(s:string)=>void}){const [receiving,setReceiving]=useState<PurchaseOrder|null>(null);const [quantity,setQuantity]=useState(0);const [unitPrice,setUnitPrice]=useState(0);const [scan,setScan]=useState('');const doReceive=()=>{if(!receiving)return;try{receivePO(state,receiving.id,quantity,unitPrice);onCommit(state);setReceiving(null);flash(`${receiving.id} received. Weighted average cost recalculated.`);}catch(e){flash((e as Error).message);}};return <><div className="stats-grid compact-stats"><StatCard label="Open purchase orders" value={String(state.purchaseOrders.filter(p=>p.status!=='Received').length)} icon={Truck} sub="Awaiting receipt"/><StatCard label="Late orders" value={String(state.purchaseOrders.filter(p=>p.status!=='Received'&&p.expected<today()).length)} icon={Clock3} accent="amber" sub="Past expected date"/><StatCard label="Supplier invoices due" value={usd(state.purchaseOrders.filter(p=>p.status==='Received').slice(0,4).reduce((a,p)=>a+p.lines.reduce((n,l)=>n+l.received*l.unitPrice,0),0))} icon={CircleDollarSign} accent="green" sub="Seeded invoice sample"/><StatCard label="Suppliers" value={String(suppliers.length)} icon={Building2} accent="purple" sub="Active vendor records"/></div><section className="panel"><div className="panel-head table-header"><div><h2>Purchase orders</h2><p>PO quantities are entered in purchase units and converted on receipt.</p></div><button className="button secondary" onClick={()=>flash('Choose a below-reorder item from MRP to draft a supplier PO.')}><Plus size={15}/> New purchase order</button></div><div className="table-scroll"><table><thead><tr><th>PO NUMBER</th><th>SUPPLIER</th><th>ITEM</th><th className="right">ORDERED</th><th className="right">UNIT PRICE</th><th>EXPECTED / ACTUAL</th><th>STATUS</th><th></th></tr></thead><tbody>{state.purchaseOrders.map(p=>{const l=p.lines[0],i=itm(l.sku),late=p.status!=='Received'&&p.expected<today();return <tr key={p.id}><td><b className="mono">{p.id}</b><small className="cell-sub">Placed {dateLabel(p.date)}</small></td><td>{p.supplier}</td><td>{i.name}<small className="cell-sub">{i.factor} {i.unit} / {i.pack}</small></td><td className="right">{l.qty} <span className="unit-mini">{i.pack}</span></td><td className="right">{usd(l.unitPrice)}</td><td><span className={late?'text-red':''}>{dateLabel(p.expected)}</span>{p.received&&<small className="cell-sub">Received {dateLabel(p.received)}</small>}</td><td><span className={`status-chip ${p.status==='Received'?'good':late?'warn':'info'}`}>{p.status}</span></td><td>{p.status!=='Received'&&<button className="table-action" onClick={()=>{setReceiving(p);setQuantity(l.qty-l.received);setUnitPrice(l.unitPrice);}}><PackageCheck size={14}/> Receive</button>}</td></tr>})}</tbody></table></div></section>{receiving&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" onClick={()=>setReceiving(null)}><X size={18}/></button><span className="eyebrow">RECEIVING · {receiving.id}</span><h2>Receive purchase order</h2><p>{receiving.supplier} · Ship to Central Commissary</p><label className="field-label">Scan barcode to select item</label><div className="scan-input"><ScanLine size={16}/><input value={scan} onChange={e=>setScan(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){const i=items.find(x=>x.barcode===scan);flash(i?.sku===receiving.lines[0].sku?'Item matched purchase order.':'Barcode does not match this PO.');setScan('');}}} placeholder="Scan item barcode…"/><kbd>ENTER</kbd></div><div className="receive-item"><b>{itm(receiving.lines[0].sku).name}</b><span>Ordered {receiving.lines[0].qty} {itm(receiving.lines[0].sku).pack}</span></div><div className="form-grid two"><div><label className="field-label">Received quantity · {itm(receiving.lines[0].sku).pack}</label><input type="number" value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></div><div><label className="field-label">Price per purchase unit</label><input type="number" step=".01" value={unitPrice} onChange={e=>setUnitPrice(Number(e.target.value))}/></div></div><div className="transfer-note"><Activity size={15}/><span>New weighted average will be based on remaining on-hand value plus this receipt.</span></div><div className="modal-actions"><button className="button secondary" onClick={()=>setReceiving(null)}>Cancel</button><button className="button primary" onClick={doReceive}>Post receipt</button></div></div></div>}</>}
 function Scorecards({state}:{state:AppState}){return <><div className="stats-grid compact-stats">{suppliers.slice(0,4).map((s,n)=>{const pos=state.purchaseOrders.filter(p=>p.supplier===s.name),received=pos.filter(p=>p.status==='Received'),ontime=received.length?received.filter(p=>p.received!<=p.expected).length/received.length:0;return <StatCard key={s.name} label={s.name} value={`${Math.round(ontime*100)}%`} icon={Truck} accent={n===1?'amber':'green'} sub="On-time delivery"/>;})}</div><section className="panel"><div className="panel-head table-header"><div><h2>Supplier performance</h2><p>Score reflects delivery reliability, fill rate, and lead-time accuracy.</p></div><span className="computed-tag"><Activity size={14}/> Computed from PO history</span></div><div className="table-scroll"><table><thead><tr><th>SUPPLIER</th><th>RATING</th><th>ON TIME</th><th>AVG LEAD</th><th>FILL RATE</th><th className="right">PURCHASE ORDERS</th><th className="right">OPEN VALUE</th><th></th></tr></thead><tbody>{suppliers.map(s=>{const ps=state.purchaseOrders.filter(p=>p.supplier===s.name),done=ps.filter(p=>p.status==='Received'),ontime=done.length?done.filter(p=>p.received!<=p.expected).length/done.length:0,ordered=done.reduce((a,p)=>a+p.lines.reduce((n,l)=>n+l.qty,0),0),filled=done.reduce((a,p)=>a+p.lines.reduce((n,l)=>n+l.received,0),0),fill=ordered?filled/ordered:0,avgLead=done.length?done.reduce((a,p)=>a+(new Date(p.received!).getTime()-new Date(p.date).getTime())/86400000,0)/done.length:s.lead,score=Math.round((ontime*.4+fill*.3+Math.max(0,1-Math.abs(avgLead-s.lead)/Math.max(s.lead,1))*.2+.9*.1)*100),open=ps.filter(p=>p.status!=='Received').reduce((a,p)=>a+p.lines.reduce((n,l)=>n+(l.qty-l.received)*l.unitPrice,0),0);return <tr key={s.name}><td><div className="supplier-cell"><span className="supplier-logo">{s.name.slice(0,1)}</span><span><b>{s.name}</b><small>{s.email}</small></span></div></td><td><span className={`score-pill ${score>=80?'good':score>=60?'warn':'bad'}`}>{score} <small>/ 100</small></span></td><td>{Math.round(ontime*100)}%</td><td>{avgLead.toFixed(1)} days <small className="cell-sub">Quoted {s.lead} days</small></td><td>{Math.round(fill*100)}%</td><td className="right">{ps.length}</td><td className="right">{usd(open)}</td><td><span className={`status-chip ${score>=80?'good':score>=60?'warn':'bad'}`}>{score>=80?'Keep':score>=60?'Watch':'Replace'}</span></td></tr>})}</tbody></table></div></section></>}
@@ -559,6 +570,287 @@ function SupabaseProductionPage({flash}:{flash:(message:string)=>void}){
  const yieldPct=completedStarted?completed.reduce((sum,order)=>sum+order.good,0)/completedStarted*100:0;
  const scrapCost=completed.reduce((sum,order)=>sum+order.scrap*order.unitCost,0);
  return <>{(actionError||loadError)&&<div className="login-error" role="alert">{actionError||loadError}{loadError&&<button className="table-action" onClick={()=>{setActionError('');void load();}}>Retry</button>}</div>}<div className="stats-grid compact-stats"><StatCard label="Production orders" value={String(snapshot.orders.length)} icon={Pizza} sub="Planned + completed"/><StatCard label="Yield" value={`${yieldPct.toFixed(1)}%`} icon={Activity} accent="green" sub="Good units ÷ started units"/><StatCard label="Units scrapped" value={String(snapshot.orders.reduce((sum,order)=>sum+order.scrap,0))} icon={AlertTriangle} accent="amber" sub="By recorded reason"/><StatCard label="Scrap cost" value={usd(scrapCost)} icon={CircleDollarSign} accent="red" sub="Rolled-up recipe cost"/></div><section className="panel"><div className="panel-head table-header"><div><h2>Production orders</h2><p>Make dough and prepared items in house; issue their bill of materials and receive good units at rolled-up cost.</p></div><button className="button primary" disabled={busy||!makeItems.length||!snapshot.locations.length} onClick={()=>setShowNew(true)}><Plus size={15}/> New production order</button></div><div className="table-scroll"><table><thead><tr><th>ORDER</th><th>ITEM</th><th>LOCATION</th><th className="right">STARTED</th><th className="right">GOOD / SCRAP</th><th>STATUS</th><th></th></tr></thead><tbody>{snapshot.orders.length?snapshot.orders.map(order=><tr key={order.id}><td><b className="mono">{order.orderNo}</b><small className="cell-sub">{order.started?`Started ${dateLabel(order.started)}`:'Batch production'}</small></td><td><b>{itemBySku.get(order.sku)?.name??order.sku}</b><small className="cell-sub">Cost {usd(order.unitCost)} / unit</small></td><td>{order.location.split(' ')[0]}</td><td className="right">{order.qty}</td><td className="right">{order.status==='Completed'?`${order.good} / ${order.scrap}`:'—'}</td><td><span className={`status-chip ${order.status==='Completed'?'good':order.status==='In Progress'?'warn':'info'}`}>{order.status}</span></td><td className="right">{order.status==='Planned'?<button className="table-action" disabled={busy} onClick={()=>void issue(order)}><PackageCheck size={14}/> Issue</button>:order.status==='In Progress'?<button className="table-action" disabled={busy} onClick={()=>{setCompletion(order.id);setGood(order.qty);setScrap(0);}}><Check size={14}/> Complete</button>:<span className="text-muted">{order.reason||'—'}</span>}</td></tr>):<tr><td colSpan={7}><div className="empty-inline">No production orders yet. Create a batch or run a production acceptance scenario.</div></td></tr>}</tbody></table></div></section>{showNew&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" disabled={busy} onClick={()=>setShowNew(false)}><X size={18}/></button><span className="eyebrow">IN-HOUSE PREP</span><h2>Create production order</h2><p>Components will be checked when the order is issued.</p><label className="field-label">Item to make</label><select value={selectedItem?.sku??''} onChange={event=>setSku(event.target.value)}>{makeItems.map(item=><option value={item.sku} key={item.sku}>{item.name} · {usd(item.unitCost)}/unit</option>)}</select><div className="form-grid two"><div><label className="field-label">Quantity to start</label><input type="number" min="1" value={qty} onChange={event=>setQty(Number(event.target.value))}/></div><div><label className="field-label">Location</label><select value={locationId} onChange={event=>setLocationId(event.target.value)}>{snapshot.locations.map(location=><option key={location.id} value={location.id}>{location.name}</option>)}</select></div></div><div className="modal-actions"><button className="button secondary" disabled={busy} onClick={()=>setShowNew(false)}>Cancel</button><button className="button primary" disabled={busy||!selectedItem||!locationId||!Number.isFinite(qty)||qty<=0} onClick={()=>void create()}>{busy?'Saving…':'Create order'}</button></div></div></div>}{completion&&selectedOrder&&<div className="modal-backdrop"><div className="modal form-modal"><button className="modal-x" disabled={busy} onClick={()=>setCompletion(null)}><X size={18}/></button><span className="eyebrow">COMPLETE PRODUCTION</span><h2>Record good units and scrap</h2><p>Started {selectedOrder.qty} units. Record the final disposition.</p><div className="form-grid two"><div><label className="field-label">Good units</label><input type="number" min="0" value={good} onChange={event=>setGood(Number(event.target.value))}/></div><div><label className="field-label">Scrapped units</label><input type="number" min="0" value={scrap} onChange={event=>setScrap(Number(event.target.value))}/></div></div><label className="field-label mt">Scrap reason</label><select value={reason} onChange={event=>setReason(event.target.value)}>{['Burnt','Dropped','Wrong toppings','Undercooked','Other'].map(value=><option key={value}>{value}</option>)}</select><div className="modal-actions"><button className="button secondary" disabled={busy} onClick={()=>setCompletion(null)}>Cancel</button><button className="button primary" disabled={busy||!Number.isFinite(good)||!Number.isFinite(scrap)||good<0||scrap<0||good+scrap>selectedOrder.qty} onClick={()=>void complete()}>{busy?'Saving…':'Complete order'}</button></div></div></div>}</>;
+}
+
+function SupabaseReturnsPage({flash}:{flash:(message:string)=>void}){
+ type ReturnRequestDetails={transactionType:'Return'|'Exchange';saleLineId:string;quantity:number;reason:string;disposition:'Restock'|'Waste';replacementLines:{sku:string;qty:number}[]|null};
+ type PendingReturnRequest={requestId:string;signature:string;details:ReturnRequestDetails};
+ const pendingStorageKey='zbyzack-pending-returns-v1';
+ const [sales,setSales]=useState<ReturnSale[]>([]);
+ const [history,setHistory]=useState<ReturnHistory[]>([]);
+ const [saleId,setSaleId]=useState('');
+ const [saleLineId,setSaleLineId]=useState('');
+ const [transactionType,setTransactionType]=useState<'Return'|'Exchange'>('Return');
+ const [quantity,setQuantity]=useState(1);
+ const [reason,setReason]=useState('Burnt');
+ const [disposition,setDisposition]=useState<'Restock'|'Waste'>('Waste');
+ const [replacementSku,setReplacementSku]=useState(items.find(item=>item.price>0)?.sku??'');
+ const [replacementQuantity,setReplacementQuantity]=useState(1);
+ const [loading,setLoading]=useState(true);
+ const [submitting,setSubmitting]=useState(false);
+ const [loadError,setLoadError]=useState('');
+ const [actionError,setActionError]=useState('');
+ const [requestStorageReady,setRequestStorageReady]=useState(false);
+ const [requestStorageError,setRequestStorageError]=useState('');
+ const [lastResult,setLastResult]=useState<ReturnRpcResult|null>(null);
+ const loadVersion=useRef(0);
+ const pendingRequests=useRef(new Map<string,PendingReturnRequest>());
+
+ const refreshData=useCallback(async()=>{
+  const version=++loadVersion.current;
+  setLoading(true);
+  setLoadError('');
+  try{
+   const pageSize=1000;
+   async function readAllPages<T>(fetchPage:(from:number,to:number)=>PromiseLike<{data:T[]|null;error:{message:string}|null}>):Promise<T[]>{
+    const rows:T[]=[];
+    for(let from=0;;from+=pageSize){
+     const {data,error}=await fetchPage(from,from+pageSize-1);
+     if(error)throw new Error(error.message);
+     const page=data??[];
+     rows.push(...page);
+     if(page.length<pageSize)return rows;
+    }
+   }
+   type SaleRow={id:string;receipt_no:string;location_id:string;customer_id:string|null;total:number;status:string;created_at:string};
+   type SaleLineRow={id:string;sale_id:string;item_sku:string;quantity:number};
+   type ReturnRow={id:string;transaction_type:'Return'|'Exchange';original_sale_id:string;replacement_sale_id:string|null;refund_total:number;replacement_total:number;settlement_net:number;settlement_mode:string;created_at:string};
+   type LocationRow={id:string;name:string};
+   const saleRows=await readAllPages<SaleRow>((from,to)=>supabase.from('sales')
+    .select('id,receipt_no,location_id,customer_id,total,status,created_at')
+    .eq('status','Completed').order('created_at',{ascending:false}).order('id',{ascending:false}).range(from,to));
+   const lineRows:SaleLineRow[]=[];
+   for(let index=0;index<saleRows.length;index+=100){
+    const saleIds=saleRows.slice(index,index+100).map(row=>row.id);
+    lineRows.push(...await readAllPages<SaleLineRow>((from,to)=>supabase.from('sale_lines')
+     .select('id,sale_id,item_sku,quantity').in('sale_id',saleIds).order('id',{ascending:true}).range(from,to)));
+   }
+   const [returnRows,locationRows]=await Promise.all([
+    readAllPages<ReturnRow>((from,to)=>supabase.from('sales_returns')
+     .select('id,transaction_type,original_sale_id,replacement_sale_id,refund_total,replacement_total,settlement_net,settlement_mode,created_at')
+     .order('created_at',{ascending:false}).order('id',{ascending:false}).range(from,to)),
+    readAllPages<LocationRow>((from,to)=>supabase.from('locations').select('id,name').order('id',{ascending:true}).range(from,to))
+   ]);
+   const returnLineRows:ReturnHistoryLine[]=[];
+   for(let index=0;index<returnRows.length;index+=100){
+    const returnIds=returnRows.slice(index,index+100).map(row=>row.id);
+    returnLineRows.push(...await readAllPages<ReturnHistoryLine>((from,to)=>supabase.from('sales_return_lines')
+     .select('id,return_id,original_sale_id,original_sale_line_id,item_sku,quantity,reason_code,disposition,refund_total,cost_amount')
+     .in('return_id',returnIds).order('id',{ascending:true}).range(from,to)));
+   }
+   const linesBySale=new Map<string,ReturnSaleLine[]>();
+   for(const row of lineRows){
+    const lines=linesBySale.get(row.sale_id)??[];
+    lines.push({id:row.id,item_sku:row.item_sku,quantity:Number(row.quantity)});
+    linesBySale.set(row.sale_id,lines);
+   }
+   const locationNames=new Map(locationRows.map(row=>[row.id,row.name]));
+   const refreshedSales:ReturnSale[]=saleRows.map(row=>({
+    ...row,location_name:locationNames.get(row.location_id)??row.location_id,
+    lines:linesBySale.get(row.id)??[]
+   }));
+   const linesByReturn=new Map<string,ReturnHistoryLine[]>();
+   for(const row of returnLineRows){
+    const lines=linesByReturn.get(row.return_id)??[];
+    lines.push({...row,quantity:Number(row.quantity),refund_total:Number(row.refund_total),cost_amount:Number(row.cost_amount)});
+    linesByReturn.set(row.return_id,lines);
+   }
+   const refreshedHistory:ReturnHistory[]=returnRows.map(row=>({
+    ...row,refund_total:Number(row.refund_total),replacement_total:Number(row.replacement_total),
+    settlement_net:Number(row.settlement_net),lines:linesByReturn.get(row.id)??[]
+   }));
+   if(version===loadVersion.current){
+    setSales(refreshedSales);
+    setHistory(refreshedHistory);
+   }
+   return true;
+  }catch(error){
+   if(version===loadVersion.current)setLoadError(`Unable to load Supabase returns data: ${error instanceof Error?error.message:String(error)}`);
+   return false;
+  }finally{
+   if(version===loadVersion.current)setLoading(false);
+  }
+ },[]);
+ useEffect(()=>{void refreshData();return()=>{loadVersion.current++;};},[refreshData]);
+ useEffect(()=>{
+  try{
+   const serialized=sessionStorage.getItem(pendingStorageKey);
+   if(serialized){
+    const parsed:unknown=JSON.parse(serialized);
+    if(!Array.isArray(parsed))throw new Error('Pending request storage is not a list.');
+    for(const entry of parsed){
+     if(!entry||typeof entry!=='object')throw new Error('Pending request storage contains an invalid entry.');
+     const stored=entry as Record<string,unknown>;
+     const details=stored.details as Record<string,unknown>|null;
+     const replacements=details?.replacementLines;
+     const validReplacements=replacements===null||(Array.isArray(replacements)&&replacements.every(line=>
+      !!line&&typeof line==='object'&&typeof (line as Record<string,unknown>).sku==='string'&&
+      typeof (line as Record<string,unknown>).qty==='number'&&Number.isFinite((line as Record<string,unknown>).qty)
+     ));
+     if(typeof stored.requestId!=='string'||typeof stored.signature!=='string'||!details||
+        (details.transactionType!=='Return'&&details.transactionType!=='Exchange')||
+        typeof details.saleLineId!=='string'||typeof details.quantity!=='number'||!Number.isFinite(details.quantity)||
+        typeof details.reason!=='string'||(details.disposition!=='Restock'&&details.disposition!=='Waste')||
+        !validReplacements||JSON.stringify(details)!==stored.signature){
+      throw new Error('Pending request storage contains invalid or mismatched request details.');
+     }
+     pendingRequests.current.set(stored.signature,entry as PendingReturnRequest);
+    }
+   }
+  }catch(error){
+   setRequestStorageError(`Unable to restore pending return requests: ${error instanceof Error?error.message:String(error)}`);
+  }finally{
+   setRequestStorageReady(true);
+  }
+ },[]);
+
+ const returnedByLine=useMemo(()=>{
+  const quantities=new Map<string,number>();
+  for(const record of history)for(const line of record.lines)
+   quantities.set(line.original_sale_line_id,(quantities.get(line.original_sale_line_id)??0)+line.quantity);
+  return quantities;
+ },[history]);
+ const remaining=(line:ReturnSaleLine)=>Math.max(0,line.quantity-(returnedByLine.get(line.id)??0));
+ const returnableSales=useMemo(()=>sales.filter(sale=>sale.lines.some(line=>remaining(line)>0)),[sales,returnedByLine]);
+ const sale=returnableSales.find(row=>row.id===saleId);
+ const returnableLines=useMemo(()=>sale?.lines.filter(line=>remaining(line)>0)??[],[sale,returnedByLine]);
+ const selectedLine=returnableLines.find(line=>line.id===saleLineId);
+ const availableQuantity=selectedLine?remaining(selectedLine):0;
+ const catalogItem=items.find(item=>item.sku===selectedLine?.item_sku);
+ const restockable=catalogItem?.sku==='1017'||catalogItem?.category==='Beverage';
+ useEffect(()=>{
+  if(!returnableSales.some(row=>row.id===saleId)){
+   const firstSale=returnableSales[0];
+   setSaleId(firstSale?.id??'');
+   setSaleLineId(firstSale?.lines.find(line=>remaining(line)>0)?.id??'');
+   setQuantity(1);
+  }else if(!returnableLines.some(line=>line.id===saleLineId)){
+   setSaleLineId(returnableLines[0]?.id??'');
+   setQuantity(1);
+  }else if(selectedLine&&quantity>availableQuantity){
+   setQuantity(availableQuantity);
+  }
+ },[returnableSales,returnableLines,saleId,saleLineId,selectedLine,quantity,availableQuantity,returnedByLine]);
+
+ const chooseSale=(id:string)=>{
+  const chosen=returnableSales.find(row=>row.id===id);
+  setSaleId(id);
+  setSaleLineId(chosen?.lines.find(line=>remaining(line)>0)?.id??'');
+  setQuantity(1);
+  setLastResult(null);
+ };
+ const chooseLine=(id:string)=>{
+  setSaleLineId(id);
+  setQuantity(1);
+  setLastResult(null);
+ };
+ const submit=async()=>{
+  if(!requestStorageReady||requestStorageError){
+   setActionError(requestStorageError||'Pending request IDs are still being restored. Try again shortly.');
+   return;
+  }
+  if(!sale||!selectedLine||!Number.isFinite(quantity)||quantity<=0||quantity>availableQuantity){
+   setActionError('Choose a returnable sale line and a quantity within the remaining amount.');
+   return;
+  }
+  if(transactionType==='Exchange'&&(!replacementSku||!Number.isFinite(replacementQuantity)||replacementQuantity<=0)){
+   setActionError('Choose a replacement item and a positive quantity.');
+   return;
+  }
+  const effectiveDisposition=restockable?disposition:'Waste';
+  const replacementLines=transactionType==='Exchange'?[{sku:replacementSku,qty:replacementQuantity}]:null;
+  const details:ReturnRequestDetails={transactionType,saleLineId:selectedLine.id,quantity,reason,disposition:effectiveDisposition,replacementLines};
+  const signature=JSON.stringify(details);
+  const request=pendingRequests.current.get(signature)??{requestId:crypto.randomUUID(),signature,details};
+  pendingRequests.current.set(signature,request);
+  try{
+   sessionStorage.setItem(pendingStorageKey,JSON.stringify([...pendingRequests.current.values()]));
+  }catch(error){
+   setActionError(`Unable to persist the pending request ID; no RPC was sent: ${error instanceof Error?error.message:String(error)}`);
+   return;
+  }
+  setSubmitting(true);
+  setActionError('');
+  try{
+   const response=transactionType==='Exchange'
+    ?await supabase.rpc('process_exchange',{
+      p_request_id:request.requestId,p_sale_line_id:selectedLine.id,p_quantity:quantity,
+      p_reason_code:reason,p_disposition:effectiveDisposition,p_replacement_lines:replacementLines
+     })
+    :await supabase.rpc('process_return',{
+      p_request_id:request.requestId,p_sale_line_id:selectedLine.id,p_quantity:quantity,
+      p_reason_code:reason,p_disposition:effectiveDisposition
+     });
+   if(response.error)throw response.error;
+   if(!isReturnRpcResult(response.data)){
+    setActionError('The server response was unclear. Retry without changing the request details to safely reuse its request ID.');
+    return;
+   }
+   pendingRequests.current.delete(signature);
+   let requestStorageWarning='';
+   try{
+    sessionStorage.setItem(pendingStorageKey,JSON.stringify([...pendingRequests.current.values()]));
+   }catch(error){
+    pendingRequests.current.set(signature,request);
+    requestStorageWarning=` The RPC succeeded, but its pending request ID could not be cleared from session storage: ${error instanceof Error?error.message:String(error)}.`;
+   }
+   setLastResult(response.data);
+   const refreshed=await refreshData();
+   if(refreshed)flash(response.data.transaction_type==='Exchange'?'Exchange recorded with manual/simulated settlement. No payment was processed.':'Return recorded as a manual/simulated refund. No payment was processed.');
+   if(requestStorageWarning||!refreshed)setActionError(`${requestStorageWarning}${refreshed?'':' The transaction was recorded, but the page could not refresh. Use Retry to reload the Supabase data.'}`.trim());
+  }catch(error){
+   const message=error instanceof Error?error.message:String(error);
+   setActionError(`Unable to process ${transactionType.toLowerCase()}: ${message}. If the result is uncertain, retry with the same details to reuse the request ID.`);
+   flash(`Unable to process ${transactionType.toLowerCase()}: ${message}`);
+  }finally{
+   setSubmitting(false);
+  }
+ };
+ const returnedQuantity=history.reduce((sum,record)=>sum+record.lines.reduce((lineSum,line)=>lineSum+line.quantity,0),0);
+ const refunds=history.reduce((sum,record)=>sum+record.refund_total,0);
+ const restockCount=history.reduce((sum,record)=>sum+record.lines.filter(line=>line.disposition==='Restock').length,0);
+ const wasteCount=history.reduce((sum,record)=>sum+record.lines.filter(line=>line.disposition==='Waste').length,0);
+ const saleLabel=(id:string)=>sales.find(row=>row.id===id)?.receipt_no??id;
+ const itemName=(sku:string)=>items.find(item=>item.sku===sku)?.name??sku;
+ const settlementLabel=(amount:number)=>amount>0?`Amount due ${usd(amount)}`:amount<0?`Customer credit ${usd(-amount)}`:'No net amount due or credit';
+ return <>{loadError&&<div className="login-error" role="alert">{loadError}<button className="table-action" disabled={loading} onClick={()=>void refreshData()}>Retry</button></div>}
+  <div className="stats-grid compact-stats">
+   <StatCard label="Return / exchange records" value={String(history.length)} icon={RotateCcw} sub="Persisted in Supabase"/>
+   <StatCard label="Refunds recorded" value={usd(refunds)} icon={CircleDollarSign} accent="amber" sub="Manual / simulated accounting"/>
+   <StatCard label="Waste lines" value={String(wasteCount)} icon={AlertTriangle} accent="red" sub={`${returnedQuantity} units returned`}/>
+   <StatCard label="Restock lines" value={String(restockCount)} icon={PackageCheck} accent="green" sub="Inventory returned through RPC"/>
+  </div>
+  <div className="movement-layout">
+   <section className="panel movement-form">
+    <div className="form-section-title"><span className="step-index">01</span><div><h2>Process a return or exchange</h2><p>Select a completed Supabase sale line and record its reason and disposition.</p></div></div>
+    <div className="tab-switch">{(['Return','Exchange'] as const).map(value=><button type="button" key={value} className={transactionType===value?'selected':''} onClick={()=>{setTransactionType(value);setLastResult(null);}}>{value==='Return'?<RotateCcw size={15}/>:<ArrowLeftRight size={15}/>} {value}</button>)}</div>
+    <label className="field-label">Original receipt</label>
+    <select value={saleId} onChange={event=>chooseSale(event.target.value)} disabled={loading||!returnableSales.length}>
+     {returnableSales.map(row=><option key={row.id} value={row.id}>{row.receipt_no} · {row.location_name} · {dateLabel(row.created_at.slice(0,10))} · {usd(row.total)}</option>)}
+    </select>
+    {sale&&<><div className="return-sale-summary"><span>Original order total</span><b>{usd(sale.total)}</b><small>{sale.customer_id?'Customer sale':'Walk-in sale'} · {sale.location_name}</small></div>
+     <label className="field-label mt">Item to return</label>
+     <select value={saleLineId} onChange={event=>chooseLine(event.target.value)}>
+      {returnableLines.map(line=><option key={line.id} value={line.id}>{itemName(line.item_sku)} · sold {line.quantity} · {remaining(line)} remaining</option>)}
+     </select>
+     <div className="form-grid two"><div><label className="field-label">Return quantity · up to {availableQuantity}</label><input type="number" min="1" max={availableQuantity} step="any" value={quantity} onChange={event=>setQuantity(Number(event.target.value))}/></div>
+      <div><label className="field-label">Reason code</label><select value={reason} onChange={event=>setReason(event.target.value)}>{['Burnt','Undercooked','Wrong order','Cold on pickup','Damaged packaging','Customer changed mind'].map(value=><option key={value}>{value}</option>)}</select></div>
+     </div>
+     {transactionType==='Exchange'&&<div className="form-grid two"><div><label className="field-label">Replacement item</label><select value={replacementSku} onChange={event=>setReplacementSku(event.target.value)}>{items.filter(item=>item.price>0).map(item=><option key={item.sku} value={item.sku}>{item.name}</option>)}</select></div><div><label className="field-label">Replacement quantity</label><input type="number" min="1" step="any" value={replacementQuantity} onChange={event=>setReplacementQuantity(Number(event.target.value))}/></div></div>}
+     <label className="field-label mt">Disposition</label>
+     <div className="disposition-choice"><button type="button" className={!restockable||disposition==='Waste'?'selected':''} onClick={()=>setDisposition('Waste')}><AlertTriangle size={15}/><span><b>Waste</b><small>Returned item does not go back to stock</small></span></button><button type="button" disabled={!restockable} className={restockable&&disposition==='Restock'?'selected':''} onClick={()=>setDisposition('Restock')}><PackageCheck size={15}/><span><b>Restock</b><small>{restockable?'Add eligible sealed item back to stock':'Only sealed soda / ranch'}</small></span></button></div>
+     {(requestStorageError||actionError)&&<div className="login-error" role="alert">{requestStorageError||actionError}</div>}
+     {lastResult&&<div className="transfer-note"><CheckCircle2 size={16}/><span>{lastResult.transaction_type==='Exchange'?<>Exchange recorded. Manual/simulated settlement only; no payment was processed. {settlementLabel(lastResult.settlement_net)}.</>:<>Return recorded as a manual/simulated refund; no payment was processed. Refund recorded: {usd(lastResult.refund_total)}.</>}</span></div>}
+     <button className="button primary form-submit" disabled={loading||submitting||!requestStorageReady||!!requestStorageError||!availableQuantity||!Number.isFinite(quantity)||quantity<=0||quantity>availableQuantity||(transactionType==='Exchange'&&(!Number.isFinite(replacementQuantity)||replacementQuantity<=0))} onClick={()=>void submit()}>{submitting?'Processing…':transactionType==='Exchange'?'Process exchange':'Process return'} <ArrowUpRight size={16}/></button>
+    </>}
+    {!loading&&!sale&&<div className="empty-inline">{sales.length?'All completed sale quantities have already been returned.':'No completed sales are available in Supabase.'}</div>}
+    {loading&&!sale&&<div className="empty-inline">Loading completed sales and return history…</div>}
+   </section>
+   <section className="panel movement-side"><div className="panel-head"><div><h2>Recent returns and exchanges</h2><p>Persisted reason, disposition, refund, and settlement history</p></div></div>
+    <div className="movement-list">{history.length?history.slice(0,12).map(record=>record.lines.map(line=><div className="movement-item" key={`${record.id}-${line.id}`}><div className={`movement-icon ${line.disposition==='Restock'?'positive':'negative'}`}>{line.disposition==='Restock'?<PackageCheck size={15}/>:<AlertTriangle size={15}/>}</div><div className="movement-copy"><b>{itemName(line.item_sku)}</b><span>{record.transaction_type} · {saleLabel(record.original_sale_id)} · {line.reason_code} · {line.disposition}{record.transaction_type==='Exchange'?' · Manual/simulated settlement':''}</span></div><div className="movement-qty"><b>{usd(line.refund_total)}</b><span>{line.quantity} returned · {dateLabel(record.created_at.slice(0,10))}</span>{record.transaction_type==='Exchange'&&<small>{settlementLabel(record.settlement_net)}</small>}</div></div>)):loading?<div className="empty-inline">Loading persisted return history…</div>:<div className="empty-inline">No returns or exchanges have been recorded yet.</div>}</div>
+   </section>
+  </div>
+ </>;
 }
 
 export default App;
