@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {Check,Activity,Minus,AlertTriangle,Boxes,CircleDollarSign,Warehouse,RotateCcw,Printer,X,ScanLine,Plus,ArrowRight,ArrowLeftRight,PackageCheck,Pizza,CheckCircle2,ClipboardList,Clock3,ArrowUpRight} from 'lucide-react';
-import {BarcodeLabelsScreen} from './BarcodeLabels';
+import {BarcodeLabelsScreen} from './BarcodeLabels.tsx';
 import type {AppState,Location,PurchaseOrder,Item} from './domain';
 import {fmt} from './domain';
 import {supabase} from './supabase';

@@ -9,7 +9,7 @@ import { formatCardNumber, formatCardExpiry, updateFormattedPaymentInput } from 
 import { type FormEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, Bell, Boxes, Building2, CalendarClock, Check, ChevronDown, ClipboardList, CircleDollarSign, Cog, FileText, Gauge, Home, LogOut, PackageCheck, Pizza, Printer, Search, ShoppingCart, Truck, UserRound, Users, Warehouse, X, ScanLine, ArrowLeftRight, RotateCcw, AlertTriangle, Plus, Minus, ArrowUpRight, Clock3, Settings2, ShieldCheck, Menu, Activity, Sparkles, MapPin, CheckCircle2 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import {BarcodeLabelsScreen} from './BarcodeLabels';
+import {BarcodeLabelsScreen} from './BarcodeLabels.tsx';
 import { AppState, Item, LoyaltyCustomer, SaleInput, Ledger, Location, PurchaseOrder, Role, Sale, SalesOrder, applyAdjustment, applyReturn, applySale, cartStockIssue, businessDate, completeCustomerOrder, fulfillSalesOrder, saleBreakdown, applyTransfer, findLoyaltyCustomer, formatCustomerPhone, normalizeCustomerPhone, saveLoyaltyCustomer, loyaltySummary, customizedItem, sauceOptions, toppingOptions, toppingPortion, toppingCharge, avgDaily, completeProductionOrder, createProductionOrder, customers, eoq, fmt, inventory, issueProductionOrder, items, loadState, locations, maxMake, mrpRows, recipeCost, receivePO, reorderPoint, resetState, saveState, suppliers, today } from './domain';
 
 type Page='Dashboard'|'POS'|'Sales Orders'|'Returns'|'Inventory'|'Transfers & Counts'|'Barcode Labels'|'Production'|'Purchase Orders'|'Supplier Scorecards'|'Suppliers'|'Inventory Review'|'Help & Support'|'MRP'|'Financials'|'Reports'|'Settings'|'About';
