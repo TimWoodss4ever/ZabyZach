@@ -1,0 +1,15 @@
+package-lock.json
+package.json
+src/App.tsx
+src/BarcodeLabels.tsx
+src/ExistingDatabaseScreens.tsx
+src/PizzaGuide.tsx
+src/PurchasingScreens.tsx
+src/barcode.ts
+src/barcodeLabels.ts
+src/domain.ts
+src/helpContent.ts
+src/paymentFormatting.ts
+src/pickup.ts
+src/purchasing.ts
+src/style.css
