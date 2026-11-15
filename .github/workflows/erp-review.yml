@@ -1,7 +1,7 @@
 name: ERP branch checks (no deployment)
 on:
   push:
-    branches: [erp-updates, erp-updates-current]
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -30,3 +30,39 @@ jobs:
         run: npm run build
       - name: Run workflow and preservation checks
         run: node tests/run-all.mjs
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: erp_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test migrations and purchasing transactions in disposable PostgreSQL
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGDATABASE: erp_test
+          PGUSER: postgres
+          PGPASSWORD: local-ci-only
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
+          for migration in supabase/migrations/*.sql; do
+            if [ "$(basename "$migration")" = 202611150002_shared_purchasing.sql ]; then
+              psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-before-migration.sql
+            fi
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql -v ON_ERROR_STOP=1 -f tests/sql/shared-purchasing.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611150002_shared_purchasing.sql
+          psql -v ON_ERROR_STOP=1 -c "select public.ci_assert((select order_cost=35 from public.erp_purchasing_options),'repeat migration reset options'); select public.ci_assert((select count(*)=3 from public.erp_purchase_receipts),'repeat migration reset receipts'); select public.ci_assert((select count(*)=3 from public.erp_supplier_payments),'repeat migration reset payments');"
+          node tests/sql/purchasing-concurrency.mjs
