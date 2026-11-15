@@ -1,0 +1,7 @@
+{
+  "repository": "TimWoodss4ever/ZabyZach",
+  "main_commit": "315a5cd",
+  "supersedes_package": "Za-by-Zack-reviewed-code.zip",
+  "review_branch": "erp-shared-purchasing",
+  "reporting_update": "Baseline is the successfully deployed merged PR #1, commit 315a5cd; existing auth, POS, returns, reports, inventory, transfers and production are preserved. New purchasing uses additive RPCs."
+}

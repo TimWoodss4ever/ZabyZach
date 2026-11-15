@@ -1,0 +1,890 @@
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,3 +1,4 @@
++import {SharedPurchasingScreen} from './SharedPurchasingScreens';
+ import {ConnectedBarcodeLabels,ConnectedInventoryPage,ConnectedMovements,ConnectedProductionPage} from './ExistingDatabaseScreens';
+ import {supabase} from './supabase';
+ import type {Session} from '@supabase/supabase-js';
+@@ -66,7 +67,7 @@
+   <main className="main-area" inert={!collapsed}>
+    <header className="topbar"><div className="topbar-navigation"><button ref={menuToggleRef} className="nav-menu-button" onClick={()=>setCollapsed(!collapsed)} aria-label={collapsed?"Open navigation menu":"Collapse navigation menu"} aria-expanded={!collapsed} aria-controls="workspace-navigation"><Menu size={19}/><span>Menu</span></button><div className="crumb">Za by Zack <span>/</span> <b>{page}</b></div></div><div className="top-actions"><div className="global-search"><Search size={15}/><input placeholder="Search anything…" value={search} onChange={e=>setSearch(e.target.value)}/><kbd>⌘ K</kbd></div><button className="icon-button" aria-label="Notifications" onClick={()=>flash('You’re all caught up.')}><Bell size={17}/><i/></button><div className="top-divider"/><button className="user-menu" onClick={signOut}><span className="avatar">{role[0]}</span><span className="user-text"><b>{role}</b><small>{login}</small></span><LogOut size={15}/></button></div></header>
+    <div className="page-wrap"><div className="page-top"><div><div className="eyebrow">ZA BY ZACK <span>·</span> {page==='Dashboard'?new Date(today()+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}).toUpperCase():page.toUpperCase()}</div><h1>{page==='Dashboard'?'Good morning, Zack':page}</h1><p>{pageDescription(page)}</p></div>{page==='Dashboard'&&<div className="page-top-actions"><LocationSelect value={location} onChange={setLocation}/><button className="button primary" onClick={()=>setPage('POS')}><Plus size={16}/> New sale</button></div>}</div>
+-    {page==='Dashboard'&&<DashboardView state={state} location={location} setPage={navigatePage}/>}
++    {page==='Dashboard'&&<><div className="p-note">This dashboard summarizes browser planning history. Use Financials and Reports for shared sales, Inventory for shared stock, and Supplier Scorecards for shared purchasing performance.</div><DashboardView state={state} location={location} setPage={navigatePage}/></>}
+     {page==='POS'&&<POSView state={state} location={location} setLocation={setLocation} onCommit={mutate} flash={flash}/>}
+     {page==='Sales Orders'&&<OrdersView state={state} onCommit={mutate} flash={flash}/>}
+     {page==='Returns'&&<ReturnsPageView flash={flash}/>}
+@@ -74,12 +75,12 @@
+     {page==='Barcode Labels'&&<ConnectedBarcodeLabels state={state} flash={flash}/>}
+     {page==='Transfers & Counts'&&<ConnectedMovements flash={flash}/>}
+     {page==='Production'&&<ConnectedProductionPage flash={flash}/>}
+-    {role==='Manager'&&page==='Suppliers'&&<SuppliersScreenView state={state} onCommit={mutate} flash={flash}/> }
+-    {role==='Manager'&&page==='Inventory Review'&&<InventoryReviewScreenView state={state} onCommit={mutate} flash={flash}/> }
++    {role==='Manager'&&page==='Suppliers'&&<SharedPurchasingScreen view="Suppliers" flash={flash}/> }
++    {role==='Manager'&&page==='Inventory Review'&&<SharedPurchasingScreen view="Inventory Review" flash={flash}/> }
+     {page==='Help & Support'&&<HelpSupportScreen role={role} onNavigate={helpNavigate}/> }
+-    {role==='Manager'&&page==='Purchase Orders'&&<PurchaseOrdersScreenView state={state} onCommit={mutate} flash={flash} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
+-    {role==='Manager'&&page==='Supplier Scorecards'&&<SupplierScorecardsScreenView state={state} onCommit={mutate} flash={flash}/>}
+-    {page==='MRP'&&<MRPView state={state} onCommit={mutate} flash={flash}/>}
++    {role==='Manager'&&page==='Purchase Orders'&&<SharedPurchasingScreen view="Purchase Orders" flash={flash} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
++    {role==='Manager'&&page==='Supplier Scorecards'&&<SharedPurchasingScreen view="Supplier Scorecards" flash={flash}/>}
++    {page==='MRP'&&<><div className="p-note">This planning view uses browser sales-order demand. Create shared supplier orders in Inventory Review.</div><MRPView state={state} onCommit={()=>{navigatePage('Inventory Review');throw Error('Create shared purchase orders in Inventory Review.');}} flash={flash}/></>}
+     {page==='Financials'&&<FinancialsView state={state}/>}
+     {page==='Reports'&&<ReportsView state={state} location={location}/>}
+     {page==='Settings'&&<SettingsPageView state={state} onCommit={mutate} flash={flash}/>}
+@@ -401,9 +402,9 @@
+  const localWaste=state.ledger.filter(entry=>entry.type==='Waste').reduce((sum,entry)=>sum+Math.abs(entry.qty*entry.unitCost),0);
+  return <><div className="report-controls"><span className="computed-tag">{location} · Supabase net sales through {dateLabel(today())}</span><span className="computed-tag">Sales, discounts, returns and returned units from Supabase; inventory remains local</span></div><div className="reports-grid"><section className="panel report-chart"><div className="panel-head"><div><h2>Sales by day</h2><p>Net sales before tax, after discounts and returns · past 7 days</p></div><BarChart3 size={17} className="muted-icon"/></div><div className="chart-box tall"><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} margin={{top:8,right:8,left:-20,bottom:0}}><CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#edf1f5"/><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#8894a2'}}/><YAxis axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#8894a2'}} tickFormatter={value=>`$${Math.round(value/1000)}k`}/><Tooltip formatter={(value:any)=>usd(value)}/><Bar dataKey="net" fill="#1d67a6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div></section><section className="panel report-top"><div className="panel-head"><div><h2>Top-selling items</h2><p>Net units after returns · all recorded history</p></div><span className="computed-tag">Ranked</span></div><div className="top-items">{top.map(({item,units},index)=><div className="top-item" key={item.sku}><span className="top-rank">{String(index+1).padStart(2,'0')}</span><div className="top-item-copy"><b>{item.name}</b><small>{units.toLocaleString()} units</small></div><div className="top-bar"><i style={{width:`${top[0]?.units?units/top[0].units*100:0}%`}}/></div></div>)}</div></section><section className="panel report-low"><div className="panel-head"><div><h2>Low stock</h2><p>Browser-local demo inventory below calculated reorder point</p></div><AlertTriangle size={17} className="amber-text"/></div>{lows.length?lows.map(item=><div className="low-row" key={item.sku}><div><b>{item.name}</b><small>ROP {Math.ceil(reorderPoint(state,item)).toLocaleString()} {item.unit}</small></div><span className="text-red">{Math.round(inventory(state,item.sku)).toLocaleString()} on hand</span><b>{Math.ceil(eoq(state,item)/item.factor)} {item.pack}</b></div>):<div className="empty-inline">All local demo items are at or above their reorder points.</div>}</section><section className="panel report-waste"><div className="panel-head"><div><h2>Waste & quality</h2><p>Browser-local demo losses posted by reason code</p></div><RotateCcw size={17} className="muted-icon"/></div><div className="waste-summary"><b>{usd(localWaste)}</b><span>Local demo waste cost; not in Supabase P&amp;L</span></div><div className="reason-chips">{['Spoiled/Expired','Damaged','Cycle count correction'].map(reason=><div key={reason}><span>{reason}</span><b>{state.ledger.filter(entry=>entry.reason===reason).length}</b></div>)}</div></section></div></>;
+ }
+-function FinancialsPage({state}:{state:AppState}){return <><Financials state={state}/><details className="panel p-note"><summary><b>Browser project history and supplier bills</b></summary><p>These records are stored in this browser. They are separate from, and excluded from, the Supabase financial totals above.</p><SalesProfitLedger state={state}/><SupplierPayablesSummary state={state}/></details></>;}
++function FinancialsPage({state}:{state:AppState}){return <><Financials state={state}/><SharedPurchasingScreen view="Payables" flash={()=>{}}/><details className="panel p-note"><summary><b>Browser project history (separate demo records)</b></summary><p>These records are stored in this browser. They are separate from, and excluded from, the Supabase financial totals above.</p><SalesProfitLedger state={state}/></details></>;}
+ function SettingsPage({state,onCommit,flash}:{state:AppState;onCommit:(s:AppState)=>void;flash:(m:string)=>void}){const [tax,setTax]=useState(state.settings.tax*100);const [order,setOrder]=useState(state.settings.orderCost);const [holding,setHolding]=useState(state.settings.holding*100);const [safety,setSafety]=useState(state.settings.safetyDays);const [reviewDays,setReviewDays]=useState(state.settings.reviewDays??7);const save=()=>{if(![tax,order,holding,safety,reviewDays].every(Number.isFinite)||tax<0||tax>20||order<0||holding<=0||holding>100||safety<0||!Number.isInteger(safety)||reviewDays<1||!Number.isInteger(reviewDays)){flash('Use a holding rate above 0%, nonnegative costs, and whole-day safety/review intervals.');return;}onCommit({...state,settings:{...state.settings,tax:tax/100,orderCost:order,holding:holding/100,safetyDays:safety,reviewDays}});flash('Settings saved. Inventory Review calculations have updated.');};return <div className="settings-layout"><section className="panel settings-panel"><div className="panel-head"><div><h2>Operating assumptions</h2><p>These values drive checkout, reorder points, and EOQ calculations.</p></div><Settings2 size={18} className="muted-icon"/></div><div className="settings-grid"><div className="setting-row"><div><b>Sales tax rate</b><small>Applied to each completed ticket after discounts</small></div><div className="setting-control"><input type="number" step=".01" min="0" max="20" value={tax} onChange={e=>setTax(Number(e.target.value))}/><span>%</span></div></div><div className="setting-row"><div><b>Ordering cost per PO</b><small>Used as S in the EOQ calculation</small></div><div className="setting-control"><span>$</span><input type="number" min="0" value={order} onChange={e=>setOrder(Number(e.target.value))}/></div></div><div className="setting-row"><div><b>Annual holding cost</b><small>Percentage of current weighted average cost</small></div><div className="setting-control"><input type="number" min="0" max="100" value={holding} onChange={e=>setHolding(Number(e.target.value))}/><span>%</span></div></div><div className="setting-row"><div><b>Safety stock coverage</b><small>Additional average usage days in reorder point</small></div><div className="setting-control"><input type="number" min="0" max="90" value={safety} onChange={e=>setSafety(Number(e.target.value))}/><span>days</span></div></div></div><div className="setting-row"><div><b>Manual inventory review interval</b><small>How often the manager reviews purchase recommendations</small></div><div className="setting-control"><input type="number" min="1" max="90" value={reviewDays} onChange={e=>setReviewDays(Number(e.target.value))}/><span>days</span></div></div><div className="settings-formula"><b>Current formulas</b><span>Reorder point = average daily usage × (lead time + safety stock days)</span><span>EOQ = √(2 × annual demand × ordering cost ÷ annual holding cost)</span><span>Perishable cap = daily usage × shelf life</span></div><button className="button primary" onClick={save}>Save assumptions <Check size={15}/></button></section><section className="panel reason-panel"><div className="panel-head"><div><h2>Reason codes</h2><p>Recorded on stock loss and quality events</p></div></div><div className="reason-group"><b>Adjustments</b>{['Cycle count correction','Spoiled/Expired','Damaged','Dropped/Spilled','Theft/Unknown loss'].map(x=><span key={x}><Check size={13}/>{x}</span>)}</div><div className="reason-group"><b>Returns</b>{['Burnt','Undercooked','Wrong order','Cold on pickup','Damaged packaging','Customer changed mind'].map(x=><span key={x}><Check size={13}/>{x}</span>)}</div></section></div>}
+-function About({state,onCommit,flash,role}:{state:AppState;onCommit:(s:AppState)=>void;flash:(m:string)=>void;role:Role}){const integrity=items.filter(i=>!i.recipe||i.makeToStock).flatMap(i=>locations.map(l=>({sku:i.sku,loc:l,ledger:inventory(state,i.sku,l)})));const runIntegrity=()=>{const bad=integrity.filter(x=>!Number.isFinite(x.ledger));flash(bad.length?'Integrity check found a quantity issue.':'Integrity check passed: on-hand is calculated directly from ledger entries.');};const reset=()=>{if(role!=='Manager'){flash('Only a manager can reset demo data.');return;}if(window.confirm('Reset all demo transactions and reload the seeded data? This clears changes saved in this browser.')){const fresh=resetState();onCommit(fresh);flash('Demo data reset to the seeded opening state.');}};return <><div className="about-banner"><div className="about-brand-mark">Z<span>+</span></div><div><span className="eyebrow">SYSTEM OVERVIEW</span><h2>Za by Zack ERP</h2><p>A connected restaurant operations demo built for ERP coursework and live scenario walkthroughs.</p></div><span className="version-pill">DEMO · 1.0</span></div><div className="about-grid"><section className="panel about-card"><span className="about-icon blue"><Boxes size={18}/></span><h3>Integrated data model</h3><p>Nested bills of material connect sales, in-house dough production, component usage, stock balances, purchase receipts, and cost rollups. The inventory transaction ledger is the source used to calculate on-hand quantity.</p><div className="about-tags"><span>{items.length} items</span><span>{items.filter(i=>i.recipe).length} recipes</span><span>{locations.length} locations</span><span>{suppliers.length} suppliers</span></div></section><section className="panel about-card"><span className="about-icon green"><Activity size={18}/></span><h3>Calculation rules</h3><p>Menu-item cost rolls through nested bills of material, including the current in-house dough recipe. Reorder points use trailing demand and supplier lead time; EOQ includes editable ordering and holding costs and a shelf-life cap.</p><div className="about-tags"><span>Weighted average</span><span>Ledger-derived stock</span><span>Four-week dough + ingredient MRP</span></div></section><section className="panel about-card"><span className="about-icon purple"><ShieldCheck size={18}/></span><h3>Tools & libraries</h3><p>The demo UI uses React, TypeScript, Vite, Recharts, and Lucide icons. It generates Code 128 labels directly and uses the browser BarcodeDetector API for camera scans where supported. Purchasing includes supplier records, per-delivery receipts, invoices, payments, and review history. Pizza Guide uses built-in help and live app records. A Supabase schema and RPC migration is included as a starting backend.</p><div className="about-tags"><span>React</span><span>Recharts</span><span>Code 128</span><span>Supabase SQL</span></div></section><section className="panel about-card"><span className="about-icon amber"><Activity size={18}/></span><h3>Demo data & persistence</h3><p>This published demo stores its working dataset in this browser’s local storage, including at least six full calendar months of sample history and estimated daily counter sales and replenishments for recent trading days. Your orders and purchases are added to the same records; refreshing does not replace them. These browser records are separate from the connected Inventory, Transfers & Counts, and Production screens. They are not synchronized across devices.</p><div className="about-tags"><span>Browser-local demo</span><span>{state.ledger.length.toLocaleString()} ledger rows</span><span>Multi-tab sync</span></div></section></div><section className="panel admin-tools"><div><span className="eyebrow">MANAGER TOOLS</span><h2>Verify and restore demo data</h2><p>Run the stock balance check or return the browser demo to its original scenario.</p></div><div className="admin-actions"><button className="button secondary" onClick={runIntegrity}><ShieldCheck size={15}/> Run integrity check</button><button className="button danger-outline" onClick={reset}><RotateCcw size={15}/> Reset demo data</button></div></section><div className="about-note"><AlertTriangle size={16}/><span>Supabase sign-in, POS checkout, Returns & Exchanges, Inventory, Transfers & Counts, and Production use your existing database connections. Sales and returns reporting now reads Supabase. Online customer checkout, purchasing, supplier scorecards, local inventory valuations, and the browser history still need a shared data adapter. POS reward redemption and customized server checkout remain unsupported in the current database integration.</span></div></>}
++function About({state,onCommit,flash,role}:{state:AppState;onCommit:(s:AppState)=>void;flash:(m:string)=>void;role:Role}){const integrity=items.filter(i=>!i.recipe||i.makeToStock).flatMap(i=>locations.map(l=>({sku:i.sku,loc:l,ledger:inventory(state,i.sku,l)})));const runIntegrity=()=>{const bad=integrity.filter(x=>!Number.isFinite(x.ledger));flash(bad.length?'Integrity check found a quantity issue.':'Integrity check passed: on-hand is calculated directly from ledger entries.');};const reset=()=>{if(role!=='Manager'){flash('Only a manager can reset demo data.');return;}if(window.confirm('Reset all demo transactions and reload the seeded data? This clears changes saved in this browser.')){const fresh=resetState();onCommit(fresh);flash('Demo data reset to the seeded opening state.');}};return <><div className="about-banner"><div className="about-brand-mark">Z<span>+</span></div><div><span className="eyebrow">SYSTEM OVERVIEW</span><h2>Za by Zack ERP</h2><p>A connected restaurant operations demo built for ERP coursework and live scenario walkthroughs.</p></div><span className="version-pill">DEMO · 1.0</span></div><div className="about-grid"><section className="panel about-card"><span className="about-icon blue"><Boxes size={18}/></span><h3>Integrated data model</h3><p>Nested bills of material connect sales, in-house dough production, component usage, stock balances, purchase receipts, and cost rollups. The inventory transaction ledger is the source used to calculate on-hand quantity.</p><div className="about-tags"><span>{items.length} items</span><span>{items.filter(i=>i.recipe).length} recipes</span><span>{locations.length} locations</span><span>{suppliers.length} suppliers</span></div></section><section className="panel about-card"><span className="about-icon green"><Activity size={18}/></span><h3>Calculation rules</h3><p>Menu-item cost rolls through nested bills of material, including the current in-house dough recipe. Reorder points use trailing demand and supplier lead time; EOQ includes editable ordering and holding costs and a shelf-life cap.</p><div className="about-tags"><span>Weighted average</span><span>Ledger-derived stock</span><span>Four-week dough + ingredient MRP</span></div></section><section className="panel about-card"><span className="about-icon purple"><ShieldCheck size={18}/></span><h3>Tools & libraries</h3><p>The demo UI uses React, TypeScript, Vite, Recharts, and Lucide icons. It generates Code 128 labels directly and uses the browser BarcodeDetector API for camera scans where supported. Purchasing includes supplier records, per-delivery receipts, invoices, payments, and review history. Pizza Guide uses built-in help and live app records. A Supabase schema and RPC migration is included as a starting backend.</p><div className="about-tags"><span>React</span><span>Recharts</span><span>Code 128</span><span>Supabase SQL</span></div></section><section className="panel about-card"><span className="about-icon amber"><Activity size={18}/></span><h3>Demo data & persistence</h3><p>This published demo stores its working dataset in this browser’s local storage, including at least six full calendar months of sample history and estimated daily counter sales and replenishments for recent trading days. Your orders and purchases are added to the same records; refreshing does not replace them. These browser records are separate from the connected Inventory, Transfers & Counts, and Production screens. They are not synchronized across devices.</p><div className="about-tags"><span>Browser-local demo</span><span>{state.ledger.length.toLocaleString()} ledger rows</span><span>Multi-tab sync</span></div></section></div><section className="panel admin-tools"><div><span className="eyebrow">MANAGER TOOLS</span><h2>Verify and restore demo data</h2><p>Run the stock balance check or return the browser demo to its original scenario.</p></div><div className="admin-actions"><button className="button secondary" onClick={runIntegrity}><ShieldCheck size={15}/> Run integrity check</button><button className="button danger-outline" onClick={reset}><RotateCcw size={15}/> Reset demo data</button></div></section><div className="about-note"><AlertTriangle size={16}/><span>Supabase sign-in, POS checkout, Returns & Exchanges, Inventory, Transfers & Counts, and Production use your existing database connections. Sales and returns reporting now reads Supabase. Purchasing, supplier scorecards, payments, and inventory reviews now use shared Supabase records. Online customer checkout, local inventory valuations, and browser history remain separate demo records. POS reward redemption and customized server checkout remain unsupported in the current database integration.</span></div></>}
+ 
+ 
+ const BarcodeLabelsView=memo(BarcodeLabelsScreen);
+--- /dev/null
++++ b/src/SharedPurchasingScreens.tsx
+@@ -0,0 +1,123 @@
++import {useCallback,useEffect,useRef,useState} from 'react';
++import type {FormEvent,ReactNode} from 'react';
++import {supabase} from './supabase';
++import {fmt} from './domain';
++import {formatSupplierPercent,formatSupplierScore} from './purchasing';
++import {dateOnly,invoiceOwedShared,invoicePaidShared,poLines,purchasingMetrics,purchasingRule,readPurchasingSnapshot,searchSharedOrders} from './sharedPurchasing';
++import type {PurchasingSnapshot,SharedAudit,SharedInvoice,SharedItem,SharedLine,SharedPO,SharedSupplier} from './sharedPurchasing';
++type View='Suppliers'|'Purchase Orders'|'Supplier Scorecards'|'Inventory Review'|'Payables';
++type Request={id:string;action:string;payload:Record<string,unknown>;userId:string};
++const pendingKey=(userId:string)=>'zbyzack-shared-purchase-request:'+import.meta.env.VITE_SUPABASE_URL+':'+userId;
++function useSharedPurchasing(){
++ const [data,setData]=useState<PurchasingSnapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[stale,setStale]=useState(false),[pending,setPending]=useState<Request|null>(null);
++ const pendingRef=useRef<Request|null>(null),busyRef=useRef(false),generation=useRef(0),mounted=useRef(true);
++ const load=useCallback(async()=>{const n=++generation.current;try{
++  const result=await supabase.rpc('erp_purchasing_snapshot');if(result.error)throw Error(result.error.message);
++  const snapshot=readPurchasingSnapshot(result.data);if(!mounted.current||n!==generation.current)return false;
++  const text=localStorage.getItem(pendingKey(snapshot.userId));const saved=text?JSON.parse(text) as Request:null;
++  if(saved&&(saved.userId!==snapshot.userId||typeof saved.id!=='string'||typeof saved.action!=='string'||!saved.payload))throw Error('Pending save information is invalid. Keep this browser state and contact your project manager.');
++  pendingRef.current=saved;setPending(saved);setData(snapshot);setStale(false);setError('');return true;
++ }catch(e){if(mounted.current&&n===generation.current){setStale(true);setError(e instanceof Error?e.message:'Unable to load shared purchasing.');}return false;}},[]);
++ useEffect(()=>{mounted.current=true;void load();const refresh=()=>{if(!busyRef.current&&document.visibilityState==='visible')void load();};window.addEventListener('focus',refresh);const timer=setInterval(refresh,15000);return()=>{mounted.current=false;generation.current++;clearInterval(timer);window.removeEventListener('focus',refresh);};},[load]);
++ const execute=async(request:Request)=>{
++  if(busyRef.current)return false;busyRef.current=true;setBusy(true);setError('');
++  try{
++   const result=await supabase.rpc('erp_purchasing_write',{p_request:request.id,p_action:request.action,p_payload:request.payload});
++   if(result.error){
++    // SQL errors mean the transaction rolled back; a network interruption is uncertain.
++    if(/^(?:22|23|42|P0001)/.test((result.error as {code?:string}).code??'')){localStorage.removeItem(pendingKey(request.userId));pendingRef.current=null;setPending(null);}
++    throw Error(result.error.message);
++   }
++   if(!result.data||typeof result.data!=='object')throw Error('Save confirmation was incomplete. Retry the same pending save.');
++   localStorage.removeItem(pendingKey(request.userId));pendingRef.current=null;setPending(null);
++   window.dispatchEvent(new Event('erp-shared-purchasing-updated'));
++   const refreshed=await load();if(!refreshed)setError('Saved to Supabase. Refresh shared data before making another change.');
++   return true;
++  }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'Unable to confirm save. Retry the pending save.');return false;}
++  finally{busyRef.current=false;if(mounted.current)setBusy(false);}
++ };
++ const save=async(action:string,payload:Record<string,unknown>)=>{
++  if(!data||stale||busyRef.current||pendingRef.current)return false;
++  const request:Request={id:crypto.randomUUID(),userId:data.userId,action,payload};
++  try{localStorage.setItem(pendingKey(data.userId),JSON.stringify(request));}catch{setError('Browser storage is unavailable. Enable it before posting a delivery or payment so interrupted saves can be retried safely.');return false;}
++  pendingRef.current=request;setPending(request);return execute(request);
++ };
++ return{data,error,busy,stale,pending,load,save,retry:()=>pendingRef.current?execute(pendingRef.current):Promise.resolve(false)};
++}
++function Badge({value}:{value:string}){return <span className={'p-badge '+(['Keep','Received','Closed','Paid'].includes(value)?'p-good':['Replace','Overdue'].includes(value)?'p-bad':'')}>{value}</span>;}
++const displayDate=(v:string|null|undefined)=>v?new Date(dateOnly(v)+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
++function Dialog({title,children,onClose}:{title:string;children:ReactNode;onClose:()=>void}){return <div className="p-modal-backdrop"><section className="p-modal p-modal-wide" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button type="button" className="p-x" aria-label="Close" onClick={onClose}>×</button></header>{children}</section></div>;}
++function Field({label,name,value='',type='text',required=false,min,step,max}:{label:string;name:string;value?:string|number;type?:string;required?:boolean;min?:string|number;max?:string|number;step?:string|number}){return <label>{label}<input name={name} type={type} defaultValue={value} required={required} min={min} max={max} step={step}/></label>;}
++const fields=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();return new FormData(e.currentTarget);};
++const text=(f:FormData,key:string)=>String(f.get(key)??'').trim();
++const num=(f:FormData,key:string)=>Number(f.get(key));
++type Modal={kind:'supplier';supplier?:SharedSupplier}|{kind:'new';supplierId?:string;sku?:string}|{kind:'receive'|'detail'|'correct';po:SharedPO}|{kind:'pay';invoice:SharedInvoice}|{kind:'review';supplier:SharedSupplier}|{kind:'options'};
++type Save=(action:string,payload:Record<string,unknown>)=>Promise<boolean>;
++
++export function SharedPurchasingScreen({view,flash,onOpenLabels}:{view:View;flash:(message:string)=>void;onOpenLabels?:()=>void}){
++ const api=useSharedPurchasing(),d=api.data;const [modal,setModal]=useState<Modal|null>(null),[query,setQuery]=useState(''),[status,setStatus]=useState('All'),[tab,setTab]=useState('Orders'),[limit,setLimit]=useState(30),[selected,setSelected]=useState<Record<string,number>>({}),[destination,setDestination]=useState('');
++ const locked=api.busy||!!api.pending||api.stale;
++ const save:Save=async(action,payload)=>{const okay=await api.save(action,payload);if(okay){setModal(null);flash('Saved to Supabase. Shared purchasing measures refreshed.');}return okay;};
++ if(!d)return <section className="panel"><h2>Shared purchasing</h2>{api.error?<><p className="p-error" role="alert">{api.error}</p><p>Shared records are unavailable. Check your connection and manager access. This page does not substitute browser demo records.</p><button className="button secondary" onClick={()=>void api.load()}>Retry shared connection</button></>:<p>Loading shared purchase order history…</p>}</section>;
++ const supplierName=(id:string)=>d.suppliers.find(s=>s.id===id)?.name??id,item=(sku:string)=>d.items.find(i=>i.sku===sku),poLabel=(id:string)=>d.orders.find(p=>p.id===id)?.po_no??id,locationName=(id:string)=>d.locations.find(l=>l.id===id)?.name??id;
++ const open=(m:Modal)=>setModal(m);
++ const orderLookup=searchSharedOrders(d,query),orders=orderLookup.orders.filter(p=>status==='All'||p.status===status);
++ const purchased=d.items.filter(i=>i.active&&!i.made),rules=purchased.map(i=>({item:i,rule:purchasingRule(d,i)})).sort((a,b)=>Number(b.rule.belowROP)-Number(a.rule.belowROP)||a.item.name.localeCompare(b.item.name));
++ const totalOwed=d.invoices.reduce((n,i)=>n+invoiceOwedShared(d,i),0);
++ const afterDate=(s:string,n:number)=>{const date=new Date(s+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+n);return date.toISOString().slice(0,10);};
++ const draftReview=async()=>{
++  const grouped=new Map<string,{sku:string;qty:number;price:number}[]>();
++  for(const [sku,qty]of Object.entries(selected)){if(!(qty>0))continue;const i=item(sku);if(!i?.supplier_id||!d.suppliers.find(s=>s.id===i.supplier_id)?.erp_active){flash('Assign an active supplier to '+(i?.name??sku));return;}
++   grouped.set(i.supplier_id,[...(grouped.get(i.supplier_id)??[]),{sku,qty,price:Number((Number(i.unit_cost)*Number(i.conversion_factor)).toFixed(2))}]);}
++  if(!grouped.size)return;
++  const locationId=destination||d.locations[0]?.id;
++  if(await save('create_orders',{orders:[...grouped].map(([supplierId,lines])=>({supplierId,lines,locationId,date:d.today,send:false,notes:'Created during shared inventory review'}))}))setSelected({});
++ };
++ return <div className="p-workspace"><div className="p-toolbar"><span className="computed-tag">Supabase · shared records</span><span>Refreshes after saves and every 15 seconds</span><button className="button secondary" disabled={api.busy} onClick={()=>void api.load()}>Refresh</button></div>
++ {api.error&&<p className="p-error" role="alert">{api.error}</p>}
++ {api.pending&&<div className="p-note"><b>A save is awaiting confirmation.</b><p>Retry this same request to confirm it without duplicating deliveries or payments.</p><button className="button primary" disabled={api.busy} onClick={()=>void api.retry()}>Retry pending save</button></div>}
++ {view==='Suppliers'&&<><div className="p-intro"><div><h2>Suppliers</h2><p>Contacts, future delivery promises, payment terms, and item assignments saved in Supabase.</p></div><button className="button primary" disabled={locked} onClick={()=>open({kind:'supplier'})}>+ Add supplier</button></div><input aria-label="Find supplier" placeholder="Find supplier…" value={query} onChange={e=>setQuery(e.target.value)}/><div className="p-supplier-grid">{d.suppliers.filter(s=>(s.name+' '+s.contact_name+' '+s.email).toLowerCase().includes(query.toLowerCase())).map(s=><article className="panel p-supplier-card" key={s.id}><h3>{s.name}</h3><p>{s.contact_name}<br/>{s.email}<br/>{s.phone}</p><p>{s.address}</p><p>Quoted {s.quoted_lead_days} days · Net {s.payment_terms_days} · {s.erp_active?'Active':'Archived'}</p><p>{s.erp_notes}</p><button className="button secondary" disabled={locked} onClick={()=>open({kind:'supplier',supplier:s})}>Edit supplier</button></article>)}</div>
++ <details className="panel p-spaced"><summary><b>Assign purchased items to suppliers</b></summary><div className="p-assign-list">{purchased.map(i=><label key={i.sku}><span>{i.name}<small>{i.sku} · {i.purchase_unit}</small></span><select disabled={locked} value={i.supplier_id??''} onChange={e=>void save('assign_supplier',{sku:i.sku,supplierId:e.target.value,previousSupplierId:i.supplier_id})}><option value="" disabled>Choose supplier</option>{d.suppliers.filter(s=>s.erp_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>)}</div></details></>}
++ {(view==='Purchase Orders'||view==='Payables')&&<><div className="p-intro"><div><h2>{view==='Payables'?'Supplier bills & payments':'Purchase orders'}</h2><p>Amount owed: <b>{fmt(totalOwed)}</b>. Receiving posts inventory and an invoice together.</p></div>{view==='Purchase Orders'&&<button className="button primary" disabled={locked||!d.suppliers.some(s=>s.erp_active)} onClick={()=>open({kind:'new'})}>+ New purchase order</button>}</div>
++ {view==='Purchase Orders'&&<div className="p-tabs">{['Orders','Deliveries','Invoices & payments'].map(t=><button key={t} className={tab===t?'active':''} onClick={()=>{setTab(t);setLimit(30);}}>{t}</button>)}{onOpenLabels&&<button onClick={onOpenLabels}>Barcode labels</button>}</div>}
++ {view==='Purchase Orders'&&tab==='Orders'&&<><div className="p-toolbar"><input aria-label="Scan barcode or search orders" placeholder="Scan / enter SKU, barcode, item, supplier, or PO…" value={query} onChange={e=>{setQuery(e.target.value);setLimit(30);}}/><select aria-label="Order status" value={status} onChange={e=>setStatus(e.target.value)}>{['All','Draft','Order Sent','Partially Received','Received','Closed'].map(s=><option key={s}>{s}</option>)}</select></div>
++ {orderLookup.items.map(i=><div className="p-note" key={i.sku}><b>{i.name}</b> · {i.sku} · {i.barcode} · {i.purchase_unit} <button className="table-action" disabled={locked||i.made||!i.supplier_id} onClick={()=>open({kind:'new',supplierId:i.supplier_id??undefined,sku:i.sku})}>New PO for this item</button></div>)}
++ <section className="panel"><div className="table-scroll"><table><thead><tr><th>PO / SUPPLIER</th><th>DESTINATION</th><th>EXPECTED / ACTUAL</th><th>STATUS</th><th>ORDER VALUE</th><th>ACTIONS</th></tr></thead><tbody>{orders.slice(0,limit).map(p=><tr key={p.id}><td><button className="p-text-button" onClick={()=>open({kind:'detail',po:p})}>{p.po_no}</button><small className="cell-sub">{supplierName(p.supplier_id)}</small>{query&&poLines(d,p.id).filter(l=>orderLookup.items.some(i=>i.sku===l.item_sku)).map(l=><small className="cell-sub" key={l.id}>{item(l.item_sku)?.name}: {l.quantity_received_purchase} / {l.quantity_purchase} {item(l.item_sku)?.purchase_unit}</small>)}</td><td>{locationName(p.ship_to_location_id)}</td><td>{displayDate(p.expected_at)}<small className="cell-sub">Actual {displayDate(p.received_at)}</small>{dateOnly(p.expected_at)<d.today&&['Order Sent','Partially Received'].includes(p.status)&&<Badge value="Overdue"/>}</td><td><Badge value={p.status}/></td><td>{fmt(poLines(d,p.id).reduce((n,l)=>n+Number(l.quantity_purchase)*Number(l.unit_price_purchase),0))}<small className="cell-sub">Before invoice tax</small></td><td><div className="p-row-actions">{p.status==='Draft'&&<button className="table-action" disabled={locked} onClick={()=>void save('send_order',{id:p.id,revision:p.erp_revision})}>Issue order</button>}{['Order Sent','Partially Received'].includes(p.status)&&<button className="table-action" disabled={locked} onClick={()=>open({kind:'receive',po:p})}>Receive delivery</button>}{p.status==='Received'&&<button className="table-action" disabled={locked} onClick={()=>void save('close_order',{id:p.id,revision:p.erp_revision})}>Close order</button>}<button className="table-action" onClick={()=>open({kind:'detail',po:p})}>Details / supplier copy</button></div></td></tr>)}</tbody></table></div>{!orders.length&&<p className="p-empty">No matching shared purchase orders.</p>}</section>{orders.length>limit&&<button className="button secondary" onClick={()=>setLimit(limit+30)}>Show 30 more</button>}</>}
++ {view==='Purchase Orders'&&tab==='Deliveries'&&<section className="panel"><h3>Recorded deliveries</h3><p>Legacy totals remain on their original POs. This list shows deliveries posted through shared purchasing.</p><div className="table-scroll"><table><thead><tr><th>DATE / PO</th><th>LOCATION</th><th>ARRIVED</th><th>DELIVERY</th></tr></thead><tbody>{[...d.receipts].reverse().slice(0,limit).map(r=><tr key={r.id}><td>{displayDate(r.received_on)}<small className="cell-sub">{poLabel(r.purchase_order_id)}</small></td><td>{locationName(r.location_id)}</td><td>{d.receiptLines.filter(l=>l.receipt_id===r.id).map(l=>{const pol=d.lines.find(x=>x.id===l.purchase_order_line_id);return <p key={l.id}>{pol?item(pol.item_sku)?.name:'Item'}: {l.quantity_purchase} purchase units</p>;})}</td><td>{r.final_delivery?'Final delivery':'Partial delivery'}</td></tr>)}</tbody></table></div>{d.receipts.length>limit&&<button className="button secondary" onClick={()=>setLimit(limit+30)}>Show more</button>}</section>}
++ {(view==='Payables'||tab==='Invoices & payments')&&<><p className="p-note">Invoice due dates and payments are shared in Supabase. Recording a payment tracks settlement; it does not transfer money or subtract inventory cost from profit again.</p><section className="panel"><div className="table-scroll"><table><thead><tr><th>INVOICE / PO</th><th>SUPPLIER</th><th>DUE</th><th>AMOUNT</th><th>PAID</th><th>OWED</th><th></th></tr></thead><tbody>{d.invoices.slice(0,limit).map(i=><tr key={i.id}><td>{i.id.slice(0,8)}<small className="cell-sub">{poLabel(i.purchase_order_id)}</small></td><td>{supplierName(d.orders.find(p=>p.id===i.purchase_order_id)?.supplier_id??'')}</td><td>{displayDate(i.due_at)}<small className="cell-sub"><Badge value={invoiceOwedShared(d,i)<=.005?'Paid':i.due_at<d.today?'Overdue':'Due'}/></small></td><td>{fmt(Number(i.amount))}</td><td>{fmt(invoicePaidShared(d,i))}</td><td>{fmt(invoiceOwedShared(d,i))}</td><td>{invoiceOwedShared(d,i)>.005&&<button className="table-action" disabled={locked} onClick={()=>open({kind:'pay',invoice:i})}>Record payment</button>}</td></tr>)}</tbody></table></div>{d.invoices.length>limit&&<button className="button secondary" onClick={()=>setLimit(limit+30)}>Show more invoices</button>}</section><details className="panel p-spaced"><summary>Shared payment history</summary>{[...d.payments].reverse().map(p=><p key={p.id}>{displayDate(p.paid_on)} · {p.reference} · {fmt(Number(p.amount))} · Invoice {p.invoice_id.slice(0,8)}</p>)}</details></>}
++ </>}
++ {view==='Supplier Scorecards'&&<><h2>Supplier scorecards</h2><p>Calculated from shared purchase orders, received quantities, invoices, and payments. Browser demo history is excluded.</p><details className="p-note"><summary>How the calculated rating works</summary><p>50% on-time delivery + 30% quantity fill rate + 20% lead-time reliability. Missing measures are omitted and weights normalized. Keep ≥80; Watch ≥60; Replace below 60. Final short deliveries reduce fill rate immediately. A small order may only slightly change a large historical average; the last order is also shown separately. Quoted promises are retained on each new PO. Legacy quoted lead is inferred from its ordered and expected dates; legacy payment terms use the supplier terms until frozen by a new transaction.</p></details><section className="panel"><div className="table-scroll"><table><thead><tr><th>SUPPLIER</th><th>CALCULATED RATING</th><th>ON TIME</th><th>ACTUAL / QUOTED</th><th>FILL RATE</th><th>OWED / PAST DUE</th><th>NEXT DUE</th><th></th></tr></thead><tbody>{d.suppliers.map(s=>{const m=purchasingMetrics(d,s.id),review=d.reviews.find(r=>r.supplier_id===s.id);return <tr key={s.id}><td><b>{s.name}</b><small className="cell-sub">{m.orders.length} issued POs · {s.contact_name}</small><small className="cell-sub">{s.email} · {s.phone}</small></td><td><Badge value={m.rating}/><small className="cell-sub">{formatSupplierScore(m.score)} / 100</small>{review&&<small className="cell-sub">Manager: {review.decision}</small>}</td><td>{formatSupplierPercent(m.onTime)}</td><td><span className={m.actualLead!==null&&m.actualLead>m.quotedLead?'text-red':''}>{m.actualLead===null?'—':m.actualLead.toFixed(1)+' days'}</span><small className="cell-sub">Quoted {m.quotedLead.toFixed(1)} days</small></td><td>{formatSupplierPercent(m.fillRate)}<small className="cell-sub">{m.received.toFixed(2)} / {m.ordered.toFixed(2)} purchase units</small>{m.shortOrders>0&&<small className="cell-sub text-red">{m.shortOrders} final short orders</small>}</td><td>{fmt(m.owed)}<small className="cell-sub text-red">Past due {fmt(m.overdue)}</small></td><td>{displayDate(m.nextDue)}</td><td><button className="table-action" disabled={locked} onClick={()=>open({kind:'review',supplier:s})}>Review & update</button></td></tr>;})}</tbody></table></div></section></>}
++ {view==='Inventory Review'&&<><div className="p-intro"><div><h2>Shared inventory review</h2><p>On-hand quantities come from the shared inventory ledger. Usage is actual Sale and Production Issue consumption over the last 180 days; no sample-demand fallback.</p></div><button className="button secondary" disabled={locked} onClick={()=>open({kind:'options'})}>Ordering options</button></div><p className="p-note">EOQ balances ordering and holding cost. Reorder point covers lead time plus safety days. Suggested packs also consider open orders, the review interval, and shelf life. You approve every draft.</p>
++ <section className="panel"><div className="table-scroll"><table><thead><tr><th></th><th>ITEM / SUPPLIER</th><th>ON HAND / ON ORDER</th><th>USAGE / DAY</th><th>REORDER POINT</th><th>EOQ</th><th>PURCHASE UNITS</th></tr></thead><tbody>{rules.map(({item:i,rule:r})=><tr key={i.sku}><td><input type="checkbox" aria-label={'Select '+i.name} disabled={locked} checked={i.sku in selected} onChange={e=>setSelected(v=>{const next={...v};if(e.target.checked)next[i.sku]=r.packs||1;else delete next[i.sku];return next;})}/></td><td>{i.name}<small className="cell-sub">{r.supplier?.name??'Assign supplier'}</small>{r.belowROP&&<Badge value="Reorder"/>}</td><td>{r.onHand.toFixed(1)} / {r.onOrder.toFixed(1)} {i.base_unit}</td><td>{r.daily.toFixed(2)}</td><td>{r.rop.toFixed(1)}</td><td>{r.eoq.toFixed(1)} {i.base_unit}</td><td><input aria-label={'Order packs for '+i.name} className="p-small-number" type="number" min="0" step="1" disabled={locked} value={selected[i.sku]??r.packs} onChange={e=>setSelected(v=>({...v,[i.sku]:Number(e.target.value)}))}/><small className="cell-sub">{i.purchase_unit} · {i.conversion_factor} {i.base_unit} each</small>{r.packExceedsShelf&&<small className="cell-sub text-red">Pack exceeds shelf-life target; review quantity.</small>}</td></tr>)}</tbody></table></div><div className="p-toolbar"><select aria-label="Draft PO destination" value={destination||d.locations[0]?.id||''} onChange={e=>setDestination(e.target.value)}>{d.locations.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</select><button className="button primary" disabled={locked||!Object.values(selected).some(q=>q>0)} onClick={()=>void draftReview()}>Create grouped draft POs</button></div></section>
++ <form className="panel p-form p-spaced" onSubmit={e=>{const f=fields(e);void save('inventory_review',{notes:text(f,'notes')});}}><h3>Finish review</h3><p>Last review: {displayDate(d.inventoryReviews[0]?.created_at)} · Next due: {d.inventoryReviews[0]?displayDate(afterDate(dateOnly(d.inventoryReviews[0].created_at),d.options.review_days)):'Now'}</p><fieldset disabled={locked}><label>Review notes<textarea name="notes"/></label><button className="button primary">Complete inventory review</button></fieldset></form></>}
++ {modal&&<Dialog title={modal.kind==='supplier'?'Supplier details':modal.kind==='new'?'Create purchase order':modal.kind==='pay'?'Record supplier payment':modal.kind==='review'?'Supplier scorecard · '+modal.supplier.name:modal.kind==='options'?'Shared ordering options':modal.po.po_no} onClose={()=>{if(!api.busy)setModal(null);}}>
++ {api.error&&<p className="p-error" role="alert">{api.error}</p>}{api.pending&&<button className="button secondary" disabled={api.busy} onClick={()=>void api.retry()}>Retry pending save</button>}
++ <fieldset disabled={locked} style={{border:0,padding:0,margin:0,minWidth:0}}>
++ {modal.kind==='supplier'&&<form className="p-form" onSubmit={e=>{const f=fields(e),s=modal.supplier;void save('save_supplier',{id:s?.id??'',revision:s?.erp_revision,name:text(f,'name'),contact:text(f,'contact'),email:text(f,'email'),phone:text(f,'phone'),address:text(f,'address'),lead:num(f,'lead'),terms:num(f,'terms'),active:f.get('active')==='on',notes:text(f,'notes')});}}><Field label="Supplier name" name="name" value={modal.supplier?.name} required/><div className="p-form-grid"><Field label="Contact" name="contact" value={modal.supplier?.contact_name??''}/><Field label="Email" name="email" type="email" value={modal.supplier?.email??''}/><Field label="Phone" name="phone" value={modal.supplier?.phone??''}/><Field label="Address" name="address" value={modal.supplier?.address??''}/><Field label="Quoted lead · whole days" name="lead" type="number" value={modal.supplier?.quoted_lead_days??3} min={0} max={365} step={1} required/><Field label="Payment terms · whole days" name="terms" type="number" value={modal.supplier?.payment_terms_days??30} min={0} max={365} step={1} required/></div><label className="p-check"><input type="checkbox" name="active" defaultChecked={modal.supplier?.erp_active??true}/>Active supplier</label><label>Notes<textarea name="notes" defaultValue={modal.supplier?.erp_notes}/></label><p>Changes apply to future orders. Existing PO promises stay intact.</p><button className="button primary">Save supplier</button></form>}
++ {modal.kind==='new'&&<NewPOForm d={d} initialSupplier={modal.supplierId} initialSku={modal.sku} save={save}/>}
++ {modal.kind==='receive'&&<form className="p-form" onKeyDown={e=>{const input=e.target as HTMLInputElement;if(e.key!=='Enter'||input.name!=='scan')return;e.preventDefault();const q=input.value.trim().toLowerCase();const line=poLines(d,modal.po.id).find(l=>l.item_sku.toLowerCase()===q||item(l.item_sku)?.barcode.toLowerCase()===q);if(!line){flash('That code is not an item on this purchase order.');return;}const quantity=e.currentTarget.elements.namedItem('qty-'+line.id) as HTMLInputElement|null;quantity?.scrollIntoView({block:'center',behavior:'smooth'});quantity?.focus();quantity?.select();input.value='';}} onSubmit={e=>{const f=fields(e);void save('receive_order',{id:modal.po.id,revision:modal.po.erp_revision,date:text(f,'date'),locationId:text(f,'location'),final:f.get('final')==='on',tax:num(f,'tax'),lines:poLines(d,modal.po.id).map(l=>({id:l.id,qty:num(f,'qty-'+l.id),price:num(f,'price-'+l.id)}))});}}><p className="p-note">Enter only what arrived today. Check Final delivery only when nothing else will arrive. A final short shipment immediately reduces the supplier’s fill rate.</p><div className="p-form-grid"><Field label="Receipt date" name="date" type="date" value={d.today} min={dateOnly(modal.po.ordered_at)} max={d.today} required/><label>Receive into<select name="location" defaultValue={modal.po.ship_to_location_id}>{d.locations.map(l=><option value={l.id} key={l.id}>{l.name}</option>)}</select></label></div><Field label="Scan barcode / SKU, then Enter" name="scan"/>
++ {poLines(d,modal.po.id).map(l=><div className="panel p-form-grid" key={l.id}><div><h3>{item(l.item_sku)?.name}</h3><p>Ordered {l.quantity_purchase}; already received {l.quantity_received_purchase}; remaining {Number(l.quantity_purchase)-Number(l.quantity_received_purchase)} × {item(l.item_sku)?.purchase_unit}</p><small>SKU {l.item_sku} · Barcode {item(l.item_sku)?.barcode}</small></div><Field label="Arrived today · purchase units" name={'qty-'+l.id} type="number" value={0} min={0} max={Number(l.quantity_purchase)-Number(l.quantity_received_purchase)} step="any" required/><Field label="Actual price per purchase unit" name={'price-'+l.id} type="number" value={l.unit_price_purchase} min={0} step="any" required/></div>)}
++ <Field label="Tax charged on this delivery · enter supplier invoice amount" name="tax" type="number" value={0} min={0} step="0.01" required/><label className="p-check"><input type="checkbox" name="final"/>Final delivery: nothing else will arrive, even if short.</label><button className="button primary">Post delivery & create invoice</button></form>}
++ {modal.kind==='pay'&&<form className="p-form" onSubmit={e=>{const f=fields(e);void save('pay_invoice',{id:modal.invoice.id,revision:modal.invoice.erp_revision,date:text(f,'date'),amount:num(f,'amount'),reference:text(f,'reference')});}}><p>Invoice balance: <b>{fmt(invoiceOwedShared(d,modal.invoice))}</b>. This records a payment already made; it does not transfer funds.</p><Field label="Payment date" name="date" type="date" value={d.today} min={modal.invoice.erp_invoice_date??dateOnly(modal.invoice.created_at)} max={d.today} required/><Field label="Amount paid" name="amount" type="number" min="0.01" max={invoiceOwedShared(d,modal.invoice)} step="0.01" value={invoiceOwedShared(d,modal.invoice)} required/><Field label="Payment reference" name="reference" required/><button className="button primary">Record payment</button></form>}
++ {modal.kind==='correct'&&<form className="p-form" onSubmit={e=>{const f=fields(e);void save('correct_order',{id:modal.po.id,revision:modal.po.erp_revision,date:text(f,'date'),lead:num(f,'lead'),reason:text(f,'reason'),lines:poLines(d,modal.po.id).map(l=>({id:l.id,qty:num(f,l.id)})),receipts:d.receipts.filter(r=>r.purchase_order_id===modal.po.id).map(r=>({id:r.id,date:text(f,r.id)}))});}}><p className="p-note">Correct source dates, promises, or ordered quantities with a reason. Received quantities, stock quantities, invoice amounts, and payments stay intact. Audited receipt date changes also update their inventory dates and invoice due dates. Legacy delivery dates remain unchanged.</p><Field label="Sent date" name="date" type="date" value={dateOnly(modal.po.ordered_at)} max={d.today} required/><Field label="Quoted lead on this PO · days" name="lead" type="number" value={modal.po.erp_quoted_lead_days??Math.max(0,Math.round((Date.parse(modal.po.expected_at)-Date.parse(modal.po.ordered_at))/86400000))} min={0} max={365} step={1} required/>{poLines(d,modal.po.id).map(l=><Field key={l.id} label={item(l.item_sku)?.name+' · ordered purchase units'} name={l.id} type="number" min={Math.max(.000001,Number(l.quantity_received_purchase))} step="any" value={l.quantity_purchase} required/>)}{d.receipts.filter(r=>r.purchase_order_id===modal.po.id).map(r=><Field key={r.id} label={'Delivery '+r.id.slice(0,8)} name={r.id} type="date" value={r.received_on} max={d.today} required/>)}<Field label="Reason for correction" name="reason" required/><button className="button primary">Save correction & recalculate</button></form>}
++ {modal.kind==='detail'&&<><h3>{supplierName(modal.po.supplier_id)}</h3><p>Sent {displayDate(modal.po.ordered_at)} · Expected {displayDate(modal.po.expected_at)} · Actual {displayDate(modal.po.received_at)} · {modal.po.status}</p><table><thead><tr><th>Item</th><th>Ordered</th><th>Received</th><th>Price / purchase unit</th></tr></thead><tbody>{poLines(d,modal.po.id).map(l=><tr key={l.id}><td>{item(l.item_sku)?.name}<small className="cell-sub">{item(l.item_sku)?.purchase_unit}</small></td><td>{l.quantity_purchase}</td><td>{l.quantity_received_purchase}</td><td>{fmt(Number(l.unit_price_purchase))}</td></tr>)}</tbody></table><p>{modal.po.erp_notes}</p><div className="p-row-actions"><button className="button secondary" onClick={()=>downloadSharedPO(d,modal.po)}>Download supplier copy</button>{modal.po.status!=='Draft'&&<button className="button secondary" onClick={()=>open({kind:'correct',po:modal.po})}>Correct PO record</button>}</div>{modal.po.status==='Partially Received'&&<form className="p-form p-spaced" onSubmit={e=>{const f=fields(e);void save('finish_short',{id:modal.po.id,revision:modal.po.erp_revision,reason:text(f,'reason')});}}><Field label="Why will the remaining items not arrive?" name="reason" required/><button className="button secondary">Finalize short delivery</button></form>}<AuditHistory d={d} rows={d.audit.filter(a=>a.resource_id===modal.po.id)}/></>}
++ {modal.kind==='review'&&<><SupplierEvidence d={d} supplier={modal.supplier}/><form className="p-form" onSubmit={e=>{const f=fields(e);void save('save_review',{supplierId:modal.supplier.id,decision:text(f,'decision'),notes:text(f,'notes')});}}><h3>Management assessment</h3><label>Decision<select name="decision"><option>Keep</option><option>Watch</option><option>Replace</option></select></label><label>Reason / follow-up plan<textarea name="notes" required/></label><button className="button primary">Save management review</button></form><h3>Purchase order evidence</h3>{d.orders.filter(p=>p.supplier_id===modal.supplier.id&&p.status!=='Draft').map(p=><p key={p.id}><button className="p-text-button" onClick={()=>open({kind:'detail',po:p})}>{p.po_no}</button> · {p.status} · expected {displayDate(p.expected_at)} · actual {displayDate(p.received_at)}</p>)}<h3>Management review history</h3>{d.reviews.filter(r=>r.supplier_id===modal.supplier.id).map(r=><div className="scorecard-log" key={r.id}><Badge value={r.decision}/><p>{r.notes}</p><small>{displayDate(r.created_at)} · {r.created_by}</small></div>)}</>}
++ {modal.kind==='options'&&<form className="p-form" onSubmit={e=>{const f=fields(e);void save('save_options',{revision:d.options.revision,orderCost:num(f,'orderCost'),holdingRate:num(f,'holdingRate'),safetyDays:num(f,'safetyDays'),reviewDays:num(f,'reviewDays')});}}><Field label="Ordering cost per order" name="orderCost" type="number" value={d.options.order_cost} min={0} step="0.01" required/><Field label="Annual holding fraction · 0.25 = 25%" name="holdingRate" type="number" value={d.options.holding_rate} min="0.000001" max={1} step="any" required/><Field label="Safety stock · days" name="safetyDays" type="number" value={d.options.safety_days} min={0} max={365} step={1} required/><Field label="Review interval · days" name="reviewDays" type="number" value={d.options.review_days} min={1} max={365} step={1} required/><button className="button primary">Save shared ordering options</button></form>}
++ </fieldset></Dialog>}
++ </div>;
++}
++
++function NewPOForm({d,initialSupplier,initialSku,save}:{d:PurchasingSnapshot;initialSupplier?:string;initialSku?:string;save:Save}){
++ const [supplier,setSupplier]=useState(initialSupplier??d.suppliers.find(s=>s.erp_active)?.id??''),[count,setCount]=useState(1);
++ const choices=d.items.filter(i=>i.active&&!i.made&&i.supplier_id===supplier);
++ return <form className="p-form" onSubmit={e=>{const f=fields(e);void save('create_orders',{orders:[{supplierId:supplier,locationId:text(f,'location'),date:text(f,'date'),send:text(f,'status')==='send',notes:text(f,'notes'),lines:Array.from({length:count},(_,n)=>({sku:text(f,'sku-'+n),qty:num(f,'qty-'+n),price:num(f,'price-'+n)}))}]});}}><label>Supplier<select value={supplier} onChange={e=>{setSupplier(e.target.value);setCount(1);}}>{d.suppliers.filter(s=>s.erp_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><div className="p-form-grid"><label>Deliver to<select name="location">{d.locations.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</select></label><Field label="Order date" name="date" type="date" value={d.today} max={d.today} required/></div>{Array.from({length:count},(_,n)=><NewPOLine key={supplier+'-'+n} choices={choices} n={n} initialSku={n===0?initialSku:undefined}/>)}<button type="button" className="button secondary" disabled={!choices.length||count>=100} onClick={()=>setCount(count+1)}>+ Add item</button>{count>1&&<button type="button" className="button secondary" onClick={()=>setCount(count-1)}>Remove last line</button>}<label>Notes<textarea name="notes"/></label><label>Status<select name="status"><option value="draft">Save draft</option><option value="send">Issue order</option></select></label><p>Issuing records the supplier promise and makes a supplier copy available. It does not send email automatically.</p><button className="button primary" disabled={!choices.length}>Save purchase order</button></form>;
++}
++function NewPOLine({choices,n,initialSku}:{choices:SharedItem[];n:number;initialSku?:string}){const [sku,setSku]=useState(choices.find(i=>i.sku===initialSku)?.sku??choices[0]?.sku??'');const i=choices.find(x=>x.sku===sku);return <div className="panel p-form-grid"><label>Item<select name={'sku-'+n} value={sku} onChange={e=>setSku(e.target.value)} required>{choices.map(x=><option key={x.sku} value={x.sku}>{x.name} · {x.purchase_unit}</option>)}</select></label><Field label="Ordered purchase units" name={'qty-'+n} type="number" value={1} min="0.000001" step="any" required/><Field key={sku} label="Price per purchase unit" name={'price-'+n} type="number" value={Number((Number(i?.unit_cost??0)*Number(i?.conversion_factor??1)).toFixed(2))} min={0} step="any" required/></div>;}
++function SupplierEvidence({d,supplier}:{d:PurchasingSnapshot;supplier:SharedSupplier}){const m=purchasingMetrics(d,supplier.id);const latest=[...d.orders.filter(p=>p.supplier_id===supplier.id&&!!p.received_at)].sort((a,b)=>b.received_at!.localeCompare(a.received_at!))[0];const lines=latest?poLines(d,latest.id):[];const ordered=lines.reduce((n,l)=>n+Number(l.quantity_purchase),0),received=lines.reduce((n,l)=>n+Number(l.quantity_received_purchase),0);return <div className="p-note"><Badge value={m.rating}/><p>Calculated score {formatSupplierScore(m.score)} / 100 · On-time {formatSupplierPercent(m.onTime)} · Overall fill {formatSupplierPercent(m.fillRate)}</p>{latest&&<p><b>Latest arrival: {latest.po_no} · {formatSupplierPercent(ordered?received/ordered:null)} filled</b><br/>{received} received / {ordered} ordered purchase units · {['Received','Closed'].includes(latest.status)?received<ordered?'Final short shipment':'Complete':'Still receiving'}</p>}</div>;}
++function AuditHistory({d,rows}:{d:PurchasingSnapshot;rows:SharedAudit[]}){return <><h3>Change history</h3>{rows.map(a=>{const after=a.after_value as {input?:{reason?:string;date?:string;lead?:number;lines?:{id:string;qty:number}[];receipts?:{id:string;date:string}[]}},before=a.before_value as {ordered_at?:string;erp_quoted_lead_days?:number;lines?:SharedLine[];receipts?:{id:string;received_on:string}[]}|null;const input=after?.input;return <details className="scorecard-log" key={a.id}><summary>{a.action.replace(/_/g,' ')} · {displayDate(a.created_at)}</summary><small>Saved by manager {a.created_by.slice(0,8)}</small>{input?.reason&&<p>Reason: {input.reason}</p>}{a.action==='correct_order'&&<><p>Sent: {displayDate(before?.ordered_at)} → {displayDate(input?.date)}<br/>Quoted lead: {before?.erp_quoted_lead_days??'Legacy promise'} → {input?.lead} days</p>{input?.lines?.map(l=>{const old=before?.lines?.find(x=>x.id===l.id);return <p key={l.id}>{d.items.find(i=>i.sku===old?.item_sku)?.name??'Order line'}: {old?.quantity_purchase} → {l.qty} ordered purchase units</p>;})}{input?.receipts?.map(r=><p key={r.id}>Delivery {r.id.slice(0,8)}: {displayDate(before?.receipts?.find(x=>x.id===r.id)?.received_on)} → {displayDate(r.date)}</p>)}</>}</details>;})}</>;}
++function downloadSharedPO(d:PurchasingSnapshot,po:SharedPO){
++ const escape=(s:unknown)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
++ const supplier=d.suppliers.find(s=>s.id===po.supplier_id);const lines=poLines(d,po.id);const subtotal=lines.reduce((n,l)=>n+Number(l.quantity_purchase)*Number(l.unit_price_purchase),0);
++ const html='<!doctype html><html><head><meta charset="utf-8"><title>'+escape(po.po_no)+'</title><style>body{font:16px system-ui;margin:40px;color:#193b55}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #ddd}</style></head><body><h1>Za by Zack · Purchase order</h1><h2>'+escape(po.po_no)+'</h2><p>Supplier: '+escape(supplier?.name)+'<br>Contact: '+escape(supplier?.contact_name)+' · '+escape(supplier?.email)+'<br>Deliver to: '+escape(d.locations.find(l=>l.id===po.ship_to_location_id)?.name)+'<br>Ordered: '+escape(displayDate(po.ordered_at))+'<br>Expected: '+escape(displayDate(po.expected_at))+'<br>Payment terms: Net '+escape(po.erp_payment_terms_days??supplier?.payment_terms_days)+'</p><table><thead><tr><th>Item</th><th>Purchase units</th><th>Unit price</th><th>Total</th></tr></thead><tbody>'+lines.map(l=>{const i=d.items.find(x=>x.sku===l.item_sku);return '<tr><td>'+escape(i?.name)+'<br>'+escape(l.item_sku)+'</td><td>'+escape(l.quantity_purchase)+' × '+escape(i?.purchase_unit)+'</td><td>'+escape(fmt(Number(l.unit_price_purchase)))+'</td><td>'+escape(fmt(Number(l.quantity_purchase)*Number(l.unit_price_purchase)))+'</td></tr>';}).join('')+'</tbody></table><p>Subtotal: <b>'+escape(fmt(subtotal))+'</b></p><p>Tax: confirm with supplier; record actual tax from the delivery invoice when receiving.</p><p>'+escape(po.erp_notes)+'</p></body></html>';
++ const url=URL.createObjectURL(new Blob([html],{type:'text/html'})),a=document.createElement('a');a.href=url;a.download=po.po_no+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
++}
+--- /dev/null
++++ b/src/sharedPurchasing.ts
+@@ -0,0 +1,58 @@
++import type {AppState,Location,PurchaseOrder} from './domain.ts';
++import {businessDate} from './domain.ts';
++import {supplierMetrics} from './purchasing.ts';
++
++export type SharedSupplier={id:string;name:string;contact_name:string|null;email:string|null;phone:string|null;address:string|null;quoted_lead_days:number;payment_terms_days:number;erp_active:boolean;erp_notes:string;erp_revision:number};
++export type SharedItem={sku:string;name:string;barcode:string;category:string;base_unit:string;purchase_unit:string;conversion_factor:number;unit_cost:number;shelf_life_days:number|null;supplier_id:string|null;active:boolean;made:boolean};
++export type SharedPO={id:string;po_no:string;supplier_id:string;ship_to_location_id:string;ordered_at:string;expected_at:string;received_at:string|null;status:string;erp_notes:string;erp_revision:number;erp_quoted_lead_days:number|null;erp_payment_terms_days:number|null;erp_legacy_received_at:string|null};
++export type SharedLine={id:string;purchase_order_id:string;item_sku:string;quantity_purchase:number;quantity_received_purchase:number;unit_price_purchase:number};
++export type SharedReceipt={id:string;purchase_order_id:string;received_on:string;location_id:string;final_delivery:boolean;tax_amount:number;created_at:string};
++export type SharedReceiptLine={id:string;receipt_id:string;purchase_order_line_id:string;quantity_purchase:number;unit_price_purchase:number};
++export type SharedInvoice={id:string;purchase_order_id:string;amount:number;due_at:string;paid_at:string|null;created_at:string;erp_invoice_date:string|null;erp_receipt_id:string|null;erp_revision:number};
++export type SharedPayment={id:string;invoice_id:string;paid_on:string;amount:number;reference:string;created_by:string};
++export type SharedReview={id:string;supplier_id:string;decision:'Keep'|'Watch'|'Replace';notes:string;created_by:string;created_at:string};
++export type SharedAudit={id:string;action:string;resource_id:string|null;before_value:unknown;after_value:unknown;created_by:string;created_at:string};
++export type SharedOptions={order_cost:number;holding_rate:number;safety_days:number;review_days:number;revision:number};
++export type PurchasingSnapshot={version:1;userId:string;today:string;suppliers:SharedSupplier[];items:SharedItem[];locations:{id:string;name:string}[];orders:SharedPO[];lines:SharedLine[];receipts:SharedReceipt[];receiptLines:SharedReceiptLine[];invoices:SharedInvoice[];payments:SharedPayment[];reviews:SharedReview[];inventoryReviews:{id:string;notes:string;created_at:string;created_by:string}[];audit:SharedAudit[];options:SharedOptions;stock:Record<string,number>;dailyUsage:Record<string,number>};
++export function readPurchasingSnapshot(value:unknown):PurchasingSnapshot{
++ if(!value||typeof value!=='object')throw Error('Invalid purchasing response.');
++ const data=value as PurchasingSnapshot;
++ if(data.version!==1||typeof data.userId!=='string'||typeof data.today!=='string'||!data.options)throw Error('Purchasing schema is unavailable or has a different version.');
++ for(const name of ['suppliers','items','locations','orders','lines','receipts','receiptLines','invoices','payments','reviews','inventoryReviews','audit'] as const)if(!Array.isArray(data[name]))throw Error('Incomplete purchasing response: '+name);
++ return data;
++}
++export const poLines=(d:PurchasingSnapshot,id:string)=>d.lines.filter(l=>l.purchase_order_id===id);
++export function invoicePaidShared(d:PurchasingSnapshot,i:SharedInvoice){const paid=d.payments.filter(p=>p.invoice_id===i.id).reduce((n,p)=>n+Number(p.amount),0);return i.paid_at?Number(i.amount):paid;}
++export const invoiceOwedShared=(d:PurchasingSnapshot,i:SharedInvoice)=>Math.max(0,Math.round((Number(i.amount)-invoicePaidShared(d,i))*100)/100);
++export const dateOnly=(v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:businessDate(new Date(v));
++const difference=(a:string,b:string)=>(Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/86400000;
++export function purchasingMetrics(d:PurchasingSnapshot,supplierId:string){
++ const orderMap=new Map(d.orders.map(o=>[o.id,o]));
++ const orders:PurchaseOrder[]=d.orders.map(o=>({id:o.id,supplierId:o.supplier_id,supplier:d.suppliers.find(s=>s.id===o.supplier_id)?.name??'Unknown supplier',
++  date:dateOnly(o.ordered_at),expected:dateOnly(o.expected_at),received:o.received_at?dateOnly(o.received_at):undefined,status:o.status as PurchaseOrder['status'],
++  quotedLead:o.erp_quoted_lead_days??Math.max(0,difference(dateOnly(o.ordered_at),dateOnly(o.expected_at))),terms:o.erp_payment_terms_days??d.suppliers.find(s=>s.id===o.supplier_id)?.payment_terms_days??0,
++  lines:poLines(d,o.id).map(l=>({id:l.id,sku:l.item_sku,qty:Number(l.quantity_purchase),received:Number(l.quantity_received_purchase),unitPrice:Number(l.unit_price_purchase)}))}));
++ const state={supplierRecords:d.suppliers.map(s=>({id:s.id,name:s.name,contact:s.contact_name??'',email:s.email??'',phone:s.phone??'',address:s.address??'',lead:s.quoted_lead_days,terms:s.payment_terms_days,active:s.erp_active,notes:s.erp_notes})),purchaseOrders:orders,
++  purchaseReceipts:d.receipts.map(r=>({id:r.id,poId:r.purchase_order_id,date:r.received_on,location:'' as Location,final:r.final_delivery,lines:[]})),
++  supplierInvoices:d.invoices.map(i=>({id:i.id,poId:i.purchase_order_id,receiptId:i.erp_receipt_id??'',supplierId:orderMap.get(i.purchase_order_id)?.supplier_id??'',date:i.erp_invoice_date??dateOnly(i.created_at),due:i.due_at,amount:Number(i.amount)})),
++  supplierPayments:d.invoices.map(i=>({id:'balance-'+i.id,invoiceId:i.id,date:i.paid_at??d.today,amount:invoicePaidShared(d,i),reference:i.paid_at?'Recorded paid in Supabase':'Shared payment history'})),
++  ledger:[],sales:[],salesOrders:[],returns:[],productionOrders:[],settings:{tax:0,orderCost:d.options.order_cost,holding:d.options.holding_rate,safetyDays:d.options.safety_days,reviewDays:d.options.review_days},customers:[],revision:0} satisfies AppState;
++ return supplierMetrics(state,supplierId,d.today);
++}
++export function purchasingRule(d:PurchasingSnapshot,item:SharedItem){
++ const supplier=d.suppliers.find(s=>s.id===item.supplier_id),daily=Number(d.dailyUsage[item.sku]??0),onHand=Number(d.stock[item.sku]??0),factor=Number(item.conversion_factor),cost=Number(item.unit_cost),o=d.options;
++ const lead=supplier?.quoted_lead_days??0,rop=daily*(lead+o.safety_days),rawEOQ=cost>0?Math.sqrt(2*daily*365*o.order_cost/(cost*o.holding_rate)):0;
++ const eoq=item.shelf_life_days?Math.min(rawEOQ,daily*item.shelf_life_days):rawEOQ;
++ const open=new Set(d.orders.filter(p=>['Order Sent','Partially Received'].includes(p.status)).map(p=>p.id));
++ const onOrder=d.lines.filter(l=>l.item_sku===item.sku&&open.has(l.purchase_order_id)).reduce((n,l)=>n+Math.max(0,Number(l.quantity_purchase)-Number(l.quantity_received_purchase))*factor,0);
++ const position=onHand+onOrder,target=daily*(lead+o.safety_days+o.review_days),need=Math.max(0,target-position);
++ const desired=need>0?Math.max(need,eoq):0,limited=item.shelf_life_days?Math.min(desired,Math.max(0,daily*item.shelf_life_days-position)):desired;
++ const packs=limited>0?Math.ceil(limited/factor):0;
++ return{supplier,daily,onHand,onOrder,position,rop,rawEOQ,eoq,target,packs,belowROP:position<rop,packExceedsShelf:!!item.shelf_life_days&&packs*factor+position>daily*item.shelf_life_days};
++}
++export function searchSharedOrders(d:PurchasingSnapshot,query:string){
++ const q=query.trim().toLowerCase();if(!q)return{orders:d.orders,items:[] as SharedItem[]};
++ const matched=d.items.filter(i=>i.sku.toLowerCase()===q||i.barcode.toLowerCase()===q),skus=new Set(matched.map(i=>i.sku));
++ const orders=d.orders.filter(p=>(p.po_no+' '+(d.suppliers.find(s=>s.id===p.supplier_id)?.name??'')).toLowerCase().includes(q)||poLines(d,p.id).some(l=>skus.has(l.item_sku)||(d.items.find(i=>i.sku===l.item_sku)?.name.toLowerCase().includes(q))));
++ return{orders,items:matched};
++}
+--- /dev/null
++++ b/supabase/migrations/202611150002_shared_purchasing.sql
+@@ -0,0 +1,320 @@
++-- Shared purchasing, additive only. Existing functions and historical rows are retained.
++begin;
++alter table public.suppliers add column if not exists erp_active boolean not null default true,
++ add column if not exists erp_notes text not null default '', add column if not exists erp_revision integer not null default 0;
++alter table public.purchase_orders add column if not exists erp_quoted_lead_days integer,
++ add column if not exists erp_payment_terms_days integer, add column if not exists erp_notes text not null default '',
++ add column if not exists erp_legacy_received_at timestamptz, add column if not exists erp_revision integer not null default 0;
++create table if not exists public.erp_purchase_receipts (
++ id uuid primary key default gen_random_uuid(), purchase_order_id uuid not null references public.purchase_orders,
++ received_on date not null, location_id uuid not null references public.locations, final_delivery boolean not null,
++ tax_amount numeric not null default 0 check(tax_amount>=0), created_by uuid not null references auth.users,
++ created_at timestamptz not null default now()
++);
++create table if not exists public.erp_purchase_receipt_lines (
++ id uuid primary key default gen_random_uuid(), receipt_id uuid not null references public.erp_purchase_receipts,
++ purchase_order_line_id uuid not null references public.purchase_order_lines,
++ quantity_purchase numeric not null check(quantity_purchase>0), unit_price_purchase numeric not null check(unit_price_purchase>=0),
++ transaction_id uuid not null unique references public.inventory_transactions,
++ unique(receipt_id,purchase_order_line_id)
++);
++alter table public.supplier_invoices add column if not exists erp_receipt_id uuid unique references public.erp_purchase_receipts,
++ add column if not exists erp_invoice_date date, add column if not exists erp_revision integer not null default 0;
++create table if not exists public.erp_supplier_payments (
++ id uuid primary key default gen_random_uuid(), invoice_id uuid not null references public.supplier_invoices,
++ paid_on date not null, amount numeric not null check(amount>0), reference text not null check(length(trim(reference))>0),
++ created_by uuid not null references auth.users, created_at timestamptz not null default now(), unique(invoice_id,reference)
++);
++create table if not exists public.erp_supplier_reviews (
++ id uuid primary key default gen_random_uuid(), supplier_id uuid not null references public.suppliers,
++ decision text not null check(decision in ('Keep','Watch','Replace')), notes text not null check(length(trim(notes))>0),
++ created_by uuid not null references auth.users, created_at timestamptz not null default now()
++);
++create table if not exists public.erp_inventory_reviews (
++ id uuid primary key default gen_random_uuid(), notes text not null, created_by uuid not null references auth.users,
++ created_at timestamptz not null default now()
++);
++create table if not exists public.erp_purchasing_requests (
++ id uuid primary key, action text not null, payload jsonb not null, result jsonb not null,
++ created_by uuid not null references auth.users, created_at timestamptz not null default now()
++);
++create table if not exists public.erp_purchasing_audit (
++ id uuid primary key default gen_random_uuid(), request_id uuid not null unique references public.erp_purchasing_requests deferrable initially deferred,
++ action text not null, resource_id text, before_value jsonb, after_value jsonb,
++ created_by uuid not null references auth.users, created_at timestamptz not null default now()
++);
++create table if not exists public.erp_purchasing_options (
++ singleton boolean primary key default true check(singleton), order_cost numeric not null check(order_cost>=0),
++ holding_rate numeric not null check(holding_rate>0 and holding_rate<=1), safety_days integer not null check(safety_days between 0 and 365),
++ review_days integer not null check(review_days between 1 and 365), revision integer not null default 0
++);
++insert into public.erp_purchasing_options(singleton,order_cost,holding_rate,safety_days,review_days)
++ values(true,coalesce((select (value#>>'{}')::numeric from public.settings where setting_key='ordering_cost'),25),
++ coalesce((select (value#>>'{}')::numeric from public.settings where setting_key='annual_holding_rate'),.25),
++ coalesce((select (value#>>'{}')::integer from public.settings where setting_key='safety_stock_days'),2),7) on conflict(singleton) do nothing;
++create index if not exists erp_purchase_receipts_lookup_idx on public.erp_purchase_receipts(purchase_order_id);
++create index if not exists erp_purchase_receipt_lines_lookup_idx on public.erp_purchase_receipt_lines(receipt_id);
++create index if not exists erp_supplier_payments_lookup_idx on public.erp_supplier_payments(invoice_id);
++create index if not exists erp_supplier_reviews_lookup_idx on public.erp_supplier_reviews(supplier_id,created_at desc);
++
++-- New objects deny direct writes: all changes use the atomic, role-checked RPC below.
++do $$ declare t text; begin
++ foreach t in array array['erp_purchase_receipts','erp_purchase_receipt_lines','erp_supplier_payments','erp_supplier_reviews','erp_inventory_reviews','erp_purchasing_requests','erp_purchasing_audit','erp_purchasing_options'] loop
++  execute format('alter table public.%I enable row level security',t);
++  execute format('revoke all on public.%I from anon, authenticated',t);
++ end loop;
++end $$;
++
++create or replace function public.erp_purchase_number(p_object jsonb,p_key text,p_min numeric,p_max numeric)
++returns numeric language plpgsql immutable set search_path=pg_catalog,public as $$
++declare n numeric; begin
++ if jsonb_typeof(p_object->p_key) is distinct from 'number' then raise exception 'A numeric % is required',p_key; end if;
++ n:=(p_object->>p_key)::numeric;
++ if not(n between p_min and p_max) then raise exception '% is outside the allowed range',p_key; end if;
++ return n;
++end $$;
++
++create or replace function public.erp_purchasing_snapshot() returns jsonb
++language plpgsql security definer set search_path=pg_catalog,public as $$
++declare result jsonb; begin
++ if auth.uid() is null or public.current_role() is distinct from 'Manager' then raise exception 'Manager role required' using errcode='42501'; end if;
++ -- One SQL statement gives each returned section the same MVCC snapshot.
++ select jsonb_build_object(
++  'version',1,'userId',auth.uid(),'today',(now() at time zone 'America/Denver')::date,
++  'suppliers',coalesce((select jsonb_agg(to_jsonb(s) order by s.name) from public.suppliers s),'[]'::jsonb),
++  'items',coalesce((select jsonb_agg(to_jsonb(i)||jsonb_build_object('made',exists(select 1 from public.bom_lines b where b.parent_sku=i.sku)) order by i.sku) from public.items i),'[]'::jsonb),
++  'locations',coalesce((select jsonb_agg(to_jsonb(l) order by l.name) from public.locations l),'[]'::jsonb),
++  'orders',coalesce((select jsonb_agg(to_jsonb(p) order by p.ordered_at desc,p.id) from public.purchase_orders p),'[]'::jsonb),
++  'lines',coalesce((select jsonb_agg(to_jsonb(l) order by l.id) from public.purchase_order_lines l),'[]'::jsonb),
++  'receipts',coalesce((select jsonb_agg(to_jsonb(r) order by r.created_at,r.id) from public.erp_purchase_receipts r),'[]'::jsonb),
++  'receiptLines',coalesce((select jsonb_agg(to_jsonb(l) order by l.id) from public.erp_purchase_receipt_lines l),'[]'::jsonb),
++  'invoices',coalesce((select jsonb_agg(to_jsonb(i) order by i.due_at,i.id) from public.supplier_invoices i),'[]'::jsonb),
++  'payments',coalesce((select jsonb_agg(to_jsonb(p) order by p.created_at,p.id) from public.erp_supplier_payments p),'[]'::jsonb),
++  'reviews',coalesce((select jsonb_agg(to_jsonb(r) order by r.created_at desc,r.id) from public.erp_supplier_reviews r),'[]'::jsonb),
++  'inventoryReviews',coalesce((select jsonb_agg(to_jsonb(r) order by r.created_at desc,r.id) from public.erp_inventory_reviews r),'[]'::jsonb),
++  'audit',coalesce((select jsonb_agg(to_jsonb(a) order by a.created_at desc,a.id) from public.erp_purchasing_audit a),'[]'::jsonb),
++  'options',(select to_jsonb(o) from public.erp_purchasing_options o),
++  'stock',coalesce((select jsonb_object_agg(s.item_sku,s.qty) from (select item_sku,sum(quantity) qty from public.inventory_transactions group by item_sku)s),'{}'::jsonb),
++  'dailyUsage',coalesce((select jsonb_object_agg(s.item_sku,s.qty/180) from (
++   select item_sku,sum(-quantity) qty from public.inventory_transactions where quantity<0 and transaction_type in ('Sale','Production Issue')
++   and (occurred_at at time zone 'America/Denver')::date between (now() at time zone 'America/Denver')::date-179 and (now() at time zone 'America/Denver')::date group by item_sku)s),'{}'::jsonb)
++ ) into result;
++ return result;
++end $$;
++
++create or replace function public.erp_purchasing_write(p_request uuid,p_action text,p_payload jsonb) returns jsonb
++language plpgsql security definer set search_path=pg_catalog,public as $$
++#variable_conflict use_variable
++declare
++ d date:=(now() at time zone 'America/Denver')::date; doc date; sent date; qty numeric; price numeric; amount numeric:=0; tax numeric:=0;
++ lead_days integer; terms integer; wanted integer; paid numeric; have numeric; cost numeric; factor numeric; new_cost numeric;
++ resource uuid; receipt uuid; tx uuid; line_id uuid; dest uuid; supplier_id uuid; request_row public.erp_purchasing_requests%rowtype;
++ supplier public.suppliers%rowtype; po public.purchase_orders%rowtype; pol public.purchase_order_lines%rowtype;
++ invoice public.supplier_invoices%rowtype; it public.items%rowtype; rec public.erp_purchase_receipts%rowtype;
++ result jsonb; before_value jsonb; part jsonb; order_input jsonb; line_input jsonb; created jsonb:='[]'::jsonb;
++ reason text; is_final boolean; complete boolean; latest timestamptz;
++begin
++ if auth.uid() is null or public.current_role() is distinct from 'Manager' then raise exception 'Manager role required' using errcode='42501'; end if;
++ if p_request is null or jsonb_typeof(p_payload) is distinct from 'object' then raise exception 'Request ID and object payload required'; end if;
++ -- Serialize this API's writes, then lock the actual PO/item/invoice rows as well.
++ perform pg_advisory_xact_lock(1179468369,1);
++ select * into request_row from public.erp_purchasing_requests where id=p_request;
++ if found then
++  if request_row.created_by<>auth.uid() or request_row.action<>p_action or request_row.payload<>p_payload then raise exception 'Request ID was already used with different data'; end if;
++  return request_row.result;
++ end if;
++ case p_action
++ when 'save_supplier' then
++  resource:=nullif(p_payload->>'id','')::uuid;
++  if resource is not null then
++   select * into supplier from public.suppliers where id=resource for update;
++   if not found then raise exception 'Supplier not found'; end if;
++   before_value:=to_jsonb(supplier);
++   if supplier.erp_revision is distinct from (p_payload->>'revision')::integer then raise exception 'Supplier changed. Refresh and reopen the form.'; end if;
++  else resource:=gen_random_uuid(); end if;
++  if length(trim(coalesce(p_payload->>'name','')))=0 then raise exception 'Supplier name is required'; end if;
++  lead_days:=public.erp_purchase_number(p_payload,'lead',0,365); terms:=public.erp_purchase_number(p_payload,'terms',0,365);
++  if lead_days<>(p_payload->>'lead')::numeric or terms<>(p_payload->>'terms')::numeric then raise exception 'Lead time and terms must be whole days'; end if;
++  if jsonb_typeof(p_payload->'active') is distinct from 'boolean' then raise exception 'Choose an active or archived status'; end if;
++  insert into public.suppliers(id,name,contact_name,email,phone,address,quoted_lead_days,payment_terms_days,erp_active,erp_notes)
++   values(resource,trim(p_payload->>'name'),trim(p_payload->>'contact'),trim(p_payload->>'email'),trim(p_payload->>'phone'),trim(p_payload->>'address'),lead_days,terms,(p_payload->>'active')::boolean,coalesce(p_payload->>'notes',''))
++   on conflict(id) do update set name=excluded.name,contact_name=excluded.contact_name,email=excluded.email,phone=excluded.phone,address=excluded.address,
++    quoted_lead_days=excluded.quoted_lead_days,payment_terms_days=excluded.payment_terms_days,erp_active=excluded.erp_active,erp_notes=excluded.erp_notes,erp_revision=public.suppliers.erp_revision+1;
++  result:=jsonb_build_object('id',resource);
++ when 'assign_supplier' then
++  supplier_id:=(p_payload->>'supplierId')::uuid;
++  if not exists(select 1 from public.suppliers where id=supplier_id and erp_active) then raise exception 'Choose an active supplier'; end if;
++  select * into it from public.items where sku=p_payload->>'sku' and active for update;
++  if not found or exists(select 1 from public.bom_lines where parent_sku=it.sku) then raise exception 'Choose an active purchased item'; end if;
++  if it.supplier_id::text is distinct from nullif(p_payload->>'previousSupplierId','') then raise exception 'Item assignment changed. Refresh first.'; end if;
++  before_value:=to_jsonb(it); update public.items set supplier_id=supplier_id,lead_days=(select quoted_lead_days from public.suppliers where id=supplier_id) where sku=it.sku;
++  result:=jsonb_build_object('sku',it.sku,'supplierId',supplier_id);
++ when 'create_orders' then
++  if jsonb_typeof(p_payload->'orders') is distinct from 'array' or jsonb_array_length(p_payload->'orders') not between 1 and 100 then raise exception 'Include one or more purchase orders'; end if;
++  for order_input in select value from jsonb_array_elements(p_payload->'orders') loop
++   supplier_id:=(order_input->>'supplierId')::uuid; dest:=(order_input->>'locationId')::uuid; doc:=(order_input->>'date')::date;
++   if doc is null or doc>d or not exists(select 1 from public.locations where id=dest) then raise exception 'Choose a location and an order date no later than today'; end if;
++   select * into supplier from public.suppliers where id=supplier_id and erp_active for share;
++   if not found then raise exception 'Choose an active supplier'; end if;
++   if jsonb_typeof(order_input->'send') is distinct from 'boolean' then raise exception 'Choose draft or issued'; end if;
++   if jsonb_typeof(order_input->'lines') is distinct from 'array' or jsonb_array_length(order_input->'lines') not between 1 and 100 then raise exception 'Add at least one order line'; end if;
++   if exists(select 1 from jsonb_array_elements(order_input->'lines')l group by l->>'sku' having count(*)>1) then raise exception 'Combine duplicate SKUs'; end if;
++   resource:=gen_random_uuid();
++   insert into public.purchase_orders(id,po_no,supplier_id,ship_to_location_id,ordered_at,expected_at,status,created_by,erp_quoted_lead_days,erp_payment_terms_days,erp_notes)
++    values(resource,'PO-'||upper(replace(resource::text,'-','')),supplier_id,dest,(doc::text||' 12:00 America/Denver')::timestamptz,
++     ((doc+supplier.quoted_lead_days)::text||' 12:00 America/Denver')::timestamptz,
++     case when (order_input->>'send')::boolean then 'Order Sent' else 'Draft' end,auth.uid(),supplier.quoted_lead_days,supplier.payment_terms_days,coalesce(order_input->>'notes',''));
++   for line_input in select value from jsonb_array_elements(order_input->'lines') loop
++    select * into it from public.items where sku=line_input->>'sku' and active;
++    if not found or it.supplier_id is distinct from supplier_id or exists(select 1 from public.bom_lines where parent_sku=it.sku) then raise exception 'Item is not a purchased item assigned to this supplier'; end if;
++    qty:=public.erp_purchase_number(line_input,'qty',.000001,1000000000); price:=public.erp_purchase_number(line_input,'price',0,1000000000);
++    insert into public.purchase_order_lines(purchase_order_id,item_sku,quantity_purchase,unit_price_purchase)values(resource,it.sku,qty,price);
++   end loop;
++   if (select sum(quantity_purchase*unit_price_purchase) from public.purchase_order_lines where purchase_order_id=resource)>1000000000000 then raise exception 'Order value is too large'; end if;
++   created:=created||jsonb_build_array(resource);
++  end loop;
++  result:=jsonb_build_object('ids',created);
++ when 'save_review' then
++  resource:=(p_payload->>'supplierId')::uuid;
++  if length(trim(coalesce(p_payload->>'notes','')))=0 then raise exception 'Enter review notes'; end if;
++  insert into public.erp_supplier_reviews(supplier_id,decision,notes,created_by)values(resource,p_payload->>'decision',trim(p_payload->>'notes'),auth.uid());
++  result:=jsonb_build_object('id',resource);
++ when 'inventory_review' then
++  insert into public.erp_inventory_reviews(notes,created_by)values(coalesce(p_payload->>'notes',''),auth.uid()) returning id into resource;
++  result:=jsonb_build_object('id',resource);
++ when 'save_options' then
++  perform 1 from public.erp_purchasing_options where revision=(p_payload->>'revision')::integer for update;
++  if not found then raise exception 'Ordering options changed. Refresh first.'; end if;
++  qty:=public.erp_purchase_number(p_payload,'safetyDays',0,365); price:=public.erp_purchase_number(p_payload,'reviewDays',1,365);
++  if qty<>trunc(qty) or price<>trunc(price) then raise exception 'Safety and review days must be whole numbers'; end if;
++  update public.erp_purchasing_options set order_cost=public.erp_purchase_number(p_payload,'orderCost',0,1000000),
++   holding_rate=public.erp_purchase_number(p_payload,'holdingRate',.000001,1),safety_days=qty,review_days=price,revision=revision+1;
++  result:=jsonb_build_object('saved',true);
++ when 'pay_invoice' then
++  resource:=(p_payload->>'id')::uuid; doc:=(p_payload->>'date')::date;
++  select * into invoice from public.supplier_invoices where id=resource for update;
++  if not found then raise exception 'Invoice not found'; end if;
++  before_value:=to_jsonb(invoice);
++  if invoice.erp_revision is distinct from (p_payload->>'revision')::integer then raise exception 'Invoice changed. Refresh and reopen payment.'; end if;
++  select coalesce(sum(p.amount),0) into paid from public.erp_supplier_payments p where p.invoice_id=resource;
++  amount:=round(public.erp_purchase_number(p_payload,'amount',.01,1000000000000),2);
++  if invoice.paid_at is not null or amount>round(invoice.amount-paid,2) then raise exception 'Payment exceeds the remaining invoice balance'; end if;
++  if doc is null or doc<coalesce(invoice.erp_invoice_date,(invoice.created_at at time zone 'America/Denver')::date) or doc>d then raise exception 'Payment date must be between invoice date and today'; end if;
++  insert into public.erp_supplier_payments(invoice_id,paid_on,amount,reference,created_by)values(resource,doc,amount,trim(p_payload->>'reference'),auth.uid());
++  update public.supplier_invoices set paid_at=case when paid+amount>=invoice.amount-.005 then doc else null end,erp_revision=erp_revision+1 where id=resource;
++  result:=jsonb_build_object('id',resource,'paid',amount);
++ else
++  -- Remaining operations act on exactly one existing PO and reject stale forms.
++  resource:=(p_payload->>'id')::uuid;
++  select * into po from public.purchase_orders where id=resource for update;
++  if not found then raise exception 'Purchase order not found'; end if;
++  before_value:=to_jsonb(po);
++  if po.erp_revision is distinct from (p_payload->>'revision')::integer then raise exception 'Purchase order changed. Refresh and reopen the form.'; end if;
++  case p_action
++  when 'send_order' then
++   if po.status<>'Draft' then raise exception 'Only a draft can be issued'; end if;
++   select * into supplier from public.suppliers where id=po.supplier_id and erp_active for share;
++   if not found then raise exception 'Supplier is archived or missing'; end if;
++   update public.purchase_orders set status='Order Sent',ordered_at=(d::text||' 12:00 America/Denver')::timestamptz,
++    expected_at=((d+supplier.quoted_lead_days)::text||' 12:00 America/Denver')::timestamptz,
++    erp_quoted_lead_days=supplier.quoted_lead_days,erp_payment_terms_days=supplier.payment_terms_days,erp_revision=erp_revision+1 where id=resource;
++  when 'receive_order' then
++   if po.status not in ('Order Sent','Partially Received') then raise exception 'Purchase order is not awaiting delivery'; end if;
++   doc:=(p_payload->>'date')::date; dest:=(p_payload->>'locationId')::uuid;
++   if doc is null or doc<(po.ordered_at at time zone 'America/Denver')::date or doc>d then raise exception 'Receipt date must be between order date and today'; end if;
++   if not exists(select 1 from public.locations where id=dest) then raise exception 'Choose a receiving location'; end if;
++   if jsonb_typeof(p_payload->'final') is distinct from 'boolean' then raise exception 'Choose final or partial delivery'; end if;
++   if jsonb_typeof(p_payload->'lines') is distinct from 'array' or jsonb_array_length(p_payload->'lines') not between 1 and 100 then raise exception 'Enter delivery lines'; end if;
++   if exists(select 1 from jsonb_array_elements(p_payload->'lines')l group by l->>'id' having count(*)>1) then raise exception 'Each PO line may occur once'; end if;
++   tax:=round(public.erp_purchase_number(p_payload,'tax',0,1000000000000),2);
++   receipt:=gen_random_uuid();
++   insert into public.erp_purchase_receipts(id,purchase_order_id,received_on,location_id,final_delivery,tax_amount,created_by)
++    values(receipt,resource,doc,dest,false,tax,auth.uid());
++   for line_input in select value from jsonb_array_elements(p_payload->'lines') order by value->>'id' loop
++    line_id:=(line_input->>'id')::uuid;
++    select * into pol from public.purchase_order_lines where id=line_id and purchase_order_id=resource for update;
++    if not found then raise exception 'Order line not found'; end if;
++    qty:=public.erp_purchase_number(line_input,'qty',0,1000000000); price:=public.erp_purchase_number(line_input,'price',0,1000000000);
++    if qty=0 then continue; end if;
++    if qty>pol.quantity_purchase-pol.quantity_received_purchase then raise exception 'Received quantity exceeds the remaining order'; end if;
++    select * into it from public.items where sku=pol.item_sku for update;
++    factor:=it.conversion_factor;
++    select greatest(0,coalesce(sum(quantity),0)) into have from public.inventory_transactions where item_sku=it.sku;
++    new_cost:=(have*it.unit_cost+qty*price)/(have+qty*factor);
++    update public.items set unit_cost=new_cost where sku=it.sku;
++    update public.purchase_order_lines set quantity_received_purchase=quantity_received_purchase+qty where id=line_id;
++    insert into public.inventory_transactions(item_sku,location_id,quantity,unit_cost,transaction_type,reference_document,user_id,occurred_at,metadata)
++     values(it.sku,dest,qty*factor,price/factor,'Receipt',po.po_no,auth.uid(),(doc::text||' 12:00 America/Denver')::timestamptz,
++      jsonb_build_object('erp_receipt_id',receipt,'purchase_order_line_id',line_id)) returning id into tx;
++    insert into public.erp_purchase_receipt_lines(receipt_id,purchase_order_line_id,quantity_purchase,unit_price_purchase,transaction_id) values(receipt,line_id,qty,price,tx);
++    amount:=amount+qty*price;
++   end loop;
++   if not exists(select 1 from public.erp_purchase_receipt_lines where receipt_id=receipt) then raise exception 'Enter a positive quantity on at least one line'; end if;
++   if round(amount,2)+tax>1000000000000 then raise exception 'Invoice value is too large'; end if;
++   select not exists(select 1 from public.purchase_order_lines where purchase_order_id=resource and quantity_received_purchase<quantity_purchase) into complete;
++   complete:=complete or (p_payload->>'final')::boolean;
++   update public.erp_purchase_receipts set final_delivery=complete where id=receipt;
++   terms:=coalesce(po.erp_payment_terms_days,(select payment_terms_days from public.suppliers where id=po.supplier_id));
++   update public.purchase_orders set status=case when complete then 'Received' else 'Partially Received' end,
++    erp_legacy_received_at=case when not exists(select 1 from public.erp_purchase_receipts where purchase_order_id=resource and id<>receipt) then po.received_at else po.erp_legacy_received_at end,
++    received_at=greatest(po.received_at,(doc::text||' 12:00 America/Denver')::timestamptz),
++    erp_payment_terms_days=terms,erp_quoted_lead_days=coalesce(erp_quoted_lead_days,greatest(0,(expected_at at time zone 'America/Denver')::date-(ordered_at at time zone 'America/Denver')::date)),erp_revision=erp_revision+1 where id=resource;
++   insert into public.supplier_invoices(purchase_order_id,amount,due_at,erp_invoice_date,erp_receipt_id)values(resource,round(amount,2)+tax,doc+terms,doc,receipt);
++  when 'finish_short' then
++   reason:=trim(coalesce(p_payload->>'reason',''));
++   if po.status<>'Partially Received' or reason='' then raise exception 'A partial receipt and reason are required'; end if;
++   update public.purchase_orders set status='Received',erp_notes=erp_notes||E'\nFinal short delivery: '||reason,erp_revision=erp_revision+1 where id=resource;
++   update public.erp_purchase_receipts set final_delivery=true where id=(select id from public.erp_purchase_receipts where purchase_order_id=resource order by received_on desc,created_at desc,id limit 1);
++  when 'close_order' then
++   if po.status<>'Received' then raise exception 'Finish receiving the order first'; end if;
++   if exists(select 1 from public.supplier_invoices i where i.purchase_order_id=resource and i.paid_at is null and i.amount>coalesce((select sum(p.amount) from public.erp_supplier_payments p where p.invoice_id=i.id),0)+.005) then raise exception 'Pay remaining invoice balances before closing'; end if;
++   update public.purchase_orders set status='Closed',erp_revision=erp_revision+1 where id=resource;
++  when 'correct_order' then
++   if po.status='Draft' or length(trim(coalesce(p_payload->>'reason','')))=0 then raise exception 'An issued order and correction reason are required'; end if;
++   doc:=(p_payload->>'date')::date; lead_days:=public.erp_purchase_number(p_payload,'lead',0,365);
++   if doc is null or doc>d or lead_days<>(p_payload->>'lead')::numeric then raise exception 'Enter a valid sent date and whole quoted lead days'; end if;
++   if jsonb_typeof(p_payload->'lines') is distinct from 'array' or jsonb_array_length(p_payload->'lines')<>(select count(*) from public.purchase_order_lines where purchase_order_id=resource) then raise exception 'Include every order line'; end if;
++   if exists(select 1 from jsonb_array_elements(p_payload->'lines')l group by l->>'id' having count(*)>1) then raise exception 'Include each order line once'; end if;
++   before_value:=before_value||jsonb_build_object('lines',(select jsonb_agg(to_jsonb(l)) from public.purchase_order_lines l where purchase_order_id=resource),
++    'receipts',(select coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) from public.erp_purchase_receipts r where purchase_order_id=resource));
++   for line_input in select value from jsonb_array_elements(p_payload->'lines') loop
++    select * into pol from public.purchase_order_lines where id=(line_input->>'id')::uuid and purchase_order_id=resource for update;
++    if not found then raise exception 'Unknown order line'; end if;
++    qty:=public.erp_purchase_number(line_input,'qty',.000001,1000000000);
++    if qty<pol.quantity_received_purchase then raise exception 'Ordered quantity cannot be less than received quantity'; end if;
++    update public.purchase_order_lines set quantity_purchase=qty where id=pol.id;
++   end loop;
++   if jsonb_typeof(p_payload->'receipts') is distinct from 'array' or jsonb_array_length(p_payload->'receipts')<>(select count(*) from public.erp_purchase_receipts where purchase_order_id=resource) then raise exception 'Include every audited receipt'; end if;
++   if exists(select 1 from jsonb_array_elements(p_payload->'receipts')r group by r->>'id' having count(*)>1) then raise exception 'Include each receipt once'; end if;
++   if (case when exists(select 1 from public.erp_purchase_receipts where purchase_order_id=resource) then po.erp_legacy_received_at else po.received_at end at time zone 'America/Denver')::date<doc then raise exception 'Sent date cannot be after a historical legacy receipt'; end if;
++   for part in select value from jsonb_array_elements(p_payload->'receipts') loop
++    select * into rec from public.erp_purchase_receipts where id=(part->>'id')::uuid and purchase_order_id=resource for update;
++    if not found then raise exception 'Unknown receipt'; end if;
++    sent:=(part->>'date')::date;
++    if sent is null or sent<doc or sent>d then raise exception 'Receipt date must be between sent date and today'; end if;
++    if exists(select 1 from public.supplier_invoices i where i.erp_receipt_id=rec.id and (i.paid_at<sent or exists(select 1 from public.erp_supplier_payments p where p.invoice_id=i.id and p.paid_on<sent))) then raise exception 'Receipt cannot be dated after an existing payment'; end if;
++    update public.erp_purchase_receipts set received_on=sent where id=rec.id;
++    update public.supplier_invoices set erp_invoice_date=sent,due_at=sent+coalesce(po.erp_payment_terms_days,(select payment_terms_days from public.suppliers where id=po.supplier_id)),erp_revision=erp_revision+1 where erp_receipt_id=rec.id;
++    update public.inventory_transactions set occurred_at=(sent::text||' 12:00 America/Denver')::timestamptz where id in(select transaction_id from public.erp_purchase_receipt_lines where receipt_id=rec.id);
++   end loop;
++   select greatest(po.erp_legacy_received_at,max((received_on::text||' 12:00 America/Denver')::timestamptz)) into latest from public.erp_purchase_receipts where purchase_order_id=resource;
++   update public.purchase_orders set ordered_at=(doc::text||' 12:00 America/Denver')::timestamptz,
++    expected_at=((doc+lead_days)::text||' 12:00 America/Denver')::timestamptz,erp_quoted_lead_days=lead_days,
++    received_at=coalesce(latest,po.received_at),erp_revision=erp_revision+1,
++    status=case when status='Partially Received' and not exists(select 1 from public.purchase_order_lines where purchase_order_id=resource and quantity_received_purchase<quantity_purchase) then 'Received' else status end where id=resource;
++  else raise exception 'Unknown purchasing action';
++  end case;
++  result:=jsonb_build_object('id',resource,'receiptId',receipt);
++ end case;
++ insert into public.erp_purchasing_requests(id,action,payload,result,created_by)values(p_request,p_action,p_payload,result,auth.uid());
++ insert into public.erp_purchasing_audit(request_id,action,resource_id,before_value,after_value,created_by)
++ values(p_request,p_action,coalesce(resource::text,p_payload->>'sku'),before_value,jsonb_build_object('input',p_payload,'result',result),auth.uid());
++ return result;
++end $$;
++revoke all on function public.erp_purchase_number(jsonb,text,numeric,numeric) from public,anon,authenticated;
++revoke all on function public.erp_purchasing_snapshot() from public,anon;
++revoke all on function public.erp_purchasing_write(uuid,text,jsonb) from public,anon;
++grant execute on function public.erp_purchasing_snapshot() to authenticated;
++grant execute on function public.erp_purchasing_write(uuid,text,jsonb) to authenticated;
++notify pgrst,'reload schema';
++commit;
+--- /dev/null
++++ b/tests/shared-purchasing.mjs
+@@ -0,0 +1,35 @@
++import assert from 'node:assert/strict';
++import {readFile} from 'node:fs/promises';
++import {stripTypeScriptTypes} from 'node:module';
++import {dateOnly,invoiceOwedShared,invoicePaidShared,purchasingMetrics,purchasingRule,readPurchasingSnapshot,searchSharedOrders} from '../src/sharedPurchasing.ts';
++const s={id:'supplier',name:'Actual supplier',contact_name:'Contact',email:'',phone:'',address:'',quoted_lead_days:3,payment_terms_days:15,erp_active:true,erp_notes:'',erp_revision:0};
++const i={sku:'LIVE-SKU',name:'Database-only item',barcode:'ACTUAL-001',category:'Ingredient',base_unit:'oz',purchase_unit:'5 lb box',conversion_factor:80,unit_cost:1,shelf_life_days:null,supplier_id:s.id,active:true,made:false};
++const po={id:'po',po_no:'PO-ACTUAL',supplier_id:s.id,ship_to_location_id:'loc',ordered_at:'2026-11-01T19:00:00Z',expected_at:'2026-11-04T19:00:00Z',received_at:'2026-11-06T19:00:00Z',status:'Received',erp_revision:1,erp_notes:'',erp_quoted_lead_days:3,erp_payment_terms_days:15,erp_legacy_received_at:null};
++const d={version:1,userId:'manager',today:'2026-11-15',suppliers:[s],items:[i],locations:[{id:'loc',name:'Database warehouse'}],orders:[po],lines:[{id:'line',purchase_order_id:po.id,item_sku:i.sku,quantity_purchase:10,quantity_received_purchase:5,unit_price_purchase:80}],receipts:[],receiptLines:[],invoices:[{id:'invoice',purchase_order_id:po.id,amount:400,due_at:'2026-11-21',paid_at:null,created_at:'2026-11-06T19:00:00Z',erp_invoice_date:'2026-11-06',erp_receipt_id:null,erp_revision:0}],payments:[],reviews:[],inventoryReviews:[],audit:[],options:{order_cost:25,holding_rate:.25,safety_days:2,review_days:7,revision:0},stock:{'LIVE-SKU':400},dailyUsage:{'LIVE-SKU':20}};
++assert.equal(readPurchasingSnapshot(d),d);assert.throws(()=>readPurchasingSnapshot({...d,version:2}));
++let m=purchasingMetrics(d,s.id);assert.equal(m.fillRate,.5);assert.equal(m.onTime,0);assert.equal(m.actualLead,5);assert.equal(m.quotedLead,3);assert.equal(m.rating,'Replace');assert.equal(m.shortOrders,1);assert.equal(m.owed,400);
++const perfect=structuredClone(d);perfect.lines[0].quantity_received_purchase=10;perfect.orders[0].received_at='2026-11-04T19:00:00Z';assert.equal(purchasingMetrics(perfect,s.id).score,100);
++const half=structuredClone(perfect);half.lines[0].quantity_received_purchase=5;assert.ok(purchasingMetrics(half,s.id).score<100);assert.equal(purchasingMetrics(half,s.id).fillRate,.5);
++const overdue=structuredClone(d);overdue.orders[0].status='Order Sent';overdue.orders[0].received_at=null;overdue.lines[0].quantity_received_purchase=0;assert.equal(purchasingMetrics(overdue,s.id).onTime,0);assert.equal(purchasingMetrics(overdue,s.id).fillRate,0);
++const legacy=structuredClone(d);legacy.orders[0].erp_quoted_lead_days=null;legacy.suppliers[0].quoted_lead_days=99;assert.equal(purchasingMetrics(legacy,s.id).quotedLead,3);legacy.invoices[0].paid_at='2026-11-10';assert.equal(invoicePaidShared(legacy,legacy.invoices[0]),400);assert.equal(invoiceOwedShared(legacy,legacy.invoices[0]),0);
++d.payments.push({id:'p',invoice_id:'invoice',paid_on:'2026-11-10',amount:125,reference:'partial',created_by:'manager'});assert.equal(invoiceOwedShared(d,d.invoices[0]),275);assert.equal(purchasingMetrics(d,s.id).owed,275);
++assert.equal(searchSharedOrders(d,' actual-001 ').orders.length,1);assert.equal(searchSharedOrders(d,'LIVE-SKU').items[0].sku,i.sku);assert.equal(searchSharedOrders(d,'unknown').orders.length,0);
++assert.equal(purchasingRule(d,i).daily,20);assert.equal(purchasingRule({...d,dailyUsage:{}},i).daily,0);assert.equal(purchasingRule({...d,dailyUsage:{}},i).packs,0);assert.equal(purchasingRule(d,i).onHand,400);
++assert.equal(dateOnly('2026-11-15T02:00:00Z'),'2026-11-14');
++const source=await readFile('src/SharedPurchasingScreens.tsx','utf8');
++const handlers=source.slice(source.indexOf(' const execute=async'),source.indexOf(' return{data,error,busy,stale,pending,load,save'));
++const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
++function setup(reply){const store=new Map(),events={calls:[],pending:null,errors:[],refresh:0,changed:0};const context={busyRef:{current:false},pendingRef:{current:null},mounted:{current:true},data:{userId:'manager'},stale:false,
++ setBusy:()=>{},setError:x=>events.errors.push(x),setPending:x=>events.pending=x,pendingKey:id=>'test:'+id,crypto,
++ localStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},
++ supabase:{rpc:async(name,args)=>{events.calls.push({name,args});return reply();}},load:async()=>{events.refresh++;return true;},
++ window:{dispatchEvent:()=>events.changed++},Event};
++ const run=new Function(...Object.keys(context),stripTypeScriptTypes(handlers)+';return {save,execute};')(...Object.values(context));return{...run,context,store,events};}
++let test=setup(()=>({data:{id:'receipt'},error:null}));await Promise.all([test.save('receive_order',{qty:5}),test.save('receive_order',{qty:5})]);assert.equal(test.events.calls.length,1);assert.equal(test.events.refresh,1);assert.equal(test.store.size,0);
++test=setup(()=>{throw Error('Connection interrupted after server save');});assert.equal(await test.save('pay_invoice',{amount:125}),false);assert.equal(test.store.size,1);const request=JSON.parse([...test.store.values()][0]);assert.equal(await test.save('pay_invoice',{amount:125}),false);assert.equal(test.events.calls.length,1);
++test.context.supabase.rpc=async(name,args)=>{test.events.calls.push({name,args});return{data:{id:'same-invoice'},error:null};};await test.execute(request);assert.equal(test.events.calls[0].args.p_request,test.events.calls[1].args.p_request);assert.deepEqual(test.events.calls[0].args.p_payload,test.events.calls[1].args.p_payload);assert.equal(test.store.size,0);
++test=setup(()=>({data:null,error:{code:'P0001',message:'Over receipt rejected'}}));await test.save('receive_order',{qty:100});assert.equal(test.store.size,0);assert.ok(test.events.errors.includes('Over receipt rejected'));
++test=setup(()=>({data:{id:'r'},error:null}));test.context.localStorage.setItem=()=>{throw Error('blocked');};await test.save('receive_order',{qty:5});assert.equal(test.events.calls.length,0);
++const app=await readFile('src/App.tsx','utf8');for(const view of ['Suppliers','Purchase Orders','Supplier Scorecards','Inventory Review','Payables'])assert.ok(app.includes('SharedPurchasingScreen view="'+view+'"'));
++assert.ok(source.includes("api.retry()"));assert.ok(!source.includes('loadState('));assert.ok(!source.includes('onCommit('));
++console.log('PASS: shared-only suppliers/catalog/history; final-short, overdue and legacy metrics; partial and legacy payments; real ledger usage; scanned lookup; duplicate-submit lock; durable uncertain-request retry; storage failure blocks writes; all purchasing routes connected. Transport tests are mocked; SQL tests run separately.');
+--- /dev/null
++++ b/tests/sql/purchasing-bootstrap.sql
+@@ -0,0 +1,8 @@
++-- Disposable CI database only. Never run bootstrap or fixture tests in Supabase.
++create role anon nologin;
++create role authenticated nologin;
++create schema auth;
++create table auth.users(id uuid primary key);
++create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
++grant usage on schema public,auth to authenticated,anon;
++grant execute on function auth.uid() to authenticated,anon;
+--- /dev/null
++++ b/tests/sql/purchasing-before-migration.sql
+@@ -0,0 +1,21 @@
++-- CI fixture, deliberately created BEFORE the new migration to verify preservation.
++insert into auth.users(id) values ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002'),('00000000-0000-0000-0000-000000000003'),('00000000-0000-0000-0000-000000000004');
++insert into public.profiles(user_id,role) values ('00000000-0000-0000-0000-000000000001','Manager'),('00000000-0000-0000-0000-000000000002','Cashier'),('00000000-0000-0000-0000-000000000003','Customer');
++insert into public.suppliers(id,name,quoted_lead_days,payment_terms_days) values('00000000-0000-0000-0000-000000000010','CI legacy supplier',3,15);
++insert into public.items(sku,name,category,barcode,base_unit,purchase_unit,conversion_factor,unit_cost,supplier_id)
++ values('CI-ITEM','CI purchased item','Ingredient','CI-BARCODE','oz','5 lb box',80,1,'00000000-0000-0000-0000-000000000010');
++insert into public.purchase_orders(id,po_no,supplier_id,ship_to_location_id,ordered_at,expected_at,received_at,status)
++ select '00000000-0000-0000-0000-000000000020','CI-LEGACY-PO','00000000-0000-0000-0000-000000000010',id,now()-interval '10 days',now()-interval '7 days',now()-interval '8 days','Received' from public.locations limit 1;
++insert into public.purchase_order_lines(id,purchase_order_id,item_sku,quantity_purchase,quantity_received_purchase,unit_price_purchase)
++ values('00000000-0000-0000-0000-000000000021','00000000-0000-0000-0000-000000000020','CI-ITEM',10,10,80);
++insert into public.supplier_invoices(id,purchase_order_id,amount,due_at,paid_at)
++ values('00000000-0000-0000-0000-000000000022','00000000-0000-0000-0000-000000000020',800,current_date+7,current_date-2);
++insert into public.inventory_transactions(item_sku,location_id,quantity,unit_cost,transaction_type,reference_document)
++ select 'CI-ITEM',id,800,1,'Receipt','CI-LEGACY-PO' from public.locations limit 1;
++create table public.ci_original_rows(table_name text,row_value jsonb);
++do $$declare t text;begin
++ foreach t in array array['suppliers','items','locations','purchase_orders','purchase_order_lines','supplier_invoices','inventory_transactions','profiles','settings'] loop
++  execute format('insert into public.ci_original_rows select %L,to_jsonb(t) from public.%I t',t,t);
++ end loop;
++end $$;
++create table public.ci_original_functions as select p.oid,pg_get_functiondef(p.oid) definition from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f';
+--- /dev/null
++++ b/tests/sql/shared-purchasing.sql
+@@ -0,0 +1,119 @@
++\set ON_ERROR_STOP on
++create function public.ci_assert(ok boolean,message text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'TEST FAILED: %',message;end if;end$$;
++-- Original values remain a subset of each row: new columns are allowed, rewrites are not.
++do $$declare old record; found_row boolean;begin
++ for old in select * from public.ci_original_rows loop
++  execute format('select exists(select 1 from public.%I t where to_jsonb(t) @> $1)',old.table_name) into found_row using old.row_value;
++  perform public.ci_assert(found_row,'migration rewrote or removed original '||old.table_name);
++ end loop;
++ for old in select * from public.ci_original_functions loop perform public.ci_assert(pg_get_functiondef(old.oid)=old.definition,'original database function changed');end loop;
++end$$;
++select public.ci_assert(not has_function_privilege('anon','public.erp_purchasing_snapshot()','EXECUTE'),'anonymous snapshot access');
++select public.ci_assert(not has_function_privilege('anon','public.erp_purchasing_write(uuid,text,jsonb)','EXECUTE'),'anonymous write access');
++select public.ci_assert(has_function_privilege('authenticated','public.erp_purchasing_write(uuid,text,jsonb)','EXECUTE'),'authenticated RPC grant missing');
++select public.ci_assert(not has_table_privilege('authenticated','public.erp_supplier_payments','INSERT'),'direct payment insertion allowed');
++select public.ci_assert(not has_table_privilege('authenticated','public.erp_purchase_receipts','UPDATE'),'direct receipt mutation allowed');
++
++do $$declare
++ manager uuid:='00000000-0000-0000-0000-000000000001'; supplier uuid:='00000000-0000-0000-0000-000000000010';
++ day date:=(now() at time zone 'America/Denver')::date; dest uuid; other_dest uuid; po uuid; line uuid; invoice uuid; first_receipt uuid; second_receipt uuid;
++ request uuid; payload jsonb; answer jsonb; again jsonb; failed boolean; before_count integer; before_stock numeric; before_amount numeric; before_pay numeric; qty numeric;
++begin
++ select id into dest from public.locations order by name limit 1;select id into other_dest from public.locations where id<>dest order by name limit 1;
++ -- Explicitly reject missing profile, Cashier, Customer, and no authenticated identity.
++ foreach manager in array array[null::uuid,'00000000-0000-0000-0000-000000000004'::uuid,'00000000-0000-0000-0000-000000000002'::uuid,'00000000-0000-0000-0000-000000000003'::uuid] loop
++  perform set_config('request.jwt.claim.sub',coalesce(manager::text,''),true);failed:=false;
++  begin perform public.erp_purchasing_snapshot();exception when insufficient_privilege then failed:=true;end;
++  perform public.ci_assert(failed,'non-manager read allowed');failed:=false;
++  begin perform public.erp_purchasing_write(gen_random_uuid(),'inventory_review','{"notes":"no access"}'::jsonb);exception when insufficient_privilege then failed:=true;end;
++  perform public.ci_assert(failed,'non-manager write allowed');
++ end loop;
++ manager:='00000000-0000-0000-0000-000000000001';perform set_config('request.jwt.claim.sub',manager::text,true);
++ answer:=public.erp_purchasing_snapshot();perform public.ci_assert((answer->>'version')::integer=1,'snapshot version');
++ perform public.ci_assert((select paid_at is not null and amount=800 from public.supplier_invoices where id='00000000-0000-0000-0000-000000000022'),'legacy invoice altered');
++ -- A final half delivery: exactly half the stock, one invoice, original ordered quantity retained.
++ answer:=public.erp_purchasing_write(gen_random_uuid(),'create_orders',jsonb_build_object('orders',jsonb_build_array(jsonb_build_object('supplierId',supplier,'locationId',dest,'date',day-7,'send',true,'lines',jsonb_build_array(jsonb_build_object('sku','CI-ITEM','qty',10,'price',160))))));
++ po:=(answer->'ids'->>0)::uuid;select id into line from public.purchase_order_lines where purchase_order_id=po;
++ request:=gen_random_uuid();payload:=jsonb_build_object('id',po,'revision',0,'date',day-2,'locationId',other_dest,'final',true,'tax',2.75,'lines',jsonb_build_array(jsonb_build_object('id',line,'qty',5,'price',160)));
++ answer:=public.erp_purchasing_write(request,'receive_order',payload);again:=public.erp_purchasing_write(request,'receive_order',payload);
++ perform public.ci_assert(answer=again,'idempotent retry result changed');
++ perform public.ci_assert((select quantity_purchase=10 and quantity_received_purchase=5 from public.purchase_order_lines where id=line),'final half quantities');
++ perform public.ci_assert((select status='Received' from public.purchase_orders where id=po),'final short not finalized');
++ perform public.ci_assert((select count(*)=1 from public.erp_purchase_receipts where purchase_order_id=po),'duplicate receipt');
++ perform public.ci_assert((select sum(t.quantity)=400 from public.inventory_transactions t join public.erp_purchase_receipt_lines l on l.transaction_id=t.id where l.purchase_order_line_id=line and t.location_id=other_dest),'receiving location or unit conversion incorrect');
++ perform public.ci_assert((select abs(unit_cost-4::numeric/3)<.000001 from public.items where sku='CI-ITEM'),'weighted cost incorrect');
++ select id into invoice from public.supplier_invoices where purchase_order_id=po;
++ perform public.ci_assert((select amount=802.75 and due_at=day+13 from public.supplier_invoices where id=invoice),'receipt invoice tax or Net terms incorrect');
++ failed:=false;begin perform public.erp_purchasing_write(request,'receive_order',payload||'{"tax":3}'::jsonb);exception when others then failed:=true;end;
++ perform public.ci_assert(failed,'request ID reused with different input');
++ -- Existing PO promise survives a supplier terms/lead edit; no static record edits.
++ perform public.erp_purchasing_write(gen_random_uuid(),'save_supplier',jsonb_build_object('id',supplier,'revision',0,'name','CI legacy supplier','contact','Changed contact','email','ci@example.com','phone','123','address','CI','lead',9,'terms',30,'active',true,'notes','Changed future promise'));
++ perform public.ci_assert((select erp_quoted_lead_days=3 and erp_payment_terms_days=15 from public.purchase_orders where id=po),'existing PO promise changed');
++ failed:=false;begin perform public.erp_purchasing_write(gen_random_uuid(),'save_supplier',jsonb_build_object('id',supplier,'revision',0,'name','Stale edit','lead',1,'terms',1,'active',true));exception when others then failed:=true;end;
++ perform public.ci_assert(failed,'stale supplier edit allowed');
++ -- New draft picks up the new promise only when issued.
++ answer:=public.erp_purchasing_write(gen_random_uuid(),'create_orders',jsonb_build_object('orders',jsonb_build_array(jsonb_build_object('supplierId',supplier,'locationId',dest,'date',day-8,'send',false,'lines',jsonb_build_array(jsonb_build_object('sku','CI-ITEM','qty',10,'price',160))))));
++ po:=(answer->'ids'->>0)::uuid;select id into line from public.purchase_order_lines where purchase_order_id=po;
++ perform public.erp_purchasing_write(gen_random_uuid(),'send_order',jsonb_build_object('id',po,'revision',0));
++ perform public.ci_assert((select erp_quoted_lead_days=9 and erp_payment_terms_days=30 and status='Order Sent' from public.purchase_orders where id=po),'send snapshot');
++ -- Correct sent date (receipts none), then receive two partial deliveries.
++ perform public.erp_purchasing_write(gen_random_uuid(),'correct_order',jsonb_build_object('id',po,'revision',1,'date',day-8,'lead',3,'reason','Match original purchase order','lines',jsonb_build_array(jsonb_build_object('id',line,'qty',10)),'receipts','[]'::jsonb));
++ answer:=public.erp_purchasing_write(gen_random_uuid(),'receive_order',jsonb_build_object('id',po,'revision',2,'date',day-3,'locationId',dest,'final',false,'tax',0,'lines',jsonb_build_array(jsonb_build_object('id',line,'qty',3,'price',160))));
++ first_receipt:=(answer->>'receiptId')::uuid;
++ perform public.ci_assert((select status='Partially Received' from public.purchase_orders where id=po),'partial prematurely finished');
++ failed:=false;begin perform public.erp_purchasing_write(gen_random_uuid(),'receive_order',jsonb_build_object('id',po,'revision',3,'date',day-1,'locationId',dest,'final',false,'tax',0,'lines',jsonb_build_array(jsonb_build_object('id',line,'qty',8,'price',160))));exception when others then failed:=true;end;
++ perform public.ci_assert(failed,'overreceipt accepted');
++ perform public.ci_assert((select quantity_received_purchase=3 from public.purchase_order_lines where id=line),'failed receipt mutated quantities');
++ answer:=public.erp_purchasing_write(gen_random_uuid(),'receive_order',jsonb_build_object('id',po,'revision',3,'date',day-1,'locationId',dest,'final',false,'tax',0,'lines',jsonb_build_array(jsonb_build_object('id',line,'qty',2,'price',160))));
++ second_receipt:=(answer->>'receiptId')::uuid;
++ perform public.ci_assert((select count(*)=2 from public.supplier_invoices where purchase_order_id=po),'per-delivery invoices missing');
++ select id into invoice from public.supplier_invoices where erp_receipt_id=first_receipt;
++ request:=gen_random_uuid();payload:=jsonb_build_object('id',invoice,'revision',0,'date',day-2,'amount',100,'reference','CI payment 1');
++ perform public.erp_purchasing_write(request,'pay_invoice',payload);perform public.erp_purchasing_write(request,'pay_invoice',payload);
++ perform public.ci_assert((select sum(amount)=100 and count(*)=1 from public.erp_supplier_payments where invoice_id=invoice),'duplicate payment');
++ perform public.ci_assert((select paid_at is null from public.supplier_invoices where id=invoice),'partial payment marked paid');
++ failed:=false;begin perform public.erp_purchasing_write(gen_random_uuid(),'pay_invoice',jsonb_build_object('id',invoice,'revision',1,'date',day-2,'amount',500,'reference','overpay'));exception when others then failed:=true;end;
++ perform public.ci_assert(failed,'overpayment accepted');
++ -- Payment chronology protects receipt corrections; a rejected edit rolls everything back.
++ select sum(quantity) into before_stock from public.inventory_transactions where item_sku='CI-ITEM';
++ select sum(amount) into before_amount from public.supplier_invoices where purchase_order_id=po;
++ payload:=jsonb_build_object('id',po,'revision',4,'date',day-9,'lead',4,'reason','Audit correction','lines',jsonb_build_array(jsonb_build_object('id',line,'qty',12)),'receipts',jsonb_build_array(jsonb_build_object('id',first_receipt,'date',day-1),jsonb_build_object('id',second_receipt,'date',day-1)));
++ failed:=false;begin perform public.erp_purchasing_write(gen_random_uuid(),'correct_order',payload);exception when others then failed:=true;end;
++ perform public.ci_assert(failed,'receipt moved after a payment');
++ perform public.ci_assert((select quantity_purchase=10 from public.purchase_order_lines where id=line),'failed correction partially changed order');
++ payload:=jsonb_set(payload,'{receipts,0,date}',to_jsonb(day-4));
++ perform public.erp_purchasing_write(gen_random_uuid(),'correct_order',payload);
++ perform public.ci_assert((select quantity_purchase=12 and quantity_received_purchase=5 from public.purchase_order_lines where id=line),'corrected quantities incorrect');
++ perform public.ci_assert((select sum(quantity)=before_stock from public.inventory_transactions where item_sku='CI-ITEM'),'correction changed stock');
++ perform public.ci_assert((select sum(amount)=before_amount from public.supplier_invoices where purchase_order_id=po),'correction changed invoice amounts');
++ perform public.ci_assert((select due_at=day+26 and erp_invoice_date=day-4 from public.supplier_invoices where id=invoice),'corrected invoice dates wrong');
++ perform public.ci_assert((select bool_and((t.occurred_at at time zone 'America/Denver')::date=day-4) from public.inventory_transactions t join public.erp_purchase_receipt_lines l on l.transaction_id=t.id where l.receipt_id=first_receipt),'corrected ledger dates wrong');
++ perform public.erp_purchasing_write(gen_random_uuid(),'finish_short',jsonb_build_object('id',po,'revision',5,'reason','Supplier confirmed no further shipment'));
++ perform public.ci_assert((select status='Received' from public.purchase_orders where id=po),'finish short failed');
++ failed:=false;begin perform public.erp_purchasing_write(gen_random_uuid(),'close_order',jsonb_build_object('id',po,'revision',6));exception when others then failed:=true;end;
++ perform public.ci_assert(failed,'unpaid PO closed');
++ perform public.erp_purchasing_write(gen_random_uuid(),'pay_invoice',jsonb_build_object('id',invoice,'revision',2,'date',day-1,'amount',380,'reference','CI payment 2'));
++ select id into invoice from public.supplier_invoices where erp_receipt_id=second_receipt;
++ perform public.erp_purchasing_write(gen_random_uuid(),'pay_invoice',jsonb_build_object('id',invoice,'revision',1,'date',day,'amount',320,'reference','CI payment 3'));
++ perform public.erp_purchasing_write(gen_random_uuid(),'close_order',jsonb_build_object('id',po,'revision',6));
++ perform public.ci_assert((select status='Closed' from public.purchase_orders where id=po),'paid PO could not close');
++ perform public.ci_assert(not exists(select 1 from public.supplier_invoices where purchase_order_id=po and paid_at is null),'fully paid invoices not marked paid');
++ -- Validation of one invalid grouped draft rolls back the entire group.
++ select count(*) into before_count from public.purchase_orders;
++ payload:=jsonb_build_object('orders',jsonb_build_array(jsonb_build_object('supplierId',supplier,'locationId',dest,'date',day,'send',false,'lines',jsonb_build_array(jsonb_build_object('sku','CI-ITEM','qty',1,'price',160))),jsonb_build_object('supplierId',supplier,'locationId',dest,'date',day,'send',false,'lines',jsonb_build_array(jsonb_build_object('sku','MISSING','qty',1,'price',1)))));
++ failed:=false;begin perform public.erp_purchasing_write(gen_random_uuid(),'create_orders',payload);exception when others then failed:=true;end;
++ perform public.ci_assert(failed,'invalid grouped draft accepted');perform public.ci_assert((select count(*)=before_count from public.purchase_orders),'grouped draft partially posted');
++ perform public.erp_purchasing_write(gen_random_uuid(),'save_review',jsonb_build_object('supplierId',supplier,'decision','Watch','notes','Review actual late and short deliveries'));
++ perform public.erp_purchasing_write(gen_random_uuid(),'inventory_review',jsonb_build_object('notes','Reviewed real inventory'));
++ perform public.erp_purchasing_write(gen_random_uuid(),'save_options',jsonb_build_object('revision',0,'orderCost',35,'holdingRate',.3,'safetyDays',3,'reviewDays',7));
++ perform public.ci_assert((select count(*)=1 from public.erp_supplier_reviews where supplier_id=supplier),'review missing');
++ perform public.ci_assert((select order_cost=35 from public.erp_purchasing_options),'ordering options missing');
++ perform public.ci_assert((select count(*) from public.erp_purchasing_requests)=(select count(*) from public.erp_purchasing_audit),'audit missing');
++ answer:=public.erp_purchasing_snapshot();perform public.ci_assert(jsonb_array_length(answer->'receipts')=3,'shared snapshot receipt count');
++end$$;
++-- Actual SQL role invocation: the RPC works without direct table SELECT privileges.
++select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
++set role authenticated;
++select public.ci_assert((public.erp_purchasing_snapshot()->>'userId')='00000000-0000-0000-0000-000000000001','authenticated role RPC call');
++reset role;
++select 'PASS: additive migration preservation, original functions, role checks, atomic partial/final receiving, inventory conversion/cost, tax/terms invoices, idempotency, payments, source corrections/rollback, reviews, options and shared snapshots.' result;
+--- /dev/null
++++ b/tests/sql/purchasing-concurrency.mjs
+@@ -0,0 +1,23 @@
++// Disposable CI database only: two actual PostgreSQL sessions, no mocked transport.
++import assert from 'node:assert/strict';
++import {execFile,execFileSync} from 'node:child_process';
++import {randomUUID} from 'node:crypto';
++if(process.env.PGDATABASE!=='erp_test'||!['127.0.0.1','localhost'].includes(process.env.PGHOST))throw Error('Concurrency tests require the isolated local erp_test database.');
++const auth="set request.jwt.claim.sub='00000000-0000-0000-0000-000000000001';";
++const args=sql=>['-X','-v','ON_ERROR_STOP=1','-At','-c',auth+sql];
++const json=output=>JSON.parse(output.trim().split('\n').findLast(line=>line.startsWith('{')));
++const sync=sql=>json(execFileSync('psql',args(sql),{encoding:'utf8'}));
++const send=sql=>new Promise(resolve=>execFile('psql',args(sql),{encoding:'utf8'},(error,stdout,stderr)=>resolve({error,stdout,stderr})));
++const created=sync("select public.erp_purchasing_write('"+randomUUID()+"','create_orders',jsonb_build_object('orders',jsonb_build_array(jsonb_build_object('supplierId','00000000-0000-0000-0000-000000000010','locationId',(select id from public.locations limit 1),'date',(now() at time zone 'America/Denver')::date,'send',true,'lines',jsonb_build_array(jsonb_build_object('sku','CI-ITEM','qty',10,'price',80))))));");
++const po=created.ids[0];
++function receive(id,revision,qty){return "select public.erp_purchasing_write('"+id+"','receive_order',jsonb_build_object('id','"+po+"','revision',"+revision+",'date',(now() at time zone 'America/Denver')::date,'locationId',(select ship_to_location_id from public.purchase_orders where id='"+po+"'),'final',false,'tax',0,'lines',jsonb_build_array(jsonb_build_object('id',(select id from public.purchase_order_lines where purchase_order_id='"+po+"'),'qty',"+qty+",'price',80))));";}
++const request=randomUUID(),same=receive(request,0,7);
++let responses=await Promise.all([send(same),send(same)]);
++assert.ok(responses.every(r=>!r.error),JSON.stringify(responses));assert.deepEqual(json(responses[0].stdout),json(responses[1].stdout));
++let state=sync("select jsonb_build_object('qty',(select quantity_received_purchase from public.purchase_order_lines where purchase_order_id='"+po+"'),'receipts',(select count(*) from public.erp_purchase_receipts where purchase_order_id='"+po+"'));");
++assert.equal(state.qty,7);assert.equal(state.receipts,1);
++responses=await Promise.all([send(receive(randomUUID(),1,2)),send(receive(randomUUID(),1,2))]);
++assert.equal(responses.filter(r=>!r.error).length,1);assert.ok(responses.find(r=>r.error).stderr.includes('Purchase order changed'));
++state=sync("select jsonb_build_object('qty',(select quantity_received_purchase from public.purchase_order_lines where purchase_order_id='"+po+"'),'receipts',(select count(*) from public.erp_purchase_receipts where purchase_order_id='"+po+"'));");
++assert.equal(state.qty,9);assert.equal(state.receipts,2);
++console.log('PASS: concurrent same-request deliveries post once; distinct stale requests allow one winner and preserve remaining stock/quantity.');
+--- a/scripts/check-main-baseline.mjs
++++ b/scripts/check-main-baseline.mjs
+@@ -2,5 +2,7 @@
+ import {execFileSync} from 'node:child_process';
+ const baseline=JSON.parse(readFileSync('migration-review/baseline.json','utf8'));
+ const main=execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim();
+-if(main!==baseline.main_commit){console.error('STOP: main changed after this package was prepared. Compare the newer group work before uploading or merging. Expected '+baseline.main_commit+'; current '+main);process.exit(1);}
++if(!/^[a-f0-9]{7,40}$/.test(baseline.main_commit))throw Error('Invalid reviewed main commit.');
++const reviewed=execFileSync('git',['rev-parse','--verify',baseline.main_commit+'^{commit}'],{encoding:'utf8'}).trim();
++if(main!==reviewed){console.error('STOP: main changed after this package was prepared. Compare the newer group work before uploading or merging. Expected '+baseline.main_commit+'; current '+main);process.exit(1);}
+ console.log('PASS: main matches the supplied snapshot '+main+'. This does not authorize merging or deploying.');
+--- a/migration-review/baseline.json
++++ b/migration-review/baseline.json
+@@ -1,7 +1,7 @@
+ {
+   "repository": "TimWoodss4ever/ZabyZach",
+-  "main_commit": "ddec26c82b62d8f30dc33b37a83271620b52e104",
++  "main_commit": "315a5cd",
+   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
+-  "review_branch": "erp-updates-current",
+-  "reporting_update": "Compared latest main ZIP; only reporting sections of src/App.tsx changed; reporting preserved in merged source."
++  "review_branch": "erp-shared-purchasing",
++  "reporting_update": "Baseline is the successfully deployed merged PR #1, commit 315a5cd; existing auth, POS, returns, reports, inventory, transfers and production are preserved. New purchasing uses additive RPCs."
+ }
+--- /dev/null
++++ b/migration-review/SHARED_PURCHASING_REVIEW_V5.md
+@@ -0,0 +1,35 @@
++# Shared purchasing review candidate v5
++
++Baseline: the deployed main merge commit 315a5cd, reconstructed from the supplied branch ZIP, the two successful barcode-import edits, and the reviewed Vite package update. The main guard resolves this abbreviated Git commit to its full object ID and blocks newer group commits. This is not a waiver of the guard.
++
++## Implemented
++
++- New shared supplier, PO, receipt, invoice/payment, management review, and inventory-review screens. The live catalog and destination IDs come from Supabase; new SKUs do not need browser seed entries.
++- Atomic partial/final-short receiving, conversion to inventory base units, weighted average cost, actual invoice tax entry, frozen PO terms, and per-delivery invoices.
++- Actual-history scorecards with precise fill/score display, overdue incompletes, saved PO promises, and a separate audited management assessment.
++- Payment balance and duplicate checks, source-record corrections with reasons, linked receipt/invoice/inventory dates, and stock/payment amount preservation.
++- Idempotent request IDs, persisted uncertain-save retries, stale form versions, manager-only RPCs, and no direct access to new tables from browser roles.
++- Shared EOQ/ROP review based on actual Sale/Production Issue ledger consumption over 180 days, shared options, and atomic grouped draft POs. No fabricated usage.
++- UI refreshes after each save, on window focus, and every 15 seconds for other users' changes.
++
++## Preserved
++
++The original six SQL migrations, existing receipt/sales/production/return RPCs, sign-in code, POS handler, returns handler, report loader/calculations, and three existing database screen loaders are unchanged. The 15 reviewed file hashes still pass. This package does not change package.json, package-lock.json, production deploy.yml, credentials, or local browser demo history. No seed/demo rows are imported into your shared database.
++
++The new migration adds erp_-prefixed tables/columns/functions only. It does not drop/truncate/delete data or replace any existing team RPC. Re-running this same migration retains saved receipts, payments, options and reviews. Existing paid_at invoices remain paid; historical quoted lead is inferred from the original sent/expected dates. Legacy payment terms are estimated from the supplier until frozen by a new transaction. Legacy receipt dates are not silently rewritten.
++
++## Validation status
++
++PASS locally: TypeScript source compatibility, all existing domain/preservation/checkout/report tests, new shared-catalog/metrics/payment/usage/scan tests, actual save-handler tests with mocked transport (duplicate submission, uncertain response, same-ID retry, failed-storage write prevention), and workflow YAML parsing.
++
++NOT RUN locally: actual PostgreSQL execution, clean npm install/production build against the real Supabase package, browser rendering of these new screens, or any live Supabase request. Package installation in this environment is blocked. No compatibility stub, node_modules, build output, credentials or environment file is shipped.
++
++The updated GitHub review workflow must pass before applying SQL. Its PostgreSQL 17 service is disposable and isolated. It applies the team's six original migrations; inserts legacy fixtures before the new migration; checks original row/function preservation; exercises manager/no-profile/customer permissions, final-half and multi-part receiving, tax/terms invoices, partial payments, corrections, rollback, audit, safe reapplication, and two real concurrent sessions. The regular verify job performs the real clean npm install, production build, and all JavaScript checks.
++
++## Boundaries still visible in the app
++
++Dashboard and four-week MRP calculations still summarize browser planning history and are now labelled accordingly. MRP's PO action routes to shared Inventory Review instead of creating disconnected browser POs. Online customer checkout/pickup/rewards and the browser profit/history are still separate from the shared server checkout; existing team guards on reward redemption and custom server modifiers remain intact. Shared purchasing does not complete those separate workflows. Food inventory cost reaches the existing POS through the updated shared items.unit_cost; supplier payment tracking is not a second P&L expense.
++
++## Review sequence
++
++Use a new erp-shared-purchasing branch from current main. Upload root files, then the single review workflow. Wait for BOTH verify and postgres jobs. If main has advanced, compare that group work first. Apply only the supplied new migration in Supabase after these checks pass, then merge and let the existing Pages workflow publish. Never run tests/sql fixture files on a shared database.
+--- a/.github/workflows/erp-review.yml
++++ b/.github/workflows/erp-review.yml
+@@ -1,7 +1,7 @@
+ name: ERP branch checks (no deployment)
+ on:
+   push:
+-    branches: [erp-updates, erp-updates-current]
++    branches: [erp-updates, erp-updates-current, erp-shared-purchasing]
+   pull_request:
+     branches: [main]
+   workflow_dispatch:
+@@ -30,3 +30,39 @@
+         run: npm run build
+       - name: Run workflow and preservation checks
+         run: node tests/run-all.mjs
++
++  postgres:
++    runs-on: ubuntu-latest
++    services:
++      postgres:
++        image: postgres:17
++        env:
++          POSTGRES_PASSWORD: local-ci-only
++          POSTGRES_DB: erp_test
++        ports: ['5432:5432']
++        options: >-
++          --health-cmd pg_isready
++          --health-interval 5s
++          --health-timeout 5s
++          --health-retries 10
++    steps:
++      - uses: actions/checkout@v4
++      - name: Test migrations and purchasing transactions in disposable PostgreSQL
++        env:
++          PGHOST: 127.0.0.1
++          PGPORT: '5432'
++          PGDATABASE: erp_test
++          PGUSER: postgres
++          PGPASSWORD: local-ci-only
++        run: |
++          psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
++          for migration in supabase/migrations/*.sql; do
++            if [ "$(basename "$migration")" = 202611150002_shared_purchasing.sql ]; then
++              psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-before-migration.sql
++            fi
++            psql -v ON_ERROR_STOP=1 -f "$migration"
++          done
++          psql -v ON_ERROR_STOP=1 -f tests/sql/shared-purchasing.sql
++          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611150002_shared_purchasing.sql
++          psql -v ON_ERROR_STOP=1 -c "select public.ci_assert((select order_cost=35 from public.erp_purchasing_options),'repeat migration reset options'); select public.ci_assert((select count(*)=3 from public.erp_purchase_receipts),'repeat migration reset receipts'); select public.ci_assert((select count(*)=3 from public.erp_supplier_payments),'repeat migration reset payments');"
++          node tests/sql/purchasing-concurrency.mjs
