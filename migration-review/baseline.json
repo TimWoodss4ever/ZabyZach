@@ -1,6 +1,7 @@
 {
   "repository": "TimWoodss4ever/ZabyZach",
-  "main_commit": "682326ae7be7b7a12fc87357d831a27623e6330f",
+  "main_commit": "ddec26c82b62d8f30dc33b37a83271620b52e104",
   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
-  "review_branch": "erp-updates-current"
+  "review_branch": "erp-updates-current",
+  "reporting_update": "Compared latest main ZIP; only reporting sections of src/App.tsx changed; reporting preserved in merged source."
 }

@@ -34,3 +34,4 @@ ADDED tests/run-all.mjs
 ADDED tests/short-delivery-impact.mjs
 ADDED tests/supplier-scorecards.mjs
 ADDED tests/team-supabase-checkout.mjs
+ADDED tests/team-supabase-reporting.mjs
