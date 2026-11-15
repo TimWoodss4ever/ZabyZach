@@ -1,6 +1,6 @@
 {
-  "package.json": "9b1cf3ca53f285764224de02470f88cdb6da9fb40681ab9199a68d43eea134e9",
-  "package-lock.json": "d28aab878faa4def45e483d87ad3b1a35497eca8bafe70c29b9a33029e941fc8",
+  "package.json": "48a7eca3a21af33d49541cb0f7d05b9c3a9067e2139d13fd40dc37e4e66ad107",
+  "package-lock.json": "ff10adab184bc6a08faf73d41f0ca53c57b79dd24eacea1be4b1e47a9acafa22",
   "vite.config.ts": "20f362e0a5e32e66712aebe1da8332d342085222ce771db1f0b7d5608d71c1a4",
   "index.html": "6d11b41fc98401cd38291ebb053f4584f0ad4112b08256dc50d63d4ca0d84ba6",
   "src/supabase.ts": "b5c8c6433e6d25f27b02c0781d5622ecc1d387c177cadf3065a8c20f7627ca41",

@@ -1,194 +1,474 @@
---- /dev/null
-+++ b/.github/workflows/erp-review.yml
-@@ -0,0 +1,32 @@
-+name: ERP branch checks (no deployment)
-+on:
-+  push:
-+    branches: [erp-updates, erp-updates-current]
-+  pull_request:
-+    branches: [main]
-+  workflow_dispatch:
-+permissions:
-+  contents: read
-+jobs:
-+  verify:
-+    runs-on: ubuntu-latest
-+    steps:
-+      - uses: actions/checkout@v4
-+        with:
-+          fetch-depth: 0
-+      - name: Check for newer work on main
-+        run: |
-+          git fetch origin main
-+          node scripts/check-main-baseline.mjs
-+      - uses: actions/setup-node@v4
-+        with:
-+          node-version: 24
-+          cache: npm
-+      - run: npm ci
-+      - name: Build the combined app
-+        env:
-+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
-+        run: npm run build
-+      - name: Run workflow and preservation checks
-+        run: node tests/run-all.mjs
---- a/README.md
-+++ b/README.md
-@@ -1,25 +1,28 @@
--# Za by Zack ERP
-+# Za by Zack ERP — combined code for review
- 
--Responsive restaurant ERP coursework demo for sales, inventory, purchasing, production, MRP, and reporting.
-+This package combines the updated ERP interface and browser workflows with the group's existing Supabase authentication, POS checkout, returns/exchanges, inventory, transfers/counts, and production screens.
- 
--## Put these files in GitHub
-+**Review branch only: `erp-updates-current`. This is not yet a complete Supabase integration and must not be merged into `main` or used for real operations.**
- 
--1. Download and unzip this project.
--2. Open the `TimWoodss4ever/ZabyZach` repository on GitHub.
--3. Choose **Add file → Upload files**.
--4. Upload the contents of this folder (including the `.github` folder), then commit to `main`.
--5. Open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**.
--6. Open the **Actions** tab and wait for **Deploy ERP to GitHub Pages** to finish. The site URL will be `https://timwoodss4ever.github.io/ZabyZach/`.
-+## What to do first
- 
--The workflow builds the Vite application and publishes the `dist` folder. The Vite base path is already set for the `ZabyZach` repository name.
-+1. Keep the current GitHub site and Supabase project unchanged.
-+2. Read `START_HERE.txt` and `REVIEW_NOTES.md`.
-+3. Review the changes on `erp-updates-current`. The new `ERP branch checks (no deployment)` workflow checks main for newer work, then builds and tests that branch; it does not deploy, run migrations, or connect to the database.
-+4. Check the workflow result before any preview or merge. Your original deployment workflow still deploys only main.
- 
--## Run locally
-+## What is connected today
- 
--```sh
--npm install
--npm run dev
--```
-+- Supabase sign-in and profile roles: preserved from the uploaded project.
-+- POS checkout and returns/exchanges: latest team database code preserved, including duplicate/uncertain submission guards.
-+- Inventory, transfers/counts, and production: preserved database queries and RPCs.
-+- New barcode catalog: reads current Supabase items, suppliers, and purchase orders. No database writes.
-+- Online customer checkout, purchasing, scorecards, inventory review, financials, and reports: updated browser-local workflows. They still need a shared database adapter before the full project is ready for multi-device use.
- 
--## Current data behavior
-+There is deliberately no automatic copy of generated history or browser records into Supabase. No existing SQL migration is changed or applied by this package. The group's latest returns/exchanges migration AND connected frontend are preserved. POS reward redemption/customized server checkout remain unsupported by the current team integration.
- 
--The demo seeds sales and inventory activity on first load and stores changes in that browser's local storage. Data does not sync to other devices or browsers. The SQL migrations in `supabase/migrations/` are database setup material; the current frontend does not yet read or write Supabase. Do not put a Supabase service-role key in this public repository.
-+## Verification
-+
-+`npm ci` then `npm run build` then `node tests/run-all.mjs`.
-+
-+See REVIEW_NOTES.md for actual local results and the dependency-download limitation. No environment values, database passwords, service-role keys, node_modules, test stubs, or compiled assets are included.
---- /dev/null
-+++ b/REVIEW_NOTES.md
-@@ -0,0 +1,61 @@
-+# Merge review and verification
-+
-+## Baseline
-+
-+Prepared from the supplied `ZabyZach-main(2).zip`, whose ZIP comment identifies commit `ddec26c82b62d8f30dc33b37a83271620b52e104`, and the updated ERP source at commit `fd7a15231d0bdbc4f3a76d0316ca3ea1845534b8`. This is a comparison against that supplied snapshot, not a claim that GitHub main has not advanced since it was downloaded. Compare the current branch before merging.
-+
-+The supplied Supabase column exports and function/policy/constraint export were read only. All 12 exported function bodies matched the migration versions in the uploaded ZIP after whitespace normalization. This does not verify database execution, function grants, triggers, RLS-enabled flags, or the completeness of production data.
-+
-+## Preserved
-+
-+`migration-review/protected-hashes.json` records the uploaded versions of 15 protected files: package and lock file, Supabase client and Vite environment declarations, index.html, Vite GitHub Pages base path, both existing workflow files, setup notes, and all six original SQL migrations. Automated checks require these files to remain byte-for-byte unchanged.
-+
-+The original auth-session/profile loading code, password sign-in, sign-out, and customer notification toast remain in App.tsx. The Inventory, Transfers & Counts, and Production screens and data loaders were isolated into ExistingDatabaseScreens.tsx. Their original three loaders and five transaction RPC call sites are checked for preservation. The newly supplied POS code (including record_sale and its concurrency/uncertain-confirmation protections), receipt type guards, and complete SupabaseReturnsPage are preserved as source snapshots and checked. The only POS edit formats phone entry as requested; the check reverses that one UI edit before comparing the full POS source byte-for-byte. Navigation routes still use the connected screens. Their existing behavior has not been redesigned or silently replaced by browser-only screens. The original per-catalog label printer remains available in Inventory.
-+
-+## Added/updated
-+
-+- Compact overlay navigation; manager/cashier-only Pizza Guide.
-+- Checkout/phone formatting, pickup-time handling, stock-blocking and friendly messages, customer privacy, and sales/profit display improvements.
-+- Supplier editing, purchasing workspace, inventory ordering review, history-derived scorecards, manual management reviews, corrections, visible short-shipment impact.
-+- Searchable/printable barcode catalog, CSV/label exports, Code 128 checksum and quiet zones, SKU/barcode PO lookup.
-+- The new barcode screen reads the current Supabase catalog/supplier assignments and POs instead of assuming the browser catalog equals the live database. It changes no records. Its catalog reads have not been exercised against the live project.
-+- Existing browser data and item costs are backed up once before local upgrades under `zbyzack-erp-v1-before-erp-updates` and `zbyzack-erp-v1-costs-before-erp-updates`. Those backups are not copied to Supabase. Export them separately before any later production deployment if local history must be retained.
-+- A new review-only GitHub workflow runs on erp-updates-current/PRs. It has read-only repository permissions and does not deploy or apply SQL.
-+
-+## Actual verification
-+
-+The local environment cannot download npm packages: both `npm ci` and a direct Supabase package lookup returned registry HTTP 403. Therefore a real dependency installation and production build with the actual Supabase library could not be completed here.
-+
-+Source TypeScript checks used the already-installed React/Vite tooling and a temporary, local-only Supabase compatibility declaration. That check catches application/module/type wiring errors but does not validate the actual Supabase library's types or behavior. The temporary declaration/runtime stub is not shipped. No mocked bundle is represented as a deployable production build, and no compiled assets are included.
-+
-+`node tests/run-all.mjs` passed locally: current domain/workflow tests, original checkout and POS-rewards tests, barcode encoding, receipt/accounting effects, EOQ, scorecards, source preservation, and browser-data backup. These tests do not authenticate or make network calls to Supabase.
-+
-+One original catalog test expected exactly 96 newly introduced drinks after migration. It fails against the new sample-history feature because recorded demo sales subsequently consume that stock (52 in the observed run). The original file is retained unchanged in `tests/original/`; its fixed opening-balance assumption is superseded by `tests/catalog-assortment.mjs` and `tests/availability-and-sample.mjs`, which check catalog migration, inventory consumption, history, persistence, and no silent restocking. It is not silently edited or counted as passing. The runner executes the other two original suites as well as all current suites. A new team-supabase-checkout test executes the actual new POS handler against mocked transport and checks server posting/receipt, no local-sale fallback, duplicate submission locking, unsupported feature guards, mapped customers, explicit failures, and uncertain confirmation protection. This does not prove live database behavior.
-+
-+Supported interactive browser QA was unavailable. Real auth, live writes, RLS enforcement, scanner hardware, responsive appearance, and cross-device synchronization have not been validated in this package. The real build remains gated by the new GitHub review workflow.
-+
-+## Remaining database integration — before main
-+
-+The existing project already mixed database screens and browser state. This code merge preserves that boundary and does not pretend to complete it. A browser ONLINE CUSTOMER sale or PO receipt currently does NOT change Supabase inventory; database production/transfers do NOT automatically update browser reports. Supplier screen changes currently do NOT edit the Supabase suppliers table. These discrepancies make this package unsuitable for live operations until the adapter work is completed.
-+
-+Next implementation must map suppliers/items/locations and historical records to database UUIDs, use validated transactional server functions for every receipt/sale/payment/order, implement customer ownership and role restrictions, and load reports/scorecards from the same records. Purchasing needs receipt-level history, payment transactions, PO promise snapshots, final-short/closed states, management reviews, and correction history. POS already posts through record_sale; online customer checkout still needs shared sale/order/payment/pickup metadata and safe idempotent submission, including recipe customization and rewards. Reporting must account for the preserved returns tables. Do not bulk-import generated history over the group's data.
-+
-+The existing receive_purchase_order function marks the PO Received for every call and uses the PO destination, so it cannot simply be reused unchanged for all the newer partial/final/chosen-location receipt behavior. No replacement function is applied by this package.
-+
-+Before a production merge, obtain a current repository comparison and a proper database backup, validate new migrations on an isolated database, and test role permissions plus two-device sale → inventory → finance and PO receipt → stock → invoice → payment → scorecard flows. A GitHub branch does not isolate the database. Keep the existing main deployment settings and environment values unchanged until the integration is verified.
-+
-+## V2: newer main work preserved
-+
-+The fresh archive changed only src/App.tsx relative to the first GitHub ZIP. It adds database-backed POS checkout and a connected returns/exchanges frontend. V2 retains both rather than reverting to the earlier local-only implementations. Existing main SQL and workflow files are still unchanged. The live Supabase function bodies were not re-exported for this update because no migration file changed in the fresh ZIP; no claim is made that the live database itself could not have changed independently.
-+
-+The updated POS intentionally retains the team's current restrictions: server checkout rejects custom modifiers and rewards redemption; a phone requires a visible Supabase customer mapping. New offline demo features do not bypass those guards. Online customer checkout, supplier/purchasing tools, scorecards, pickup queues, and browser reports still have separate local data. Live POS sales and returns therefore are not automatically reflected in those local reports. This remains a review-only code transfer, not a finished unified backend integration.
-+
-+Use a new erp-updates-current branch from current main so its history includes the newer team commits. Do not use the older package. The review workflow fetches main and compares its SHA to migration-review/baseline.json; it fails if newer main work appears, requiring another comparison. It does not push, deploy, apply SQL, or approve a merge.
-+
-+## V3: reporting update after the baseline check stopped
-+
-+The fresh main ZIP at ddec26c82b62d8f30dc33b37a83271620b52e104 changed only the Financials/Reports section of src/App.tsx relative to the last reviewed main ZIP. The team's complete reporting loader, hook, finance calculations, report calculations, and local-online-sale warning are now preserved verbatim as a source snapshot and checked in tests. The overall Financials screen wraps that preserved component and puts the newer browser project-history table/payables in a separate, explicitly excluded section. No SQL/client/deployment/package files changed in the fresh main ZIP or this patch.
-+
-+The expected main SHA was updated only after comparing the actual new archive and integrating its reporting work. The baseline protection remains enabled. Existing erp-updates-current can receive the patch; it does not require creating another branch. The eventual PR may need conflict review because the branch history and main diverged while work continued. Passing the build is not permission to merge a still-partially-connected backend.
-+
-+Affected checks passed: TypeScript source compatibility with the test-only dependency declaration, original-source preservation, current POS handler tests, main-baseline protection, and the new actual-source reporting loader/calculation tests. The reporting test covers 1001 sales/pagination, numeric conversion, return-line mapping, explicit server-error behavior, refunds/net tax/restock COGS, and excludes local demo values. Real dependency build, auth, live database behavior, and browser UI checks still require the GitHub/preview steps described above.
---- /dev/null
-+++ b/START_HERE.txt
-@@ -0,0 +1,32 @@
-+ZA BY ZACK — REVIEW PACKAGE V2 — REPLACES THE EARLIER ZIP
-+
-+This is the combined code prepared from your GitHub ZIP and the updated ERP.
-+Your live GitHub repository, published website, and Supabase database have not been changed.
-+
-+CURRENT STATUS
-+- Combined source prepared.
-+- Original SQL, Supabase client, package files, and main deployment workflow retained.
-+- Domain/workflow and source-preservation checks passed locally.
-+- Actual Supabase dependency build still needs to run in GitHub Actions.
-+- Remaining browser workflows are not yet connected to Supabase.
-+
-+NEXT STEP
-+Use this source ONLY on the erp-updates-current branch for review and build checks.
-+Do not commit to main, merge a pull request, change repository variables,
-+or run the SQL migrations against the group's database yet.
-+
-+This ZIP contains a folder called Za-by-Zack-review-v2. It is a full project copy,
-+not a database backup. Read REVIEW_NOTES.md for what was checked and what remains.
-+Ask for the next upload step after downloading and unzipping it.
-+
-+The existing README from the group's ZIP is retained in
-+migration-review/original-README.md for reference. Its old instruction to
-+commit files to main DOES NOT apply to this review package.
-+
-+WHY THIS REPLACES V1
-+Your new GitHub ZIP contains POS-to-Supabase checkout and connected returns/
-+exchanges. Both are now retained. Do not upload the earlier review ZIP.
-+
-+The fresh source baseline is 682326ae7be7b7a12fc87357d831a27623e6330f.
-+Create erp-updates-current from the current main branch before uploading.
-+The branch-check workflow stops if main changes after this baseline.
---- /dev/null
-+++ b/scripts/check-main-baseline.mjs
-@@ -0,0 +1,6 @@
-+import {readFileSync} from 'node:fs';
-+import {execFileSync} from 'node:child_process';
-+const baseline=JSON.parse(readFileSync('migration-review/baseline.json','utf8'));
-+const main=execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim();
-+if(main!==baseline.main_commit){console.error('STOP: main changed after this package was prepared. Compare the newer group work before uploading or merging. Expected '+baseline.main_commit+'; current '+main);process.exit(1);}
-+console.log('PASS: main matches the supplied snapshot '+main+'. This does not authorize merging or deploying.');
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -19,25 +19,25 @@
+         "@types/react-dom": "19.2.3",
+         "@vitejs/plugin-react": "6.0.2",
+         "typescript": "5.9.3",
+-        "vite": "8.0.13"
++        "vite": "8.3.8"
+       }
+     },
+     "node_modules/@emnapi/core": {
+-      "version": "1.10.0",
+-      "resolved": "https://registry.npmjs.org/@emnapi/core/-/core-1.10.0.tgz",
+-      "integrity": "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==",
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "dependencies": {
+-        "@emnapi/wasi-threads": "1.2.1",
++      "version": "2.0.0-beta.2",
++      "resolved": "https://registry.npmjs.org/@emnapi/core/-/core-2.0.0-beta.2.tgz",
++      "integrity": "sha512-MzCVoWtcg4Pm2B3je5mMvYMvj3MmBKw+fU7vbsJc9/iT8ip6/eYIHo/Dsm/mr+wsHB6SEyJDuxB09Yy6r/8+4A==",
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "dependencies": {
++        "@emnapi/wasi-threads": "2.2.0",
+         "tslib": "^2.4.0"
+       }
+     },
+     "node_modules/@emnapi/runtime": {
+-      "version": "1.10.0",
+-      "resolved": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-1.10.0.tgz",
+-      "integrity": "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA==",
++      "version": "2.0.0-beta.2",
++      "resolved": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-2.0.0-beta.2.tgz",
++      "integrity": "sha512-JcrSPzPvZuNZvJqPTF9Fw25LbOJ8avzFVlaf2grmH4Cku0oGP47tRgqPZadcfj3YoZMHkFVnCYFbQM8I+i5QEw==",
+       "dev": true,
+       "license": "MIT",
+       "optional": true,
+@@ -46,9 +46,9 @@
+       }
+     },
+     "node_modules/@emnapi/wasi-threads": {
+-      "version": "1.2.1",
+-      "resolved": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-1.2.1.tgz",
+-      "integrity": "sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==",
++      "version": "2.2.0",
++      "resolved": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-2.2.0.tgz",
++      "integrity": "sha512-JP7OYH38Q7+pyTAe14raZHLQIK7BDKbdwji+Xi3pcd/6QkJYQH3SX4wu6EplGrGJWRepoNzedfm0G3B9Z4e9Rw==",
+       "dev": true,
+       "license": "MIT",
+       "optional": true,
+@@ -57,9 +57,9 @@
+       }
+     },
+     "node_modules/@napi-rs/wasm-runtime": {
+-      "version": "1.2.7",
+-      "resolved": "https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-1.2.7.tgz",
+-      "integrity": "sha512-zJccwplOAbgfZju95IUHazLnx9RAPtPN2YGJXI6UbrgeaR9QfPjGrQL6ERkSAtnVCA4Q+83ApGyaX5zdpCaKkQ==",
++      "version": "1.2.6",
++      "resolved": "https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-1.2.6.tgz",
++      "integrity": "sha512-mRyDmEw9/fCDXCGfL1sbgIw/GUK0PVxRW4YwgPN61F3LQ+fSyoBFarJVzgGyhF6kRzEQZ0FejDqm4WLXSeqQmw==",
+       "dev": true,
+       "license": "MIT",
+       "optional": true,
+@@ -74,18 +74,18 @@
+         "url": "https://github.com/sponsors/Brooooooklyn"
+       },
+       "peerDependencies": {
+-        "@emnapi/core": "^1.7.1 || 2.0.0-beta.2 || 2.0.0-beta.3",
+-        "@emnapi/runtime": "^1.7.1 || 2.0.0-beta.2 || 2.0.0-beta.3"
++        "@emnapi/core": "^1.7.1 || 2.0.0-beta.2",
++        "@emnapi/runtime": "^1.7.1 || 2.0.0-beta.2"
+       }
+     },
+     "node_modules/@oxc-project/types": {
+-      "version": "0.130.0",
+-      "resolved": "https://registry.npmjs.org/@oxc-project/types/-/types-0.130.0.tgz",
+-      "integrity": "sha512-ibD2usx9JRu7f5pu2tMKMI4cpA4NgXJQoYRP4pQ7Pxmn1l6k/53qWtQWZayhYy3X4QZkt90Ot+mJEaeXouio6Q==",
+-      "dev": true,
+-      "license": "MIT",
+-      "funding": {
+-        "url": "https://github.com/sponsors/Boshen"
++      "version": "0.156.0",
++      "resolved": "https://registry.npmjs.org/@oxc-project/types/-/types-0.156.0.tgz",
++      "integrity": "sha512-1Duyg48TdJNdyhEB8Xn1L36bT9Pv6GUtlKjHxOys8xkaF/rQq3XJE+bAurSK/AgIz5mGFsb77cn9Pb20+WCScw==",
++      "dev": true,
++      "license": "MIT",
++      "funding": {
++        "url": "https://github.com/sponsors/oxc-project"
+       }
+     },
+     "node_modules/@reduxjs/toolkit": {
+@@ -128,10 +128,27 @@
+         "url": "https://opencollective.com/immer"
+       }
+     },
++    "node_modules/@rolldown/binding-android-arm-eabi": {
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-android-arm-eabi/-/binding-android-arm-eabi-1.2.19.tgz",
++      "integrity": "sha512-e+Ebe0WT+9tbXmNKPIiC8YrWAHYwug3m6i4p3rZGGulfZri1jtI4HslT+OZnFf/OIHowWF71DTlHwXBP2SiA7A==",
++      "cpu": [
++        "arm"
++      ],
++      "dev": true,
++      "license": "MIT",
++      "optional": true,
++      "os": [
++        "android"
++      ],
++      "engines": {
++        "node": "^20.19.0 || >=22.12.0"
++      }
++    },
+     "node_modules/@rolldown/binding-android-arm64": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-android-arm64/-/binding-android-arm64-1.0.1.tgz",
+-      "integrity": "sha512-fJI3I0r3C3Oj/zdBCpaCmBRZYf07xpaq4yCfDDoSFm+beWNzbIl26puW8RraUdugoJw/95zerNOn6jasAhzSmg==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-android-arm64/-/binding-android-arm64-1.2.19.tgz",
++      "integrity": "sha512-hOombrTJ+szt2ciEzS7oCA78lMPBgF5UMQWCJIyNfnrI7GLl8HYoFqCnpL2gcPOaXMqryGCU5ExdQKyDDcC+yA==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -146,9 +163,9 @@
+       }
+     },
+     "node_modules/@rolldown/binding-darwin-arm64": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-darwin-arm64/-/binding-darwin-arm64-1.0.1.tgz",
+-      "integrity": "sha512-cKnAhWEsV7TPcA/5EAteDp6KcJZBQ2G+BqE7zayMMi7kMvwRsbv7WT9aOnn0WNl4SKEIf43vjS31iUPu80nzXg==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-darwin-arm64/-/binding-darwin-arm64-1.2.19.tgz",
++      "integrity": "sha512-XoMA2pwCKGTQzUjPgtRwkedH4WmXhdIPKT6l6oOxd1PUbNodGI6DcBekgN7EC//+x3pfBYX/qL1gNmZAqivw5g==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -163,9 +180,9 @@
+       }
+     },
+     "node_modules/@rolldown/binding-darwin-x64": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-darwin-x64/-/binding-darwin-x64-1.0.1.tgz",
+-      "integrity": "sha512-YKrVwQjIRBPo+5G/u03wGjbdy4q7pyzCe93DK9VJ7zkVmeg8LJ7GbgsiHWdR4xSoe4CAXRD7Bcjgbtr64bkXNg==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-darwin-x64/-/binding-darwin-x64-1.2.19.tgz",
++      "integrity": "sha512-zo8EsSSwMZCY/e+fRnGaX02YGgvJD0yvhNi/9hpGPA2MJ9ZF8dPCw75UGfpI6OpQ/myR/dIYmogRvqiZD0TrXg==",
+       "cpu": [
+         "x64"
+       ],
+@@ -180,9 +197,9 @@
+       }
+     },
+     "node_modules/@rolldown/binding-freebsd-x64": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-freebsd-x64/-/binding-freebsd-x64-1.0.1.tgz",
+-      "integrity": "sha512-z/oBsREo46SsFqBwYtFe0kpJeBijAT48O/WXLI4suiCLBkr03RTtTJMCzSdDd2znlh8VJizL09XVkQgk8IZonw==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-freebsd-x64/-/binding-freebsd-x64-1.2.19.tgz",
++      "integrity": "sha512-O8ISAOfI1nj7AuBPd30FSF47z7f7lzlk5poQVGgiikvQuGEBFYvW8ki+UEnT+YJPnNGjQzn304klt4O9FUE7mA==",
+       "cpu": [
+         "x64"
+       ],
+@@ -197,9 +214,9 @@
+       }
+     },
+     "node_modules/@rolldown/binding-linux-arm-gnueabihf": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-arm-gnueabihf/-/binding-linux-arm-gnueabihf-1.0.1.tgz",
+-      "integrity": "sha512-ik8q7GM11zxvYxFc2PeDcT6TBvhCQMaUxfph/M5l9sKuTs/Sjg3L+Byw0F7w0ZVLBZmx30P+gG0ECzzN+MFcmQ==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-arm-gnueabihf/-/binding-linux-arm-gnueabihf-1.2.19.tgz",
++      "integrity": "sha512-/lYCba5NO0yq4S0jGMH8QTBtkvQxoXjoQWzF5BcWp9MjB9jxVRD1GQDNofkVjcOj30DWyhLIN/4Oe60JKzaONw==",
+       "cpu": [
+         "arm"
+       ],
+@@ -214,13 +231,16 @@
+       }
+     },
+     "node_modules/@rolldown/binding-linux-arm64-gnu": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-arm64-gnu/-/binding-linux-arm64-gnu-1.0.1.tgz",
+-      "integrity": "sha512-QoSx2EkyrrdZ6kcyE8stqZ62t0Yra8Fs5ia9lOxJrh6TMQJK7gQKmscdTHf7pOXKREKrVwOtJcQG3qVSfc866A==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-arm64-gnu/-/binding-linux-arm64-gnu-1.2.19.tgz",
++      "integrity": "sha512-pm/apFMBnSbFb3O6nG5pHO1iqHhZrjGDFEjSm+ot9J17XXPvH9L90y5h+jgfHCE+Qdlsvy8qKEcU4VKxgjD+vA==",
+       "cpu": [
+         "arm64"
+       ],
+       "dev": true,
++      "libc": [
++        "glibc"
++      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -231,13 +251,16 @@
+       }
+     },
+     "node_modules/@rolldown/binding-linux-arm64-musl": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-arm64-musl/-/binding-linux-arm64-musl-1.0.1.tgz",
+-      "integrity": "sha512-uwNwFpwKeNiZawfAWBgg0VIztPTV3ihhh1vV334h9ivnNLorxnQMU6Fz8wG1Zb4Qh9LC1/MkcyT3YlDXG3Rsgg==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-arm64-musl/-/binding-linux-arm64-musl-1.2.19.tgz",
++      "integrity": "sha512-K1SmQp3FFichn8oqrNIwvFoZ5wcvjC7goBzpaMNvLf9FZc+QB/QvLmnpJZgAAGHiD980tP8FZZnXk2K94rvlxg==",
+       "cpu": [
+         "arm64"
+       ],
+       "dev": true,
++      "libc": [
++        "musl"
++      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -248,13 +271,16 @@
+       }
+     },
+     "node_modules/@rolldown/binding-linux-ppc64-gnu": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-ppc64-gnu/-/binding-linux-ppc64-gnu-1.0.1.tgz",
+-      "integrity": "sha512-zY1bul7OWr7DFBiJ++wofXvnr8B45ce3QsQUhKrIhXsygAh7bTkwyeM1bi1a2g5C/yC/N8TZyGDEoMfm/l9mpg==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-ppc64-gnu/-/binding-linux-ppc64-gnu-1.2.19.tgz",
++      "integrity": "sha512-I0xwD57jP/3A7+5UPZin2w8Y7XHEmEM5zqpYZOcQ45MlNW6tUJUziymV3yRr7rL4vwyfEcRsRksC4a7Kc08p5Q==",
+       "cpu": [
+         "ppc64"
+       ],
+       "dev": true,
++      "libc": [
++        "glibc"
++      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -265,13 +291,16 @@
+       }
+     },
+     "node_modules/@rolldown/binding-linux-s390x-gnu": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-s390x-gnu/-/binding-linux-s390x-gnu-1.0.1.tgz",
+-      "integrity": "sha512-0frlsT/f4Ft6I7SMESTKnF3cZsdicQn1dCMkF/jT9wDLE+gGoiQfv1nmT9e+s7s/fekvvy6tZM2jHvI2tkbJDQ==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-s390x-gnu/-/binding-linux-s390x-gnu-1.2.19.tgz",
++      "integrity": "sha512-BrtEHT24SNXj9HiXqy+s/kXiSiQGt6EKCPUlRirAoIioVxKGnbXBUEkbZASAei7iZJB0/Ynm+0JP00Ipx7AnSw==",
+       "cpu": [
+         "s390x"
+       ],
+       "dev": true,
++      "libc": [
++        "glibc"
++      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -282,13 +311,16 @@
+       }
+     },
+     "node_modules/@rolldown/binding-linux-x64-gnu": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-x64-gnu/-/binding-linux-x64-gnu-1.0.1.tgz",
+-      "integrity": "sha512-XABVmGp9Tg0WspTVvwduTc4fpqy6JnAUrSQe6OuyqD/03nI7r0O9OWUkMIwFrjKAIqolvqoA4ZrJppgwE0Gxmw==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-x64-gnu/-/binding-linux-x64-gnu-1.2.19.tgz",
++      "integrity": "sha512-rm75/9DkHKeU2WnA8w4X94WGYgLlDCFCfkQC+4bguVJmC/jvDRv2B+2wLOYhyE0fVuv7//Ckk39OoOufyCu76Q==",
+       "cpu": [
+         "x64"
+       ],
+       "dev": true,
++      "libc": [
++        "glibc"
++      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -299,13 +331,16 @@
+       }
+     },
+     "node_modules/@rolldown/binding-linux-x64-musl": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-x64-musl/-/binding-linux-x64-musl-1.0.1.tgz",
+-      "integrity": "sha512-bV4fzswuzVcKD90o/VM6QqKxnxlDq0g2BISDLNVmxrnhpv1DDbyPhCIjYfvzYLV+MvkKKnQt2Q6AO86SEBULUQ==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-linux-x64-musl/-/binding-linux-x64-musl-1.2.19.tgz",
++      "integrity": "sha512-irh/4+iYFM4GAzpluDErgjz89bj6NDtqqMAG/6O1LG38Ed3NpyebzCpcVNkFW8uhy+/3/BocUvnXDR33CXWe9A==",
+       "cpu": [
+         "x64"
+       ],
+       "dev": true,
++      "libc": [
++        "musl"
++      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -316,9 +351,9 @@
+       }
+     },
+     "node_modules/@rolldown/binding-openharmony-arm64": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-openharmony-arm64/-/binding-openharmony-arm64-1.0.1.tgz",
+-      "integrity": "sha512-/Mh0Zhq3OP7fVs0kcQHZP6lZEthMGTaSf8UBQYSFEZDWGXXlEC+nJ6EqenaK2t4LBXMe3A+K/G2BVXXdtOr4PQ==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-openharmony-arm64/-/binding-openharmony-arm64-1.2.19.tgz",
++      "integrity": "sha512-+KWTWNoPt+CfSq94CiceWu3yPE+QzkaG+phPyz9G60tmZLwfQkcA4AeksafzvJAw4pvg1mcd5a1TkUqVv0s4JA==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -333,9 +368,9 @@
+       }
+     },
+     "node_modules/@rolldown/binding-wasm32-wasi": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-wasm32-wasi/-/binding-wasm32-wasi-1.0.1.tgz",
+-      "integrity": "sha512-+1xc9X45l8ufsBAm6Gjvx2qDRIY9lTVt0cgWNcJ+1gdhXvkbxePA60yRTwSTuXL09CMhyJmjpV7E3NoyxbqFQQ==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-wasm32-wasi/-/binding-wasm32-wasi-1.2.19.tgz",
++      "integrity": "sha512-7EH+skOsl5qpWnK0vzamgJFhOv1cwxQpsxm8tI883K9fur5c27p8q87fzEO6BbBPabA2/+s/zR63/pLc137iOg==",
+       "cpu": [
+         "wasm32"
+       ],
+@@ -343,18 +378,18 @@
+       "license": "MIT",
+       "optional": true,
+       "dependencies": {
+-        "@emnapi/core": "1.10.0",
+-        "@emnapi/runtime": "1.10.0",
+-        "@napi-rs/wasm-runtime": "^1.1.4"
+-      },
+-      "engines": {
+-        "node": "^20.19.0 || >=22.12.0"
++        "@emnapi/core": "2.0.0-beta.2",
++        "@emnapi/runtime": "2.0.0-beta.2",
++        "@napi-rs/wasm-runtime": "1.2.6"
++      },
++      "engines": {
++        "node": "^20.19.0 || ^22.13.0 || >=23.5.0"
+       }
+     },
+     "node_modules/@rolldown/binding-win32-arm64-msvc": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-win32-arm64-msvc/-/binding-win32-arm64-msvc-1.0.1.tgz",
+-      "integrity": "sha512-1D+UqZdfnuR+Jy1GgMJwi85bD40H21uNmOPRWQhw4oRSuolZ/B5rixZ45DK2KXOTCvmVCecauWgEhbw8bI7tOw==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-win32-arm64-msvc/-/binding-win32-arm64-msvc-1.2.19.tgz",
++      "integrity": "sha512-3Q1Yg1Q7tEvBWoZf5rFvG/GKZQPgwfru+p4wBajDfJFBs0SHCpL++dfTjW9gyAKd1T7ZpIYvdaUax7Pa/IhFVQ==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -369,9 +404,9 @@
+       }
+     },
+     "node_modules/@rolldown/binding-win32-x64-msvc": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/@rolldown/binding-win32-x64-msvc/-/binding-win32-x64-msvc-1.0.1.tgz",
+-      "integrity": "sha512-INAycaWuhlOK3wk4mRHGsdgwYWmd9cChdPdE9bwWmy6rn9VqVNYNFGhOdXrofXUxwHIncSiPNb8tNm8knDVIeQ==",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/@rolldown/binding-win32-x64-msvc/-/binding-win32-x64-msvc-1.2.19.tgz",
++      "integrity": "sha512-y/sqRRc6d7hECzOFc5n3LSeqctmIp9mMjY1Kq4s14uLPd/LZ4z7i1zrW6fMtp2mPeuQIC4e6ULMcwQzMomqQag==",
+       "cpu": [
+         "x64"
+       ],
+@@ -1325,13 +1360,13 @@
+       "license": "MIT"
+     },
+     "node_modules/rolldown": {
+-      "version": "1.0.1",
+-      "resolved": "https://registry.npmjs.org/rolldown/-/rolldown-1.0.1.tgz",
+-      "integrity": "sha512-X0KQHljNnEkWNqqiz9zJrGunh1B0HgOxLXvnFpCOcadzcy5qohZ3tqMEUg00vncoRovXuK3ZqCT9KnnKzoInFQ==",
+-      "dev": true,
+-      "license": "MIT",
+-      "dependencies": {
+-        "@oxc-project/types": "=0.130.0",
++      "version": "1.2.19",
++      "resolved": "https://registry.npmjs.org/rolldown/-/rolldown-1.2.19.tgz",
++      "integrity": "sha512-QIiV1J9d0pzN4jeeTH4sjPy0AZ6cAy2cG0ExeoE1+U8Rvj+hR3gYkokx0YbeUNGlZqiQJJ2utcETe0oKXwzsuA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@oxc-project/types": "=0.156.0",
+         "@rolldown/pluginutils": "^1.0.0"
+       },
+       "bin": {
+@@ -1341,21 +1376,22 @@
+         "node": "^20.19.0 || >=22.12.0"
+       },
+       "optionalDependencies": {
+-        "@rolldown/binding-android-arm64": "1.0.1",
+-        "@rolldown/binding-darwin-arm64": "1.0.1",
+-        "@rolldown/binding-darwin-x64": "1.0.1",
+-        "@rolldown/binding-freebsd-x64": "1.0.1",
+-        "@rolldown/binding-linux-arm-gnueabihf": "1.0.1",
+-        "@rolldown/binding-linux-arm64-gnu": "1.0.1",
+-        "@rolldown/binding-linux-arm64-musl": "1.0.1",
+-        "@rolldown/binding-linux-ppc64-gnu": "1.0.1",
+-        "@rolldown/binding-linux-s390x-gnu": "1.0.1",
+-        "@rolldown/binding-linux-x64-gnu": "1.0.1",
+-        "@rolldown/binding-linux-x64-musl": "1.0.1",
+-        "@rolldown/binding-openharmony-arm64": "1.0.1",
+-        "@rolldown/binding-wasm32-wasi": "1.0.1",
+-        "@rolldown/binding-win32-arm64-msvc": "1.0.1",
+-        "@rolldown/binding-win32-x64-msvc": "1.0.1"
++        "@rolldown/binding-android-arm-eabi": "1.2.19",
++        "@rolldown/binding-android-arm64": "1.2.19",
++        "@rolldown/binding-darwin-arm64": "1.2.19",
++        "@rolldown/binding-darwin-x64": "1.2.19",
++        "@rolldown/binding-freebsd-x64": "1.2.19",
++        "@rolldown/binding-linux-arm-gnueabihf": "1.2.19",
++        "@rolldown/binding-linux-arm64-gnu": "1.2.19",
++        "@rolldown/binding-linux-arm64-musl": "1.2.19",
++        "@rolldown/binding-linux-ppc64-gnu": "1.2.19",
++        "@rolldown/binding-linux-s390x-gnu": "1.2.19",
++        "@rolldown/binding-linux-x64-gnu": "1.2.19",
++        "@rolldown/binding-linux-x64-musl": "1.2.19",
++        "@rolldown/binding-openharmony-arm64": "1.2.19",
++        "@rolldown/binding-wasm32-wasi": "1.2.19",
++        "@rolldown/binding-win32-arm64-msvc": "1.2.19",
++        "@rolldown/binding-win32-x64-msvc": "1.2.19"
+       }
+     },
+     "node_modules/scheduler": {
+@@ -1451,17 +1487,17 @@
+       }
+     },
+     "node_modules/vite": {
+-      "version": "8.0.13",
+-      "resolved": "https://registry.npmjs.org/vite/-/vite-8.0.13.tgz",
+-      "integrity": "sha512-MFtjBYgzmSxmgA4RAfjIyXWpGe1oALnjgUTzzV7QLx/TKxCzjtMH6Fd9/eVK+5Fg1qNoz5VAwsmMs/NofrmJvw==",
+-      "dev": true,
+-      "license": "MIT",
+-      "dependencies": {
+-        "lightningcss": "^1.32.0",
+-        "picomatch": "^4.0.4",
+-        "postcss": "^8.5.14",
+-        "rolldown": "1.0.1",
+-        "tinyglobby": "^0.2.16"
++      "version": "8.3.8",
++      "resolved": "https://registry.npmjs.org/vite/-/vite-8.3.8.tgz",
++      "integrity": "sha512-LzOn3h9rG/0vhLdXrV4yJ4QFA9eEoqCl+Yx+kGJd7aB9w6nfNgVHKSYwLPZUHrz4ZGa+t+kXjV9itvcHDLQouA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "lightningcss": "^1.33.0",
++        "picomatch": "^4.0.7",
++        "postcss": "^8.5.32",
++        "rolldown": "~1.2.18",
++        "tinyglobby": "^0.2.17"
+       },
+       "bin": {
+         "vite": "bin/vite.js"
+@@ -1477,7 +1513,7 @@
+       },
+       "peerDependencies": {
+         "@types/node": "^20.19.0 || >=22.12.0",
+-        "@vitejs/devtools": "^0.1.18",
++        "@vitejs/devtools": "^0.7.1 || ^0.8.0",
+         "esbuild": "^0.27.0 || ^0.28.0",
+         "jiti": ">=1.21.0",
+         "less": "^4.0.0",
+--- a/package.json
++++ b/package.json
+@@ -20,6 +20,6 @@
+     "@types/react-dom": "19.2.3",
+     "@vitejs/plugin-react": "6.0.2",
+     "typescript": "5.9.3",
+-    "vite": "8.0.13"
++    "vite": "8.3.8"
+   }
+ }
 --- a/src/App.tsx
 +++ b/src/App.tsx
 @@ -1,16 +1,22 @@
@@ -210,7 +490,7 @@
 -import { supabase } from './supabase';
 -
 -type Page='Dashboard'|'POS'|'Sales Orders'|'Returns'|'Inventory'|'Transfers & Counts'|'Production'|'Purchase Orders'|'Supplier Scorecards'|'MRP'|'Financials'|'Reports'|'Settings'|'About';
-+import {BarcodeLabelsScreen} from './BarcodeLabels';
++import {BarcodeLabelsScreen} from './BarcodeLabels.tsx';
 +import { AppState, Item, LoyaltyCustomer, SaleInput, Ledger, Location, PurchaseOrder, Role, Sale, SalesOrder, applyAdjustment, applyReturn, applySale, cartStockIssue, businessDate, completeCustomerOrder, fulfillSalesOrder, saleBreakdown, applyTransfer, findLoyaltyCustomer, formatCustomerPhone, normalizeCustomerPhone, saveLoyaltyCustomer, loyaltySummary, customizedItem, sauceOptions, toppingOptions, toppingPortion, toppingCharge, avgDaily, completeProductionOrder, createProductionOrder, customers, eoq, fmt, inventory, issueProductionOrder, items, loadState, locations, maxMake, mrpRows, recipeCost, receivePO, reorderPoint, resetState, saveState, suppliers, today } from './domain';
 +
 +type Page='Dashboard'|'POS'|'Sales Orders'|'Returns'|'Inventory'|'Transfers & Counts'|'Barcode Labels'|'Production'|'Purchase Orders'|'Supplier Scorecards'|'Suppliers'|'Inventory Review'|'Help & Support'|'MRP'|'Financials'|'Reports'|'Settings'|'About';
@@ -854,7 +1134,7 @@
 @@ -0,0 +1,366 @@
 +import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 +import {Check,Activity,Minus,AlertTriangle,Boxes,CircleDollarSign,Warehouse,RotateCcw,Printer,X,ScanLine,Plus,ArrowRight,ArrowLeftRight,PackageCheck,Pizza,CheckCircle2,ClipboardList,Clock3,ArrowUpRight} from 'lucide-react';
-+import {BarcodeLabelsScreen} from './BarcodeLabels';
++import {BarcodeLabelsScreen} from './BarcodeLabels.tsx';
 +import type {AppState,Location,PurchaseOrder,Item} from './domain';
 +import {fmt} from './domain';
 +import {supabase} from './supabase';
@@ -1772,379 +2052,3 @@
 +.barcode-workspace{display:grid;gap:20px}.barcode-intro{display:flex;align-items:center;gap:18px;padding:24px}.barcode-intro>div{flex:1}.barcode-intro h2{margin:6px 0;font-size:25px}.barcode-intro p{color:#6f8298;line-height:1.6;margin:0}.barcode-intro-icon{display:grid;place-items:center;background:#fff1d5;color:#986322;border-radius:14px;width:58px;height:58px;flex-shrink:0}.barcode-filters{display:grid;grid-template-columns:1.2fr 1fr .8fr 1.2fr;gap:14px;padding:20px;border-bottom:1px solid #e2eaf1}.barcode-filters label,.barcode-printbar label{display:grid;gap:7px;font-weight:600;font-size:12px;color:#567087}.barcode-filters input,.barcode-filters select,.barcode-printbar input{width:100%;min-width:0;border:1px solid #d6e2ed;background:white;color:#203a50;border-radius:9px;padding:11px;font:inherit}.barcode-selection{display:flex;align-items:center;flex-wrap:wrap;gap:20px;padding:16px 20px;background:#f7fafc;color:#61768a;font-size:12px}.barcode-selection label{display:flex;gap:9px;align-items:center;font-weight:600;color:#203a50}.barcode-selection input,.barcode-item-heading input{width:17px;height:17px;accent-color:#1c608c;flex-shrink:0}.barcode-catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:18px;padding:20px}.barcode-item{padding:18px;border:1px solid #dce5ec;border-radius:13px;background:#fff;min-width:0}.barcode-item.selected{border-color:#1d6a98;box-shadow:0 0 0 1px #1d6a98}.barcode-item-heading{display:flex;gap:10px;align-items:flex-start;cursor:pointer;min-height:45px}.barcode-item-heading b{font-size:13px;color:#203a50}.barcode-item-heading small{display:block;color:#778b9f;font-size:11px;margin-top:5px}.barcode-image{padding:14px 0 6px;background:white}.barcode-image svg{display:block;width:100%;height:68px}.barcode-value{display:flex;align-items:center;justify-content:center;gap:10px;font:13px monospace;letter-spacing:1px;color:#1c3347}.barcode-value button{display:grid;place-items:center;background:#f1f6fa;border:1px solid #dce5ed;border-radius:6px;padding:5px;color:#537087;cursor:pointer}.barcode-item-meta{display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:16px}.barcode-item-meta span,.barcode-item>p{color:#6d8398}.barcode-item>p{font-size:11px;margin:8px 0 15px}.barcode-printbar{position:sticky;bottom:15px;z-index:3;display:flex;align-items:center;gap:12px;padding:18px;box-shadow:0 6px 25px #16374e15;flex-wrap:wrap}.barcode-printbar>div{margin-right:auto}.barcode-printbar b{display:block;font-size:15px;color:#203a50}.barcode-printbar small{display:block;font-size:11px;color:#7b8fa1;margin-top:5px}.barcode-printbar input{max-width:95px;padding:8px}.barcode-printbar .button{font-size:12px}.barcode-preview{display:flex;flex-direction:column;height:90vh}.barcode-preview iframe{flex:1;width:100%;min-height:260px;border:1px solid #dce5ed;border-radius:8px;background:#f7f8f9}.barcode-preview p{font-size:12px;color:#6b8295}.barcode-how{margin:0}.barcode-how li{margin:8px 0}.barcode-workspace button:focus-visible,.barcode-workspace input:focus-visible,.barcode-workspace select:focus-visible{outline:3px solid #f1b653;outline-offset:3px}@media(max-width:1000px){.barcode-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.barcode-intro{flex-wrap:wrap}}@media(max-width:600px){.barcode-filters{grid-template-columns:1fr}.barcode-intro{padding:18px}.barcode-intro h2{font-size:20px}.barcode-intro-icon{display:none}.barcode-printbar{position:static}.barcode-catalog{padding:12px}.barcode-selection{gap:12px}}
 +.po-scan-search{display:flex;gap:10px;flex:1;min-width:0}.po-scan-search input{min-width:0;width:100%}.po-scan-search .button{white-space:nowrap}.po-item-result{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:0 20px 20px;padding:22px;border:1px solid #bad8e7;border-radius:12px;background:#f3f9fc}.po-item-result h3{font-size:19px;color:#173f5e;margin:7px 0 10px}.po-item-result p{font-size:12px;color:#577288;margin:7px 0;line-height:1.6}.po-item-result small{color:#4f7189}.po-item-result-actions{display:flex;align-items:flex-start;flex-direction:column;gap:12px;max-width:340px}.po-filter-notice,.po-search-message{padding:0 22px 16px;font-size:12px;color:#687e92}.po-filter-notice button{margin-left:8px}.po-matched-line{color:#1d719c!important;font-weight:600}.p-toolbar .po-scan-search{flex:1}.po-scan-search input{flex:1}@media(max-width:650px){.po-item-result{flex-direction:column;align-items:flex-start;margin:0 12px 15px;padding:16px}.po-scan-search{width:100%}.po-scan-search .button{font-size:11px;padding:10px}.po-item-result-actions{max-width:100%}}
 +.supplier-latest-fill{margin-top:10px;padding:10px;border-radius:8px;background:#eef6fb;min-width:185px;color:#365d78}.supplier-latest-fill b,.supplier-latest-fill small{display:block;white-space:normal;font-size:11px;line-height:1.55}.supplier-latest-fill.is-short{background:#fff1e7;color:#99491e;border-left:3px solid #dd8b4c}.supplier-latest-summary{padding:15px 18px;border-radius:10px;background:#fff7ed;border:1px solid #f0d8b8;margin:18px 0}.supplier-latest-summary h3{margin-top:0}.supplier-latest-summary p{font-size:12px;line-height:1.6}
---- /dev/null
-+++ b/tests/availability-and-sample.mjs
-@@ -0,0 +1,18 @@
-+import assert from 'node:assert/strict';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};globalThis.window={dispatchEvent:()=>{}};globalThis.CustomEvent=class{};
-+const d=await import('../src/domain.ts');const state=d.loadState(),location='Provo Campus Store';
-+for(let ago=0;ago<7;ago++){const date=new Date(d.today()+'T12:00:00Z');date.setUTCDate(date.getUTCDate()-ago);const key=date.toISOString().slice(0,10);for(const store of d.locations.slice(0,2))assert.ok(state.sales.some(s=>s.date===key&&s.location===store),'Sample sales on '+key+' at '+store);}
-+const snapshot=JSON.stringify(state);assert.equal(d.ensureSampleOperations(state),false);assert.equal(JSON.stringify(state),snapshot,'No duplicate sales, stock, or purchases on another load.');
-+for(const i of d.items.filter(i=>i.price>0))assert.equal(d.cartStockIssue(state,location,[{sku:i.sku,qty:1}]),null,'Opening menu availability: '+i.name);
-+const out=structuredClone(state);out.ledger.push({id:'BACON-COUNT',date:d.today(),item:'1008',location,qty:-d.inventory(out,'1008',location),unitCost:.35,type:'Adjustment',reference:'Cycle count'});
-+assert.equal(d.cartStockIssue(out,location,[{sku:'2006',qty:1}]).sku,'1008');assert.equal(d.cartStockIssue(out,location,[{sku:'2002',qty:1}]),null);
-+assert.equal(d.ensureSampleOperations(out),false);assert.equal(d.inventory(out,'1008',location),0,'A sold-out item is not silently restocked.');
-+const shared=structuredClone(state),mozz=d.inventory(shared,'1003',location);shared.ledger.push({id:'CHEESE-COUNT',date:d.today(),item:'1003',location,qty:12-mozz,unitCost:.22,type:'Adjustment',reference:'Cycle count'});
-+assert.equal(d.cartStockIssue(shared,location,[{sku:'2002',qty:1}]),null);assert.equal(d.cartStockIssue(shared,location,[{sku:'2001',qty:1}]),null);assert.equal(d.cartStockIssue(shared,location,[{sku:'2002',qty:1},{sku:'2001',qty:1}]).sku,'1003','Whole cart shares the same ingredient stock.');
-+const limited=structuredClone(state),soda=d.inventory(limited,'1018',location);limited.ledger.push({id:'SODA-COUNT',date:d.today(),item:'1018',location,qty:1-soda,unitCost:.35,type:'Adjustment',reference:'Cycle count'});
-+assert.equal(d.cartStockIssue(limited,location,[{sku:'1018',qty:1}]),null);assert.ok(d.cartStockIssue(limited,location,[{sku:'1018',qty:2}]));d.applySale(limited,location,[{sku:'1018',qty:1}],0,undefined,0,false);assert.ok(d.cartStockIssue(limited,location,[{sku:'1018',qty:1}]));
-+const asOf=new Date(d.today()+'T12:00:00Z');asOf.setUTCDate(asOf.getUTCDate()+1);const forward=structuredClone(state);assert.equal(d.ensureSampleOperations(forward,asOf.toISOString().slice(0,10)),true);assert.ok(state.sales.every(s=>forward.sales.some(x=>x.id===s.id)),'Existing sales preserved as sample history advances.');assert.equal(d.ensureSampleOperations(forward,asOf.toISOString().slice(0,10)),false);
-+// Received stock and its cost feed the next completed sale.
-+const receiving=structuredClone(state),pep=d.items.find(i=>i.sku==='1005'),originalCost=pep.cost;receiving.purchaseOrders.push({id:'VERIFY-PURCHASE',supplier:pep.supplier,date:d.today(),expected:d.today(),status:'Order Sent',terms:30,lines:[{sku:pep.sku,qty:1,received:0,unitPrice:originalCost*pep.factor*2}]});const originalQty=d.inventory(receiving,pep.sku,'Central Commissary');d.receivePO(receiving,'VERIFY-PURCHASE',1,originalCost*pep.factor*2);assert.equal(d.inventory(receiving,pep.sku,'Central Commissary'),originalQty+pep.factor);assert.ok(pep.cost>originalCost);const sale=d.applySale(receiving,location,[{sku:'2002',qty:1}],0,undefined,0,false);assert.equal(sale.lines[0].cost,d.recipeCost(d.items.find(i=>i.sku==='2002')));pep.cost=originalCost;
-+assert.equal(d.businessDate(new Date('2026-11-15T00:30:00Z')),'2026-11-14','Dashboard day uses Utah time.');
-+console.log('PASS: seven days of posted sales, all opening menu items available, idempotent sample data, no silent restock, recipe and shared-cart shortages, quantity limits, sales consumption, date rollover, preserved transactions, purchase quantity and cost, Utah dates.');
---- /dev/null
-+++ b/tests/browser-data-preservation.mjs
-@@ -0,0 +1,6 @@
-+import assert from 'node:assert/strict';
-+import {loadState,saveState} from '../src/domain.ts';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};globalThis.window={dispatchEvent(){}};globalThis.CustomEvent=class{};
-+const initial=loadState();initial.salesOrders.push({id:'TEAM-ORDER-KEEP',customer:'Team',location:'Provo Campus Store',pickup:'2027-01-01',status:'Order Placed',lines:[{sku:'2001',qty:2}]});saveState(initial);const original=memory.get('zbyzack-erp-v1'),costs=memory.get('zbyzack-erp-v1-costs');
-+loadState();assert.equal(memory.get('zbyzack-erp-v1-before-erp-updates'),original);assert.equal(memory.get('zbyzack-erp-v1-costs-before-erp-updates'),costs);const next=loadState();saveState(next);loadState();assert.equal(memory.get('zbyzack-erp-v1-before-erp-updates'),original);assert.ok(next.salesOrders.some(o=>o.id==='TEAM-ORDER-KEEP'));
-+console.log('PASS: exact original browser state and costs backed up once; existing team order retained; refresh does not overwrite backup.');
---- a/tests/catalog-assortment.mjs
-+++ b/tests/catalog-assortment.mjs
-@@ -7,5 +7,6 @@
- const s=fresh();const sale=applySale(s,loc,[{sku:'2002',qty:1,sauceSku:'1031',adjustments:{1031:2}},{sku:'1041',qty:2},{sku:'1054',qty:3}]);assert.equal(inventory(s,'1002',loc),1000);assert.equal(inventory(s,'1031',loc),988);assert.equal(inventory(s,'1040',loc),998);assert.equal(inventory(s,'1054',loc),997);assert.equal(sale.lines[0].price,14.99);assert.equal(sale.lines[0].sauceSku,'1031');
- const soda=sale.lines.find(l=>l.sku==='1054');applyReturn(s,sale.id,'1054',1,'Wrong order','Restock',soda.id);assert.equal(inventory(s,'1054',loc),998);
- const plan=fresh();plan.salesOrders=[{id:'demand',customer:'Test',location:loc,pickup:today(),status:'Order Placed',lines:[{sku:'1051',qty:12},{sku:'1041',qty:3}]}];const rows=mrpRows(plan);assert.equal(rows.find(r=>r.item.sku==='1051').gross.reduce((a,b)=>a+b,0),12);assert.equal(rows.find(r=>r.item.sku==='1031').gross.reduce((a,b)=>a+b,0),6);
--const old=fresh();old.ledger=old.ledger.filter(t=>!['1031','1032','1033','1034','1040','1051','1052','1053','1054','1055'].includes(t.item));storage.set('zbyzack-erp-v1',JSON.stringify(old));const upgraded=loadState();assert.equal(upgraded.catalogVersion,2);assert.equal(inventory(upgraded,'1051',loc),96);const count=upgraded.ledger.length;assert.equal(loadState().ledger.length,count);
-+const old=fresh();old.ledger=old.ledger.filter(t=>!['1031','1032','1033','1034','1040','1051','1052','1053','1054','1055'].includes(t.item));storage.set('zbyzack-erp-v1',JSON.stringify(old));const upgraded=loadState();assert.equal(upgraded.catalogVersion,2);assert.equal(upgraded.ledger.find(t=>t.id==='CATALOG-2-1051-'+loc).qty,96); // The opening receipt is followed by recorded sample sales.
-+const count=upgraded.ledger.length;assert.equal(loadState().ledger.length,count);
- console.log('PASS: six distinct soda SKUs, sauce swaps/prices/usage, dip packaging, soda restock, direct soda and sauce MRP demand, idempotent browser migration.');
---- a/tests/customer-checkout.mjs
-+++ b/tests/customer-checkout.mjs
-@@ -17,3 +17,36 @@
- const shortage=structuredClone(state);shortage.ledger=shortage.ledger.filter(l=>l.item!=='1005');const snapshot=JSON.stringify(shortage);assert.throws(()=>d.completeCustomerOrder(shortage,{...order,id:'ZA-SHORT'}),/unavailable/);assert.equal(JSON.stringify(shortage),snapshot);
- const combined=structuredClone(state);const sodaQty=d.inventory(combined,'1018',location);combined.ledger.push({id:'SET-SODA',date:d.today(),item:'1018',location,qty:3-sodaQty,unitCost:.35,type:'Adjustment',reference:'verification'});const snap=JSON.stringify(combined);assert.throws(()=>d.applySale(combined,location,[{sku:'1018',qty:2},{sku:'1018',qty:2}]),/unavailable/);assert.equal(JSON.stringify(combined),snap);
- console.log('PASS: checkout inventory, revenue, COGS, discount/tax, payment/order linkage, persistence, pickup without double posting, duplicate prevention, shortage rollback, combined stock validation.');
-+// Customer checkout and POS share a normalized phone identity and rewards history.
-+const phoneOrder={...order,id:'ZA-PHONE-VERIFY',customerPhone:'(801) 555-0199'};
-+const phonePosted=d.completeCustomerOrder(state,phoneOrder);
-+const profile=d.findLoyaltyCustomer(phonePosted.state,'8015550199');
-+assert.ok(profile);assert.equal(profile.name,order.orderName);
-+assert.equal(phonePosted.order.customerPhone,'+18015550199');
-+assert.equal(phonePosted.order.loyaltyCustomerId,profile.id);
-+assert.equal(phonePosted.sale.loyaltyCustomerId,profile.id);
-+assert.equal(phonePosted.sale.customerPhone,phonePosted.order.customerPhone);
-+assert.equal(phonePosted.sale.pickupName,order.orderName);
-+assert.equal(phonePosted.order.pickupNumber,phonePosted.sale.pickupNumber);
-+assert.equal(d.loyaltySummary(phonePosted.state,profile.id).visits,1);
-+const repeated=d.completeCustomerOrder(phonePosted.state,{...phoneOrder,id:'ZA-PHONE-RETURN',customerPhone:'1-801-555-0199'});
-+assert.equal(repeated.order.loyaltyCustomerId,profile.id);
-+assert.equal((repeated.state.loyaltyCustomers??[]).length,(phonePosted.state.loyaltyCustomers??[]).length);
-+assert.equal(d.loyaltySummary(repeated.state,profile.id).visits,2);
-+const posSale=d.applySale(repeated.state,location,[{sku:'1018',qty:1}],0,undefined,0,false,profile.name,{phone:'8015550199'});
-+assert.equal(posSale.loyaltyCustomerId,profile.id);
-+assert.equal(d.loyaltySummary(repeated.state,profile.id).visits,3);
-+d.saveState(repeated.state);assert.equal(d.findLoyaltyCustomer(d.loadState(),'8015550199').id,profile.id);
-+const invalidBefore=JSON.stringify(state);
-+assert.throws(()=>d.completeCustomerOrder(state,{...phoneOrder,id:'ZA-BAD-PHONE',customerPhone:'123'}),/10-digit/);
-+assert.equal(JSON.stringify(state),invalidBefore);
-+console.log('PASS: online phone enrollment, POS lookup, matching pickup name/call number, shared purchase history and rewards, returning-customer deduplication, persistence, invalid-phone rollback.');
-+// The photographed $73.95 receipt contributes sales before tax, not just its profit.
-+const basket=[{sku:'2001',qty:1},{sku:'2005',qty:3},{sku:'1041',qty:1},{sku:'2007',qty:1},{sku:'1043',qty:1},{sku:'1018',qty:3}];
-+const receiptOrder={...order,id:'ZA-RECEIPT-VERIFY',orderName:'Tim Woods',lines:basket,discountPct:0};
-+const beforeNet=state.sales.filter(s=>s.date===d.today()&&s.location===location&&s.status==='Completed').reduce((sum,s)=>sum+d.saleBreakdown(s).netSales,0);
-+const postedReceipt=d.completeCustomerOrder(state,receiptOrder),breakdown=d.saleBreakdown(postedReceipt.sale);
-+const afterNet=postedReceipt.state.sales.filter(s=>s.date===d.today()&&s.location===location&&s.status==='Completed').reduce((sum,s)=>sum+d.saleBreakdown(s).netSales,0);
-+assert.equal(breakdown.netSales,68.95);assert.equal(Math.round(breakdown.tax*100)/100,5);assert.equal(Math.round(breakdown.total*100)/100,73.95);assert.ok(Math.abs(afterNet-beforeNet-68.95)<1e-6);assert.equal(breakdown.grossProfit,breakdown.netSales-breakdown.cogs);assert.equal(Math.round(breakdown.grossProfit*100)/100,51.51);
-+const stored=JSON.stringify(breakdown);const cheese=d.items.find(i=>i.sku==='1003'),cheeseCost=cheese.cost;cheese.cost+=1;assert.equal(JSON.stringify(d.saleBreakdown(postedReceipt.sale)),stored,'Later receipt costs do not rewrite earlier sales/profit.');cheese.cost=cheeseCost;
-+console.log('PASS: photographed receipt adds $68.95 net sales, $5.00 tax, $73.95 paid, $51.51 gross profit at sample costs; historical amounts stay fixed after cost changes.');
---- /dev/null
-+++ b/tests/inventory-barcodes.mjs
-@@ -0,0 +1,13 @@
-+import assert from 'node:assert/strict';
-+import {items} from '../src/domain.ts';
-+import {code128Svg} from '../src/barcode.ts';
-+import {code128Patterns} from '../src/barcodePatterns.ts';
-+import {barcodeLabelSheet} from '../src/barcodeLabels.ts';
-+const incoming=items.filter(i=>!i.recipe);assert.ok(incoming.length>25);assert.equal(new Set(incoming.map(i=>i.barcode)).size,incoming.length);
-+// Decode printed bars and spaces back into Code 128 symbols, then verify the checksum.
-+function decode(svg){const width=Number(svg.match(/viewBox="0 0 (\d+)/)[1]);const bars=[...svg.matchAll(/<rect x="(\d+)" y="0" width="(\d+)"/g)].map(m=>({x:+m[1],width:+m[2]}));assert.equal(bars[0].x,20);assert.equal(width-bars.at(-1).x-bars.at(-1).width,20);let runs=[];for(let n=0;n<bars.length;n++){runs.push(bars[n].width/2);if(n+1<bars.length)runs.push((bars[n+1].x-bars[n].x-bars[n].width)/2);}const values=[];while(runs.length){const size=runs.length===7?7:6;const chunk=runs.splice(0,size).map((w,n)=>String.fromCharCode((n%2?96:64)+w)).join('');const entry=Object.entries(code128Patterns).find(([,p])=>p===chunk);assert.ok(entry,'Unknown barcode symbol '+chunk);values.push(+entry[0]);}return values;}
-+assert.deepEqual(decode(code128Svg('ZBZ-1005')),[104,58,34,58,13,17,16,16,21,93,106]);
-+for(const i of incoming){const values=decode(code128Svg(i.barcode));assert.equal(values[0],104);assert.equal(values.at(-1),106);const data=values.slice(1,-2).map(c=>String.fromCharCode(c+32)).join('');assert.equal(data,i.barcode);assert.equal(values.at(-2),values.slice(0,-2).reduce((n,c,index)=>n+c*(index||1),0)%103);}
-+const pepperoni=incoming.find(i=>i.sku==='1005');const sheet=barcodeLabelSheet([pepperoni],3);assert.equal((sheet.match(/class="label"/g)||[]).length,3);assert.ok(sheet.includes('SKU 1005'));assert.ok(sheet.includes('80 oz'));assert.ok(sheet.includes('5 lb box'));assert.ok(sheet.includes('ZBZ-1005'));assert.ok(sheet.includes('@page{size:letter'));assert.ok(sheet.includes('Actual size'));assert.ok(!sheet.includes('<script'));
-+assert.throws(()=>code128Svg(''),/Enter/);assert.throws(()=>code128Svg('🍕'),/not supported/);const escaped=barcodeLabelSheet([{...pepperoni,name:'<script>alert("x")</script>'}],1);assert.ok(!escaped.includes('<script>'));assert.ok(escaped.includes('&lt;script&gt;'));
-+console.log('PASS: every incoming barcode decodes to its catalog value; known Code 128 vector/checksum; quiet zones; printable copy counts, item/SKU/pack mapping, paper dimensions, escaped content, invalid-value guards.');
---- /dev/null
-+++ b/tests/main-baseline-guard.mjs
-@@ -0,0 +1,8 @@
-+import assert from 'node:assert/strict';
-+import {mkdtemp,writeFile,mkdir,rm} from 'node:fs/promises';
-+import {tmpdir} from 'node:os';
-+import {join,resolve} from 'node:path';
-+import {execFileSync,spawnSync} from 'node:child_process';
-+const script=resolve('scripts/check-main-baseline.mjs'),dir=await mkdtemp(join(tmpdir(),'erp-baseline-'));
-+const git=(...args)=>execFileSync('git',args,{cwd:dir,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
-+try{git('init','--quiet');git('-c','user.name=ERP test','-c','user.email=test@example.invalid','commit','--allow-empty','-m','base');const first=git('rev-parse','HEAD');git('update-ref','refs/remotes/origin/main',first);await mkdir(join(dir,'migration-review'));await writeFile(join(dir,'migration-review/baseline.json'),JSON.stringify({main_commit:first}));let result=spawnSync(process.execPath,[script],{cwd:dir,encoding:'utf8'});assert.equal(result.status,0,result.stderr);git('-c','user.name=ERP test','-c','user.email=test@example.invalid','commit','--allow-empty','-m','new group work');git('update-ref','refs/remotes/origin/main',git('rev-parse','HEAD'));result=spawnSync(process.execPath,[script],{cwd:dir,encoding:'utf8'});assert.equal(result.status,1);assert.ok(result.stderr.includes('main changed'));assert.equal(git('rev-parse','origin/main'),git('rev-parse','HEAD'));console.log('PASS: baseline gate accepts reviewed main and blocks later group commits without changing main.');}finally{await rm(dir,{recursive:true,force:true});}
---- /dev/null
-+++ b/tests/merge-preservation.mjs
-@@ -0,0 +1,20 @@
-+import assert from 'node:assert/strict';
-+import {readFile} from 'node:fs/promises';
-+import {createHash} from 'node:crypto';
-+const hashes=JSON.parse(await readFile('migration-review/protected-hashes.json','utf8'));
-+for(const [path,expected]of Object.entries(hashes)){const actual=createHash('sha256').update(await readFile(path)).digest('hex');assert.equal(actual,expected,'Protected original file changed: '+path);}
-+const app=await readFile('src/App.tsx','utf8'),connected=await readFile('src/ExistingDatabaseScreens.tsx','utf8');
-+const chunks=JSON.parse(await readFile('migration-review/preserved-source.json','utf8'));
-+for(const [name,text]of Object.entries(chunks)){
-+ const source=name==='latestPOS'?app.replace('onChange={e=>updateFormattedPaymentInput(e.currentTarget,formatCustomerPhone,changeRewardsPhone)}','onChange={e=>changeRewardsPhone(e.target.value)}'):app;
-+ assert.ok((name==='authentication'||name.startsWith('latest')?source:connected).includes(text),'Original source changed: '+name);
-+}
-+assert.ok(app.includes('const ReturnsPageView=memo(SupabaseReturnsPage);'));
-+for(const rpc of ['record_sale','process_return','process_exchange'])assert.ok(app.includes("supabase.rpc('"+rpc+"'"),'New team RPC missing: '+rpc);
-+for(const rpc of ['post_transfer','post_adjustment','create_production_order','issue_production_order','complete_production_order'])assert.ok(connected.includes("supabase.rpc('"+rpc+"'"),'Existing RPC connection missing: '+rpc);
-+assert.ok(app.includes("supabase.auth.signInWithPassword({email,password})"));assert.ok(app.includes('supabase.auth.signOut()'));
-+assert.ok(app.includes('<ConnectedInventoryPage'));assert.ok(app.includes('<ConnectedMovements'));assert.ok(app.includes('<ConnectedProductionPage'));assert.ok(app.includes('<ConnectedBarcodeLabels'));
-+const customer=app.slice(app.indexOf("if(role==='Customer')return"),app.indexOf(' const canOpen='));assert.ok(!customer.includes('<PizzaGuide'));
-+for(const page of ['Suppliers','Inventory Review','Supplier Scorecards','Barcode Labels'])assert.ok(app.includes("label:'"+page+"'"));
-+const review=await readFile('.github/workflows/erp-review.yml','utf8');assert.ok(!review.includes('deploy-pages'));assert.ok(!review.includes('pages: write'));assert.ok(!review.includes('supabase db push'));
-+console.log('PASS: '+Object.keys(hashes).length+' original files are byte-for-byte unchanged; auth, latest POS/returns, receipt validators, and three database loaders preserved; five existing RPC connections intact; live screens remain routed; new screens present; no customer helper; review workflow cannot publish or migrate.');
---- /dev/null
-+++ b/tests/original/catalog-assortment.mjs
-@@ -0,0 +1,11 @@
-+import assert from 'node:assert/strict';
-+import {items,sauceOptions,customizedItem,applySale,applyReturn,inventory,mrpRows,loadState,today} from '../src/domain.ts';
-+const storage=new Map();globalThis.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)};globalThis.window={dispatchEvent(){}};
-+const loc='Provo Campus Store';const fresh=()=>({ledger:items.map(i=>({id:i.sku,date:today(),item:i.sku,location:loc,qty:i.recipe?0:1000,unitCost:i.cost,type:'Receipt',reference:'check'})).concat([{id:'dough',date:today(),item:'1030',location:loc,qty:100,unitCost:.45,type:'Production',reference:'check'}]),sales:[],salesOrders:[],purchaseOrders:[],productionOrders:[],returns:[],customers:[],settings:{tax:.0725,orderCost:25,holding:.25,safetyDays:2},revision:1});
-+const drinks=items.filter(i=>i.category==='Beverage');assert.equal(drinks.length,6);assert.equal(new Set(drinks.map(i=>i.barcode)).size,6);assert(sauceOptions.some(i=>i.sku==='1031'));
-+const custom=customizedItem('2002',{},'1031');assert.equal(custom.recipe['1002'],undefined);assert.equal(custom.recipe['1031'],6);assert.equal(custom.price,13.99);
-+const s=fresh();const sale=applySale(s,loc,[{sku:'2002',qty:1,sauceSku:'1031',adjustments:{1031:2}},{sku:'1041',qty:2},{sku:'1054',qty:3}]);assert.equal(inventory(s,'1002',loc),1000);assert.equal(inventory(s,'1031',loc),988);assert.equal(inventory(s,'1040',loc),998);assert.equal(inventory(s,'1054',loc),997);assert.equal(sale.lines[0].price,14.99);assert.equal(sale.lines[0].sauceSku,'1031');
-+const soda=sale.lines.find(l=>l.sku==='1054');applyReturn(s,sale.id,'1054',1,'Wrong order','Restock',soda.id);assert.equal(inventory(s,'1054',loc),998);
-+const plan=fresh();plan.salesOrders=[{id:'demand',customer:'Test',location:loc,pickup:today(),status:'Order Placed',lines:[{sku:'1051',qty:12},{sku:'1041',qty:3}]}];const rows=mrpRows(plan);assert.equal(rows.find(r=>r.item.sku==='1051').gross.reduce((a,b)=>a+b,0),12);assert.equal(rows.find(r=>r.item.sku==='1031').gross.reduce((a,b)=>a+b,0),6);
-+const old=fresh();old.ledger=old.ledger.filter(t=>!['1031','1032','1033','1034','1040','1051','1052','1053','1054','1055'].includes(t.item));storage.set('zbyzack-erp-v1',JSON.stringify(old));const upgraded=loadState();assert.equal(upgraded.catalogVersion,2);assert.equal(inventory(upgraded,'1051',loc),96);const count=upgraded.ledger.length;assert.equal(loadState().ledger.length,count);
-+console.log('PASS: six distinct soda SKUs, sauce swaps/prices/usage, dip packaging, soda restock, direct soda and sauce MRP demand, idempotent browser migration.');
---- /dev/null
-+++ b/tests/original/customer-checkout.mjs
-@@ -0,0 +1,19 @@
-+import assert from 'node:assert/strict';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};globalThis.window={dispatchEvent:()=>{}};globalThis.CustomEvent=class{};
-+const d=await import('../src/domain.ts');
-+const state=d.loadState(), location='Provo Campus Store';
-+const order={id:'ZA-VERIFY',customer:'Za by Zack Demo Customer',orderName:'Friday Study Group',location,pickup:d.today(),pickupTime:'17:00',status:'Order Placed',lines:[{sku:'2002',qty:2},{sku:'1018',qty:1}],discountPct:10};
-+const before=JSON.stringify(state),stock=d.inventory(state,'1005',location),soda=d.inventory(state,'1018',location),sales=state.sales.length;
-+const revenue=s=>s.sales.reduce((n,x)=>n+x.lines.reduce((a,l)=>a+l.qty*l.price,0)-x.discount,0);
-+const costs=s=>s.sales.reduce((n,x)=>n+x.lines.reduce((a,l)=>a+l.qty*l.cost,0),0);
-+const result=d.completeCustomerOrder(state,order);
-+assert.equal(JSON.stringify(state),before,'preparation does not mutate saved state');assert.equal(result.state.sales.length,sales+1);assert.equal(d.inventory(result.state,'1005',location),stock-6);assert.equal(d.inventory(result.state,'1018',location),soda-1);
-+const sub=2*d.items.find(i=>i.sku==='2002').price+d.items.find(i=>i.sku==='1018').price;
-+assert.ok(Math.abs(revenue(result.state)-revenue(state)-sub*.9)<1e-6);assert.ok(Math.abs(costs(result.state)-costs(state)-result.sale.lines.reduce((n,l)=>n+l.qty*l.cost,0))<1e-6);
-+assert.equal(result.order.payment.status,'Paid');assert.equal(result.order.saleId,result.sale.id);assert.equal(result.order.payment.amount,Math.round(result.sale.total*100)/100);
-+d.saveState(result.state);const restored=d.loadState();assert.equal(restored.salesOrders[0].saleId,result.sale.id);assert.equal(restored.salesOrders[0].orderName,'Friday Study Group');
-+const picked=d.fulfillSalesOrder(restored,order.id);assert.equal(picked.sales.length,result.state.sales.length);assert.deepEqual(picked.ledger,result.state.ledger);assert.equal(picked.salesOrders[0].status,'Fulfilled');
-+assert.throws(()=>d.completeCustomerOrder(result.state,order),/already/);
-+const shortage=structuredClone(state);shortage.ledger=shortage.ledger.filter(l=>l.item!=='1005');const snapshot=JSON.stringify(shortage);assert.throws(()=>d.completeCustomerOrder(shortage,{...order,id:'ZA-SHORT'}),/unavailable/);assert.equal(JSON.stringify(shortage),snapshot);
-+const combined=structuredClone(state);const sodaQty=d.inventory(combined,'1018',location);combined.ledger.push({id:'SET-SODA',date:d.today(),item:'1018',location,qty:3-sodaQty,unitCost:.35,type:'Adjustment',reference:'verification'});const snap=JSON.stringify(combined);assert.throws(()=>d.applySale(combined,location,[{sku:'1018',qty:2},{sku:'1018',qty:2}]),/unavailable/);assert.equal(JSON.stringify(combined),snap);
-+console.log('PASS: checkout inventory, revenue, COGS, discount/tax, payment/order linkage, persistence, pickup without double posting, duplicate prevention, shortage rollback, combined stock validation.');
---- /dev/null
-+++ b/tests/original/pos-rewards.mjs
-@@ -0,0 +1,16 @@
-+import assert from 'node:assert/strict';
-+import {items,applySale,applyReturn,findLoyaltyCustomer,saveLoyaltyCustomer,loyaltySummary,normalizeCustomerPhone,inventory,saveState,loadState,today} from '../src/domain.ts';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};globalThis.window={dispatchEvent(){}};
-+const location='Provo Campus Store',phone='(801) 555-0123';const fresh=()=>({ledger:items.map(i=>({id:i.sku,date:today(),item:i.sku,location,qty:i.recipe&&i.price>0?0:1000,unitCost:i.cost,type:'Receipt',reference:'test'})),sales:[],returns:[],salesOrders:[],purchaseOrders:[],productionOrders:[],customers:[],settings:{tax:.0725,orderCost:25,holding:.25,safetyDays:2},catalogVersion:2,revision:1});
-+assert.equal(normalizeCustomerPhone(phone),'+18015550123');assert.equal(normalizeCustomerPhone('+1 801-555-0123'),'+18015550123');assert.equal(normalizeCustomerPhone('801555'),'');
-+const state=fresh();const profile=saveLoyaltyCustomer(state,phone,'Andrew');assert.equal(findLoyaltyCustomer(state,'8015550123').name,'Andrew');saveLoyaltyCustomer(state,'+1 801 555 0123','Andrew Sabey');assert.equal(state.loyaltyCustomers.length,1);assert.equal(profile.name,'Andrew Sabey');assert.equal(loyaltySummary(state,profile.id).points,0);
-+const first=applySale(state,location,[{sku:'1018',qty:80}],0,undefined,0,true,undefined,{phone});assert.equal(first.customer,'Andrew Sabey');assert.equal(first.pickupName,'Andrew Sabey');assert.equal(first.loyaltyCustomerId,profile.id);assert.equal(first.rewardsEarned,120);assert.equal(loyaltySummary(state,profile.id).points,120);
-+const redeem=applySale(state,location,[{sku:'1018',qty:10}],0,undefined,0,true,'Andrew',{phone:'18015550123',redeem:true});assert.equal(redeem.rewardsRedeemed,100);assert.equal(redeem.rewardsDiscount,5);assert.equal(redeem.rewardsEarned,10);assert.equal(redeem.discount,5);assert(Math.abs(redeem.tax-.725)<1e-8);assert.equal(loyaltySummary(state,profile.id).points,30);
-+applyReturn(state,redeem.id,'1018',5,'Wrong order','Restock',redeem.lines[0].id);assert.equal(loyaltySummary(state,profile.id).points,75);applyReturn(state,redeem.id,'1018',5,'Wrong order','Restock',redeem.lines[0].id);assert.equal(loyaltySummary(state,profile.id).points,120);const snap=JSON.stringify(state);assert.throws(()=>applyReturn(state,redeem.id,'1018',1,'Wrong order','Restock',redeem.lines[0].id));assert.equal(JSON.stringify(state),snap);
-+const discounted=applySale(state,location,[{sku:'1051',qty:10}],10,undefined,0,true,'Andrew',{phone});assert.equal(discounted.rewardsEarned,13);assert.equal(loyaltySummary(state,profile.id).points,133);
-+const guest=applySale(state,location,[{sku:'1051',qty:1}]);assert.equal(guest.loyaltyCustomerId,undefined);assert.equal(guest.rewardsEarned,0);
-+const second=applySale(state,location,[{sku:'1054',qty:2}],0,undefined,0,true,'Zack',{phone:'385-555-0144'});assert.equal(findLoyaltyCustomer(state,'3855550144').name,'Zack');assert.equal(second.rewardsEarned,3);assert.equal(state.loyaltyCustomers.length,2);
-+for(const attempt of [()=>applySale(state,location,[{sku:'1054',qty:1}],0,undefined,0,true,'Zack',{phone:'3855550144',redeem:true}),()=>applySale(state,location,[{sku:'1054',qty:1}],0,undefined,0,true,'Andrew',{phone,redeem:true}),()=>applySale(state,location,[{sku:'1054',qty:1}],0,undefined,0,true,'Oops',{phone:'123'}),()=>applySale(state,location,[{sku:'1054',qty:1}],0,undefined,0,true,'',{phone:'8015550999'}),()=>applySale(state,location,[{sku:'1054',qty:2000}],0,undefined,0,true,'New Customer',{phone:'8015550999'})]){const before=JSON.stringify(state);assert.throws(attempt);assert.equal(JSON.stringify(state),before,'failed transaction is atomic');}
-+const beforeBalance=loyaltySummary(state,profile.id).points;saveState(state);saveState(state);const restored=loadState();assert.equal(loyaltySummary(restored,profile.id).points,beforeBalance);assert.equal(findLoyaltyCustomer(restored,'+1 (801) 555-0123').name,'Andrew Sabey');assert.equal(restored.loyaltyCustomers.length,2);
-+const debt=fresh();const earned=applySale(debt,location,[{sku:'1018',qty:80}],0,undefined,0,true,'Andrew',{phone});const spent=applySale(debt,location,[{sku:'1018',qty:10}],0,undefined,0,true,'Andrew',{phone,redeem:true});applyReturn(debt,earned.id,'1018',80,'Wrong order','Restock',earned.lines[0].id);const balance=loyaltySummary(debt,earned.loyaltyCustomerId);assert.equal(balance.points,-90);assert.equal(balance.availablePoints,0);assert.throws(()=>applySale(debt,location,[{sku:'1018',qty:10}],0,undefined,0,true,'Andrew',{phone,redeem:true}));
-+console.log('PASS: normalized phone identity/name lookup, enrollment, earning after discounts excluding tax, redemption, partial/full refund point adjustments, balance debt, guest checkout, atomic failures, persistence without duplicate points.');
---- /dev/null
-+++ b/tests/pickup-checkout.mjs
-@@ -0,0 +1,13 @@
-+import assert from 'node:assert/strict';
-+import {pickupSchedule} from '../src/pickup.ts';
-+import {businessDate,cartStockIssue,loadState} from '../src/domain.ts';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
-+const now=new Date('2026-11-15T00:07:00Z'); // Nov 14, 5:07 PM at the restaurant.
-+assert.equal(businessDate(now),'2026-11-14');
-+const tomorrow=pickupSchedule('2026-11-15',now);assert.equal(tomorrow.minDate,'2026-11-14');assert.ok(tomorrow.options.includes('17:30'));assert.ok(tomorrow.options.includes('17:00'));
-+const sameDay=pickupSchedule('2026-11-14',now);assert.equal(sameDay.options[0],'17:30');assert.ok(!sameDay.options.includes('17:00'));
-+const closed=pickupSchedule('2026-11-14',new Date('2026-11-15T05:00:00Z'));assert.equal(closed.minDate,'2026-11-15');assert.equal(closed.options.length,0);
-+// Checkout's screenshot basket is valid against the recorded sample inventory.
-+const state=loadState(),cart=[{sku:'2001',qty:1},{sku:'2005',qty:1},{sku:'1041',qty:1},{sku:'2007',qty:1},{sku:'1018',qty:1}];
-+assert.equal(cartStockIssue(state,'Provo Campus Store',cart),null);
-+console.log('PASS: screenshot basket availability, 5:30 PM tomorrow checkout, same-day selection normalization, restaurant timezone, closed-day handling.');
---- /dev/null
-+++ b/tests/pizza-guide.mjs
-@@ -0,0 +1,9 @@
-+import assert from 'node:assert/strict';
-+import {guideAnswer,helpTopics} from '../src/helpContent.ts';
-+const state={purchaseOrders:[],supplierInvoices:[],supplierPayments:[]};
-+for(const [question,title] of [['How do I receive an order?','Receive a delivery'],['Where do I pay a supplier?','Pay a supplier or close a PO'],['Where are profits?','Find sales and profits'],['How do I change a supplier contact?','Add or edit a supplier'],['Where are reorder points and EOQ?','Review inventory and EOQ'],['Where are supplier scorecards?','Compare supplier performance']]){const answer=guideAnswer(question,state,'Manager');assert.equal(answer.links[0]?.title,title,question);}
-+assert.equal(guideAnswer('What is the weather?',state,'Manager').answer.includes('I can help you find'),true);
-+assert.equal(guideAnswer('Where are profits?',state,'Cashier').links.some(t=>t.page==='Financials'),false);
-+assert.equal(guideAnswer('What do we owe suppliers?',state,'Customer').links.length,0);
-+assert.ok(helpTopics.every(t=>t.steps.length>0&&t.answer&&t.page));
-+console.log('PASS: pizza guide navigation for receiving, supplier payments, profit, supplier contacts, EOQ, and scorecards; unknown-question fallback; role-limited links and customer help.');
---- /dev/null
-+++ b/tests/purchase-order-lookup.mjs
-@@ -0,0 +1,14 @@
-+import assert from 'node:assert/strict';
-+import {purchaseOrderSearch} from '../src/purchasing.ts';
-+const po=(id,supplier,sku,status,date)=>({id,supplier,supplierId:'SUP-6',date,expected:date,status,terms:30,location:'Central Commissary',lines:[{id:id+'-L0',sku,qty:10,received:status==='Received'?10:0,unitPrice:24}]});
-+const state={purchaseOrders:[po('PO-OLD','Cascade Beverage & Sides','1054','Received','2026-05-01'),po('PO-NEW','Cascade Beverage & Sides','1054','Order Sent','2026-11-14'),po('PO-OTHER','Valley Meats','1005','Order Sent','2026-11-14'),po('PO-PARTIAL','Cascade Beverage & Sides','1054','Partially Received','2026-11-10')]};
-+const before=JSON.stringify(state);
-+let result=purchaseOrderSearch(state,'  zbz-1054\r\n');assert.equal(result.matchedItem.name,'Sprite (12 oz can)');assert.deepEqual(result.orders.map(p=>p.id),['PO-NEW','PO-PARTIAL','PO-OLD']);assert.equal(result.openOrders.length,2);assert.equal(result.hiddenCount,0);
-+assert.deepEqual(purchaseOrderSearch(state,'1054').orders,result.orders);assert.equal(purchaseOrderSearch(state,'Sprite').orders.length,3);assert.equal(purchaseOrderSearch(state,'cascade').orders.length,3);assert.equal(purchaseOrderSearch(state,'PO-OTHER').orders[0].id,'PO-OTHER');assert.equal(purchaseOrderSearch(state,'ZBZ-1005').matchedItem.name,'Pepperoni');
-+result=purchaseOrderSearch(state,'ZBZ-1054','Closed');assert.equal(result.orders.length,0);assert.equal(result.hiddenCount,3);assert.equal(result.matchedItem.sku,'1054');
-+// Valid item with no PO remains discoverable; unknown codes never invent an item or PO.
-+result=purchaseOrderSearch(state,'ZBZ-1055');assert.equal(result.matchedItem.sku,'1055');assert.equal(result.matchingOrders.length,0);assert.equal(result.openOrders.length,0);assert.equal(purchaseOrderSearch(state,'ZBZ-9999').matchedItem,undefined);assert.equal(purchaseOrderSearch(state,'ZBZ-9999').orders.length,0);
-+assert.equal(purchaseOrderSearch(state,'').orders.length,4);assert.equal(purchaseOrderSearch(state,'','Order Sent').orders.length,2);assert.equal(JSON.stringify(state),before);
-+// Historical POs continue to use their saved supplier even when today's item assignment changes.
-+const historic={purchaseOrders:[po('PO-HIST','Previous Beverage Partner','1054','Received','2026-05-01')]};assert.equal(purchaseOrderSearch(historic,'ZBZ-1054').orders[0].supplier,'Previous Beverage Partner');
-+console.log('PASS: scanned/typed barcode and SKU lookups; case/whitespace normalization; item/name/supplier/PO search; open-first ordering; status-filter visibility; valid item without POs; unknown codes; read-only lookup; historical supplier retained.');
---- /dev/null
-+++ b/tests/purchasing-workflows.mjs
-@@ -0,0 +1,37 @@
-+import assert from 'node:assert/strict';
-+import * as d from '../src/domain.ts';
-+import * as p from '../src/purchasing.ts';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};globalThis.window={dispatchEvent(){}};globalThis.CustomEvent=class{};
-+const item=sku=>d.items.find(i=>i.sku===sku);
-+function fixture(){const state={ledger:d.items.filter(i=>!i.recipe).flatMap(i=>d.locations.map(location=>({id:'OPEN-'+i.sku+location,date:p.addDays(d.today(),-200),item:i.sku,location,qty:1000,unitCost:i.cost,type:'Receipt',reference:'Opening'}))),sales:[],salesOrders:[],purchaseOrders:[],returns:[],productionOrders:[],settings:{tax:.0725,orderCost:25,holding:.25,safetyDays:2,reviewDays:7},customers:[],revision:1};p.upgradePurchasing(state);return state;}
-+let state=fixture(),supplier=p.getSuppliers(state).find(s=>s.name==='Valley Meats');
-+state=p.saveSupplierRecord(state,{...supplier,contact:'Casey Morgan',email:'orders@valley.example',phone:'(801) 555-0100',lead:5,terms:3});supplier=p.getSuppliers(state).find(s=>s.id===supplier.id);assert.equal(supplier.contact,'Casey Morgan');
-+assert.throws(()=>p.saveSupplierRecord(state,{...supplier,email:'bad'}),/valid supplier email/);
-+const newSupplier={id:'',name:'Utah Test Farms',contact:'Taylor Park',email:'taylor@utahfarms.example',phone:'8015550129',address:'Orem, UT',lead:2,terms:14,active:true,notes:'Morning deliveries'};state=p.saveSupplierRecord(state,newSupplier);const added=p.getSuppliers(state).find(s=>s.name===newSupplier.name);assert.ok(added?.id);state=p.assignItemSupplier(state,'1011',added.id);assert.equal(p.supplierForItem(state,item('1011')).id,added.id);
-+const createdDate=p.addDays(d.today(),-10);state=p.createPurchaseOrder(state,{supplierId:supplier.id,location:'Provo Campus Store',date:createdDate,send:false,lines:[{sku:'1005',qty:4,unitPrice:48},{sku:'1006',qty:4,unitPrice:44}]});let po=state.purchaseOrders[0];assert.equal(po.status,'Draft');assert.equal(po.expected,p.addDays(createdDate,5));assert.equal(po.lines.length,2);assert.throws(()=>p.receivePurchaseOrder(state,{poId:po.id,date:d.today(),location:'Orem Store',final:false,lines:[{lineId:po.lines[0].id,qty:1,unitPrice:48}]}),/not awaiting/);
-+state=p.sendPurchaseOrder(state,po.id,createdDate);po=state.purchaseOrders[0];assert.equal(po.status,'Order Sent');assert.equal(po.terms,3);
-+// Future supplier edits affect future ordering rules, not promises already sent.
-+state=p.saveSupplierRecord(state,{...supplier,lead:9,terms:30});assert.equal(state.purchaseOrders[0].expected,p.addDays(createdDate,5));assert.equal(state.purchaseOrders[0].terms,3);assert.equal(d.supplierLead(state,item('1005')),9);
-+const baseline=JSON.stringify(state),baseCost=item('1005').cost;
-+assert.throws(()=>p.receivePurchaseOrder(state,{poId:po.id,date:d.today(),location:'Orem Store',final:false,lines:[{lineId:po.lines[0].id,qty:5,unitPrice:48}]}),/cannot exceed/);assert.equal(JSON.stringify(state),baseline);assert.equal(item('1005').cost,baseCost);
-+assert.throws(()=>p.receivePurchaseOrder(state,{poId:po.id,date:p.addDays(createdDate,-1),location:'Orem Store',final:false,lines:[{lineId:po.lines[0].id,qty:1,unitPrice:48}]}),/Receipt date/);
-+const beforeStore=d.inventory(state,'1005','Orem Store'),beforeOther=d.inventory(state,'1005','Provo Campus Store'),globalQty=d.inventory(state,'1005');const receiptDate=p.addDays(d.today(),-7);
-+state=p.receivePurchaseOrder(state,{id:'RCV-TEST-1',poId:po.id,date:receiptDate,location:'Orem Store',final:false,lines:[{lineId:po.lines[0].id,qty:2,unitPrice:48},{lineId:po.lines[1].id,qty:1,unitPrice:44}]});po=state.purchaseOrders[0];assert.equal(po.status,'Partially Received');assert.equal(d.inventory(state,'1005','Orem Store'),beforeStore+160);assert.equal(d.inventory(state,'1005','Provo Campus Store'),beforeOther);assert.ok(Math.abs(item('1005').cost-(globalQty*baseCost+96)/(globalQty+160))<1e-10);assert.equal(state.purchaseReceipts[0].lines.length,2);
-+let invoice=state.supplierInvoices[0];assert.equal(invoice.amount,140);assert.equal(invoice.due,p.addDays(receiptDate,3));assert.equal(p.invoiceBalance(state,invoice),140);let metrics=p.supplierMetrics(state,supplier.id);assert.equal(metrics.fillRate,3/8);assert.equal(metrics.onTime,0);assert.equal(metrics.actualLead,3);assert.equal(metrics.owed,140);assert.equal(metrics.overdue,140);
-+assert.throws(()=>p.receivePurchaseOrder(state,{id:'RCV-TEST-1',poId:po.id,date:d.today(),location:'Orem Store',final:false,lines:[{lineId:po.lines[0].id,qty:1,unitPrice:48}]}),/already/);
-+state=p.recordSupplierPayment(state,{invoiceId:invoice.id,date:d.today(),amount:40,reference:'BANK-1'});assert.equal(p.invoiceBalance(state,invoice),100);assert.throws(()=>p.recordSupplierPayment(state,{invoiceId:invoice.id,date:d.today(),amount:40,reference:'BANK-1'}),/already/);assert.throws(()=>p.recordSupplierPayment(state,{invoiceId:invoice.id,date:d.today(),amount:101,reference:'BANK-OVER'}),/cannot exceed/);
-+state=p.finishShortDelivery(state,po.id,'Supplier confirmed no remaining stock.');po=state.purchaseOrders[0];assert.equal(po.status,'Received');assert.equal(p.supplierMetrics(state,supplier.id).fillRate,3/8);assert.throws(()=>p.closePurchaseOrder(state,po.id),/payments/);
-+state=p.recordSupplierPayment(state,{invoiceId:invoice.id,date:d.today(),amount:100,reference:'BANK-2'});state=p.closePurchaseOrder(state,po.id);assert.equal(state.purchaseOrders[0].status,'Closed');assert.equal(p.poBalance(state,po.id),0);assert.equal(state.purchaseOrders.filter(p.isOpenPO).length,0);assert.equal(p.supplierMetrics(state,supplier.id).owed,0);
-+// A second PO is received in two deliveries, with a final short quantity.
-+state=p.createPurchaseOrder(state,{supplierId:supplier.id,location:'Provo Campus Store',date:createdDate,send:true,lines:[{sku:'1005',qty:4,unitPrice:24}]});const second=state.purchaseOrders[0];state=p.receivePurchaseOrder(state,{poId:second.id,date:p.addDays(d.today(),-6),location:'Provo Campus Store',final:false,lines:[{lineId:second.lines[0].id,qty:1,unitPrice:24}]});state=p.receivePurchaseOrder(state,{poId:second.id,date:p.addDays(d.today(),-5),location:'Provo Campus Store',final:true,lines:[{lineId:second.lines[0].id,qty:1,unitPrice:24}]});assert.equal(state.purchaseOrders[0].status,'Received');assert.equal(state.purchaseOrders[0].lines[0].received,2);assert.equal(state.purchaseReceipts.filter(r=>r.poId===second.id).length,2);assert.equal(state.supplierInvoices.filter(i=>i.poId===second.id).length,2);
-+const noHistory=p.supplierMetrics(state,added.id);assert.equal(noHistory.score,null);assert.equal(noHistory.rating,'New');
-+// Lead-time demand, EOQ sensitivity, and periodic review are computed from recorded sales.
-+const rules=fixture();rules.sales=Array.from({length:180},(_,n)=>({id:'USAGE-'+n,date:p.addDays(d.today(),-n),location:'Provo Campus Store',lines:[{sku:'2002',qty:10,price:13.99,cost:5}],discount:0,tax:0,total:139.9,status:'Completed'}));let rule=p.orderingRule(rules,item('1005'));assert.equal(rule.daily,30);const raw=rule.rawEOQ;const doubled={...rules,settings:{...rules.settings,orderCost:50}};assert.ok(Math.abs(p.orderingRule(doubled,item('1005')).rawEOQ/raw-Math.SQRT2)<1e-10);assert.ok(Math.abs(p.orderingRule({...rules,settings:{...rules.settings,holding:.5}},item('1005')).rawEOQ/raw-1/Math.SQRT2)<1e-10);assert.equal(d.avgDaily(rules,'1055'),0);assert.equal(p.orderingRule(rules,item('1055')).rawEOQ,0);
-+const leadSupplier=p.supplierForItem(rules,item('1005'));const newLead=p.saveSupplierRecord(rules,{...leadSupplier,lead:12});assert.equal(d.reorderPoint(newLead,item('1005')),30*(12+2));assert.equal(p.orderingRule(newLead,item('1005')).lead,12);const reviewed=p.recordInventoryReview(rules,'Reviewed meat and dairy.');assert.equal(reviewed.inventoryReviews[0].date,d.today());assert.equal(p.addDays(reviewed.inventoryReviews[0].date,reviewed.settings.reviewDays),p.addDays(d.today(),7));
-+// Full calendar-month coverage and idempotent migrations preserve existing records.
-+const loaded=d.loadState();const six=new Date(d.today()+'T12:00:00Z');six.setUTCMonth(six.getUTCMonth()-6);assert.ok(loaded.sales.map(s=>s.date).sort()[0]<=six.toISOString().slice(0,10));const counts=[loaded.sales.length,loaded.purchaseOrders.length,loaded.supplierInvoices.length,loaded.purchaseReceipts.length,loaded.supplierPayments.length];d.saveState(loaded);const reloaded=d.loadState();assert.deepEqual([reloaded.sales.length,reloaded.purchaseOrders.length,reloaded.supplierInvoices.length,reloaded.purchaseReceipts.length,reloaded.supplierPayments.length],counts);assert.equal(p.upgradePurchasing(reloaded),false);
-+item('1005').cost=baseCost;
-+console.log('PASS: supplier create/edit/assignment; draft/send and promised-date snapshots; multi-line partial receiving into chosen location; pack conversion; company weighted cost; invalid/duplicate receipts; per-receipt invoices and Net terms; partial/full payments and duplicate protection; final short delivery; close guards; history-derived on-time/lead/fill/owed/overdue metrics; EOQ, lead-time ROP, manual review; zero-usage behavior; six calendar months; persistent idempotent migration.');
-+// A perfect supplier is rated from its data, then a late delivery changes that rating.
-+let perfect=fixture();const partner=p.getSuppliers(perfect).find(s=>s.name==='Valley Meats');perfect=p.createPurchaseOrder(perfect,{supplierId:partner.id,location:'Orem Store',date:p.addDays(d.today(),-5),send:true,lines:[{sku:'1005',qty:1,unitPrice:24}]});let perfectPO=perfect.purchaseOrders[0];perfect=p.receivePurchaseOrder(perfect,{poId:perfectPO.id,date:d.today(),location:'Orem Store',final:false,lines:[{lineId:perfectPO.lines[0].id,qty:1,unitPrice:24}]});assert.equal(p.supplierMetrics(perfect,partner.id).score,100);perfect=p.createPurchaseOrder(perfect,{supplierId:partner.id,location:'Orem Store',date:p.addDays(d.today(),-10),send:true,lines:[{sku:'1005',qty:1,unitPrice:24}]});perfectPO=perfect.purchaseOrders[0];perfect=p.receivePurchaseOrder(perfect,{poId:perfectPO.id,date:d.today(),location:'Orem Store',final:false,lines:[{lineId:perfectPO.lines[0].id,qty:1,unitPrice:24}]});assert.ok(p.supplierMetrics(perfect,partner.id).score<100);assert.equal(p.supplierMetrics(perfect,partner.id).onTime,.5);assert.equal(p.supplierMetrics(perfect,partner.id).actualLead,7.5);
-+console.log('PASS: a perfect delivery history scores 100; late delivery recalculates the rating, on-time rate, and average actual lead.');
---- /dev/null
-+++ b/tests/run-all.mjs
-@@ -0,0 +1,7 @@
-+import {readdir,copyFile,unlink} from 'node:fs/promises';
-+import {spawnSync} from 'node:child_process';
-+const run=file=>{console.log('\n'+file);const result=spawnSync(process.execPath,['--experimental-strip-types',file],{stdio:'inherit'});if(result.status!==0)throw Error(file+' failed');};
-+for(const name of (await readdir('tests')).sort())if(name.endsWith('.mjs')&&name!=='run-all.mjs')run('tests/'+name);
-+for(const name of (await readdir('tests/original')).sort())if(name.endsWith('.mjs')&&name!=='catalog-assortment.mjs'){const target='tests/.original-'+name;try{await copyFile('tests/original/'+name,target);run(target);}finally{await unlink(target).catch(()=>{});}}
-+
-+console.log('Original catalog-assortment is preserved for reference; its fixed opening-stock assertion is superseded by the updated catalog/history tests. See REVIEW_NOTES.md.');
---- /dev/null
-+++ b/tests/short-delivery-impact.mjs
-@@ -0,0 +1,16 @@
-+import assert from 'node:assert/strict';
-+import * as d from '../src/domain.ts';import * as p from '../src/purchasing.ts';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)};globalThis.window={dispatchEvent(){}};globalThis.CustomEvent=class{};
-+let state=d.loadState();state.purchaseOrders=[];state.purchaseReceipts=[];state.supplierInvoices=[];state.supplierPayments=[];
-+const supplier=p.getSuppliers(state).find(s=>s.name==='Wasatch Dairy Co.'),start=p.addDays(d.today(),-3);
-+// 519 previously filled purchase units, followed by the screenshot's one-unit PO.
-+state=p.createPurchaseOrder(state,{supplierId:supplier.id,location:'Central Commissary',date:start,send:true,lines:[{sku:'1003',qty:519,unitPrice:17.60}]});let po=state.purchaseOrders[0];state=p.receivePurchaseOrder(state,{poId:po.id,date:d.today(),location:'Central Commissary',final:true,lines:[{lineId:po.lines[0].id,qty:519,unitPrice:17.60}]});
-+state=p.createPurchaseOrder(state,{supplierId:supplier.id,location:'Orem Store',date:start,send:true,lines:[{sku:'1003',qty:1,unitPrice:17.60}]});po=state.purchaseOrders[0];const before=p.supplierMetrics(state,supplier.id);assert.equal(before.fillRate,1);assert.equal(before.score,100);const qty=d.inventory(state,'1003','Orem Store');
-+state=p.receivePurchaseOrder(state,{poId:po.id,date:d.today(),location:'Orem Store',final:true,lines:[{lineId:po.lines[0].id,qty:.5,unitPrice:17.60}]});const after=p.supplierMetrics(state,supplier.id);
-+assert.equal(after.received,519.5);assert.equal(after.ordered,520);assert.equal(after.fillRate,519.5/520);assert.ok(after.score<before.score);assert.equal(p.formatSupplierPercent(after.fillRate),'99.90%');assert.equal(p.formatSupplierScore(after.score),'99.97');assert.equal(after.rating,'Keep');assert.equal(after.shortOrders,1);assert.equal(after.latestFillRate,.5);assert.equal(after.latestOrder.final,true);assert.equal(after.latestOrder.poId,po.id);assert.equal(after.latestOrder.received,.5);assert.equal(after.latestOrder.ordered,1);assert.equal(d.inventory(state,'1003','Orem Store'),qty+40);assert.ok(Math.abs(after.owed-before.owed-8.80)<1e-8);
-+// Rounding must never claim a perfect fill/score for a slightly imperfect record.
-+assert.equal(p.formatSupplierPercent(.9999999),'>99.99%');assert.equal(p.formatSupplierPercent(1),'100.00%');assert.equal(p.formatSupplierPercent(.0000001),'<0.01%');assert.equal(p.formatSupplierPercent(null),'—');
-+d.saveState(state);const reload=d.loadState(),saved=p.supplierMetrics(reload,supplier.id);assert.equal(saved.latestOrder.poId,po.id);assert.equal(saved.latestFillRate,.5);assert.equal(saved.fillRate,after.fillRate);assert.equal(saved.shortOrders,1);
-+// Completing the remaining half later restores fill for a partial PO, without losing its history.
-+state=p.createPurchaseOrder(state,{supplierId:supplier.id,location:'Orem Store',date:start,send:true,lines:[{sku:'1003',qty:1,unitPrice:17.60}]});po=state.purchaseOrders[0];state=p.receivePurchaseOrder(state,{poId:po.id,date:d.today(),location:'Orem Store',final:false,lines:[{lineId:po.lines[0].id,qty:.5,unitPrice:17.60}]});assert.equal(p.supplierMetrics(state,supplier.id).latestOrder.final,false);state=p.receivePurchaseOrder(state,{poId:po.id,date:d.today(),location:'Orem Store',final:true,lines:[{lineId:po.lines[0].id,qty:.5,unitPrice:17.60}]});assert.equal(p.supplierMetrics(state,supplier.id).latestFillRate,1);assert.equal(p.supplierMetrics(state,supplier.id).shortOrders,1);
-+console.log('PASS: 519.5/520 screenshot reproduction; immediate fill and precise weighted-score decrease; final-short order callout and counts; half inventory/invoice only; no false 100% rounding; saved-state persistence; partial follow-up restores order fill.');
---- /dev/null
-+++ b/tests/supplier-scorecards.mjs
-@@ -0,0 +1,22 @@
-+import assert from 'node:assert/strict';
-+import * as d from '../src/domain.ts';
-+import * as p from '../src/purchasing.ts';
-+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)};globalThis.window={dispatchEvent(){}};globalThis.CustomEvent=class{};
-+let state=d.loadState();const metrics=p.getSuppliers(state).map(s=>({s,m:p.supplierMetrics(state,s.id)}));
-+assert.ok(metrics.some(x=>x.m.rating==='Keep'));assert.ok(metrics.some(x=>x.m.rating==='Watch'));assert.ok(metrics.some(x=>x.m.rating==='Replace'));
-+for(const name of ['Valley Meats','Mountain Produce','Beehive Packaging']){const {m}=metrics.find(x=>x.s.name===name);assert.ok(m.actualLead>m.quotedLead);assert.ok(m.onTime<.8);assert.ok(m.fillRate<1);}
-+const before=structuredClone(state);assert.equal(p.diversifySamplePurchases(state),false);assert.deepEqual(state,before);
-+const supplier=metrics.find(x=>x.s.name==='Valley Meats').s,computed=p.supplierMetrics(state,supplier.id);
-+state=p.saveSupplierReview(state,{supplierId:supplier.id,decision:'Replace',notes:'Repeated late deliveries; request alternative quotes.'});assert.equal(state.supplierReviews[0].decision,'Replace');assert.deepEqual(p.supplierMetrics(state,supplier.id),computed);
-+assert.throws(()=>p.saveSupplierReview(state,{supplierId:supplier.id,decision:'Keep',notes:' '}),/explain/);
-+// A new PO is unaffected by sample-history changes. Correcting a delivery date keeps due dates in sync.
-+state=p.createPurchaseOrder(state,{supplierId:supplier.id,location:'Orem Store',date:p.addDays(d.today(),-20),send:true,lines:[{sku:'1005',qty:10,unitPrice:40}]});let po=state.purchaseOrders[0];const id=po.id;
-+state=p.receivePurchaseOrder(state,{poId:id,date:p.addDays(d.today(),-10),location:'Orem Store',final:true,lines:[{lineId:po.lines[0].id,qty:8,unitPrice:40}]});po=state.purchaseOrders[0];const receipt=state.purchaseReceipts.find(r=>r.poId===id),invoice=state.supplierInvoices.find(i=>i.poId===id);const stock=d.inventory(state,'1005','Orem Store'),owed=invoice.amount,baseline=JSON.stringify(state);
-+const correction={poId:id,date:po.date,quotedLead:po.quotedLead,ordered:po.lines.map(l=>({lineId:l.id,qty:l.qty})),receipts:[{id:receipt.id,date:p.addDays(d.today(),-12)}],reason:'Delivery docket confirms arrival two days earlier.'};
-+assert.throws(()=>p.correctPurchaseHistory(state,{...correction,reason:''}),/reason/);assert.throws(()=>p.correctPurchaseHistory(state,{...correction,ordered:[{lineId:po.lines[0].id,qty:7}]}),/less than/);assert.throws(()=>p.correctPurchaseHistory(state,{...correction,receipts:[]}),/exactly once/);assert.throws(()=>p.correctPurchaseHistory(state,{...correction,receipts:[{id:receipt.id,date:p.addDays(po.date,-1)}]}),/between/);assert.equal(JSON.stringify(state),baseline);
-+state=p.correctPurchaseHistory(state,correction);assert.equal(state.purchaseOrders[0].received,correction.receipts[0].date);assert.equal(state.supplierInvoices.find(i=>i.id===invoice.id).due,p.addDays(correction.receipts[0].date,po.terms));assert.equal(state.supplierInvoices.find(i=>i.id===invoice.id).amount,owed);assert.equal(d.inventory(state,'1005','Orem Store'),stock);assert.equal(state.purchasingCorrections[0].before.received,receipt.date);assert.equal(state.purchasingCorrections[0].after.received,correction.receipts[0].date);assert.equal(state.ledger.find(t=>t.id===receipt.id+'-'+po.lines[0].id).date,correction.receipts[0].date);
-+// Payment chronology is protected, and a corrected order survives reload without sample migration overwriting it.
-+state=p.recordSupplierPayment(state,{invoiceId:invoice.id,date:p.addDays(d.today(),-11),amount:100,reference:'SUPPLIER-TEST'});
-+assert.throws(()=>p.correctPurchaseHistory(state,{...correction,receipts:[{id:receipt.id,date:p.addDays(d.today(),-9)}]}),/payment/);
-+const sample=state.purchaseOrders.find(p=>p.id.startsWith('PO-SAMPLE-'));const sampleInput={poId:sample.id,date:p.addDays(sample.date,-2),quotedLead:sample.quotedLead,ordered:sample.lines.map(l=>({lineId:l.id,qty:l.qty})),receipts:state.purchaseReceipts.filter(r=>r.poId===sample.id).map(r=>({id:r.id,date:r.date})),reason:'Corrected sent date from original order.'};state=p.correctPurchaseHistory(state,sampleInput);d.saveState(state);const reload=d.loadState();assert.equal(reload.purchaseOrders.find(p=>p.id===sample.id).date,sampleInput.date);assert.equal(reload.supplierReviews[0].notes,state.supplierReviews[0].notes);assert.deepEqual(reload.purchasingCorrections,state.purchasingCorrections);assert.equal(reload.purchaseOrders.find(p=>p.id===id).samplePerformanceVersion,undefined);
-+console.log('PASS: realistic Keep/Watch/Replace distribution and late/short evidence; one-time sample migration; independent manager review; audited corrections; invoice/receipt/ledger date consistency; stock and amount preservation; invalid/paid chronology guards; persistence and user-PO protection.');
---- /dev/null
-+++ b/tests/team-supabase-checkout.mjs
-@@ -0,0 +1,30 @@
-+import assert from 'node:assert/strict';
-+import {readFile} from 'node:fs/promises';
-+import {stripTypeScriptTypes} from 'node:module';
-+import {customizedItem,normalizeCustomerPhone,today} from '../src/domain.ts';
-+// Exercise the preserved team's actual handler with mocked transport, not a reimplementation.
-+const source=await readFile('src/App.tsx','utf8');const pos=source.slice(source.indexOf('function POS('),source.indexOf('function CameraScanner('));
-+const handler=pos.slice(pos.indexOf(' const finish=async()=>{'),pos.indexOf(' const editLine='));
-+const validators=source.slice(source.indexOf('type RecordSaleResult='),source.indexOf('function App(){'));
-+const guards=new Function(stripTypeScriptTypes(validators)+';return {isRecordSaleResult,isReturnRpcResult};')();
-+assert.ok(guards.isRecordSaleResult({sale_id:'s',receipt_no:'r',subtotal:10,discount:0,tax:1,total:11,cogs:4}));assert.ok(!guards.isRecordSaleResult({sale_id:'s',receipt_no:'r',total:'11'}));
-+assert.ok(guards.isReturnRpcResult({return_id:'r',transaction_type:'Return',refund_total:10,replacement_total:0,settlement_net:-10,settlement_mode:'Manual/Simulated'}));assert.ok(!guards.isReturnRpcResult({return_id:'r',transaction_type:'Return',refund_total:NaN,replacement_total:0,settlement_net:-10,settlement_mode:'Manual/Simulated'}));
-+const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
-+function setup(overrides={}){
-+ const events={rpc:[],messages:[],receipts:[],cleared:0,uncertain:false,localWrites:0};
-+ const response={sale_id:'sale-db-1',receipt_no:'DB-001',subtotal:13.99,discount:0,tax:1.01,total:15,cogs:4.50};
-+ const context={checkoutBusy:false,checkoutLock:{current:false},checkoutUncertain:false,cart:[{id:'line1',sku:'2001',qty:1}],discount:0,redeemReward:false,rewardsPhone:'',location:'Provo Campus Store',customizedItem,normalizeCustomerPhone,today,isRecordSaleResult:guards.isRecordSaleResult,
-+  flash:m=>events.messages.push(m),setCheckoutBusy:()=>{},setCheckoutUncertain:v=>events.uncertain=v,setLastSale:v=>events.receipts.push(v),setCart:()=>events.cleared++,setDiscount:()=>{},setPickupName:()=>{},setRewardsPhone:()=>{},setRedeemReward:()=>{},setProfileOpen:()=>{},onCommit:()=>events.localWrites++,applySale:()=>{throw Error('Must not fall back to browser-only sale');},
-+  supabase:{from:table=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:table==='locations'?{id:'location-db-1'}:{id:'customer-db-1'},error:null})})})}),rpc:async(name,args)=>{events.rpc.push({name,args});return {data:response,error:null};}},...overrides};
-+ const fn=new AsyncFunction(...Object.keys(context),stripTypeScriptTypes(handler)+';return finish();');
-+ return {context,events,run:()=>fn(...Object.values(context))};
-+}
-+let test=setup();await Promise.all([test.run(),test.run()]);assert.equal(test.events.rpc.length,1);assert.equal(test.events.rpc[0].name,'record_sale');assert.equal(test.events.rpc[0].args.p_location,'location-db-1');assert.deepEqual(test.events.rpc[0].args.p_lines,[{sku:'2001',qty:1}]);assert.equal(test.events.receipts[0].saleId,'sale-db-1');assert.equal(test.events.receipts[0].total,15);assert.equal(test.events.localWrites,0);assert.equal(test.events.cleared,1);
-+test=setup({redeemReward:true});await test.run();assert.equal(test.events.rpc.length,0);assert.ok(test.events.messages.some(m=>m.includes('not supported')));
-+test=setup({cart:[{id:'line1',sku:'2001',qty:1,adjustments:{1003:2}}]});await test.run();assert.equal(test.events.rpc.length,0);
-+test=setup({discount:101});await test.run();assert.equal(test.events.rpc.length,0);
-+test=setup();test.context.supabase.rpc=async()=>{throw Error('connection lost');};await test.run();assert.ok(test.events.uncertain);assert.equal(test.context.checkoutLock.current,true);assert.equal(test.events.cleared,0);assert.equal(test.events.receipts.length,0);
-+test=setup();test.context.supabase.rpc=async()=>({data:{unexpected:true},error:null});await test.run();assert.ok(test.events.uncertain);assert.equal(test.events.cleared,0);
-+test=setup();test.context.supabase.rpc=async()=>({data:null,error:{message:'Stock rejected'}});await test.run();assert.equal(test.context.checkoutLock.current,false);assert.equal(test.events.cleared,0);assert.ok(test.events.messages.some(m=>m.includes('Stock rejected')));
-+test=setup({rewardsPhone:'8015550123'});await test.run();assert.equal(test.events.rpc[0].args.p_customer,'customer-db-1');assert.equal(test.events.localWrites,0);
-+console.log('PASS: latest team POS handler posts record_sale; uses server receipt; avoids local sale/double-submit; preserves unsupported-feature guards, mapped customer, rejection handling and uncertain-confirmation lock; validates receipt formats. Mock transport only, not live Supabase.');
---- /dev/null
-+++ b/tests/team-supabase-reporting.mjs
-@@ -0,0 +1,17 @@
-+import assert from 'node:assert/strict';
-+import {readFile} from 'node:fs/promises';
-+import {stripTypeScriptTypes} from 'node:module';
-+const source=await readFile('src/App.tsx','utf8');
-+const loaderCode=source.slice(source.indexOf('type ReportSaleLine='),source.indexOf('function useSupabaseReportData('));
-+const saleRows=Array.from({length:1001},(_,n)=>({id:'s'+n,location_id:'loc',subtotal:'100',discount:'10',tax:'6.525',total:'96.525',created_at:'2026-11-14T12:00:00Z'}));
-+const rows={sales:saleRows,sale_lines:saleRows.map(s=>({id:'l'+s.id,sale_id:s.id,item_sku:'2001',quantity:'2',unit_cost:'25'})),locations:[{id:'loc',name:'Provo Campus Store'}],sales_returns:[{id:'ret',transaction_type:'Return',original_sale_id:'s0',replacement_sale_id:null,refund_subtotal:'18',refund_tax:'1.305',refund_total:'19.305',replacement_total:'0',created_at:'2026-11-14T12:00:00Z'}],sales_return_lines:[{id:'rl',return_id:'ret',original_sale_id:'s0',original_sale_line_id:'ls0',item_sku:'2001',quantity:'1',disposition:'Restock',refund_subtotal:'18',refund_tax:'1.305',refund_total:'19.305',cost_amount:'10'}]};
-+const calls=[];const supabase={from(table){let filter;const q={select(){return q;},eq(){return q;},order(){return q;},in(key,values){filter={key,values};return q;},async range(from,to){calls.push({table,from,to});const data=rows[table].filter(r=>!filter||filter.values.includes(r[filter.key]));return {data:data.slice(from,to+1),error:null};}};return q;}};
-+const loader=new Function('supabase',stripTypeScriptTypes(loaderCode)+';return loadSupabaseReportData;')(supabase);const loaded=await loader();assert.equal(loaded.sales.length,1001);assert.equal(loaded.sales[0].location_name,'Provo Campus Store');assert.equal(loaded.sales.at(-1).lines.length,1);assert.equal(loaded.sales[0].subtotal,100);assert.equal(loaded.returns[0].lines[0].cost_amount,10);assert.ok(calls.some(c=>c.table==='sales'&&c.from===1000));
-+const failureLoader=new Function('supabase',stripTypeScriptTypes(loaderCode)+';return loadSupabaseReportData;')({from(){const q={select:()=>q,eq:()=>q,order:()=>q,range:async()=>({data:null,error:{message:'Database unavailable'}})};return q;}});await assert.rejects(failureLoader(),/Database unavailable/);
-+const finance=source.slice(source.indexOf('function Financials('),source.indexOf('function Reports('));const calc=finance.slice(finance.indexOf(' const daysBack='),finance.indexOf(' const categories='));
-+const evaluate=new Function('data','dateRange','today','state','items','inventory','recipeCost','itm',stripTypeScriptTypes(calc)+';return {gross,discount,refund,tax,net,cogs,margin,localWaste,localLoss};');
-+const fixture={sales:[{subtotal:100,discount:10,tax:6.525,total:96.525,created_at:'2026-11-14T12:00:00Z',lines:[{quantity:2,unit_cost:25}]},{subtotal:20,discount:0,tax:1.45,total:21.45,created_at:'2026-11-14T12:00:00Z',lines:[{quantity:1,unit_cost:8}]}],returns:[{created_at:'2026-11-14T12:00:00Z',replacement_total:21.45,lines:[{refund_subtotal:18,refund_tax:1.305,disposition:'Restock',cost_amount:10}]}]};
-+const local={sales:[{subtotal:900000}],ledger:[{type:'Waste',qty:-99,unitCost:99}],productionOrders:[]};
-+let totals=evaluate(fixture,'All dates',()=> '2026-11-15',local,[],()=>0,()=>0,()=>({}));assert.equal(totals.gross,120);assert.equal(totals.net,92);assert.equal(totals.cogs,48);assert.ok(Math.abs(totals.tax-6.67)<1e-9);assert.equal(totals.localWaste,9801);assert.equal(totals.net-totals.cogs,44);
-+fixture.returns[0].lines[0].disposition='Waste';totals=evaluate(fixture,'All dates',()=> '2026-11-15',local,[],()=>0,()=>0,()=>({}));assert.equal(totals.cogs,58);assert.equal(totals.net,92);
-+console.log('PASS: preserved report loader paginates 1001 sales and links lines/returns/locations; numeric conversion; server errors remain errors; financial net sales/tax/restock COGS are correct; exchange replacement not double-added; local demo sales/expenses excluded from Supabase P&L. Mock transport, not live database.');

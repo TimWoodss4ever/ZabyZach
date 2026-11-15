@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const hashes=JSON.parse(await readFile('migration-review/protected-hashes.json','utf8'));
-for(const [path,expected]of Object.entries(hashes)){const actual=createHash('sha256').update(await readFile(path)).digest('hex');assert.equal(actual,expected,'Protected original file changed: '+path);}
+for(const [path,expected]of Object.entries(hashes)){const actual=createHash('sha256').update(await readFile(path)).digest('hex');assert.equal(actual,expected,'Reviewed protected file changed: '+path);}
 const app=await readFile('src/App.tsx','utf8'),connected=await readFile('src/ExistingDatabaseScreens.tsx','utf8');
 const chunks=JSON.parse(await readFile('migration-review/preserved-source.json','utf8'));
 for(const [name,text]of Object.entries(chunks)){
@@ -17,4 +17,4 @@ assert.ok(app.includes('<ConnectedInventoryPage'));assert.ok(app.includes('<Conn
 const customer=app.slice(app.indexOf("if(role==='Customer')return"),app.indexOf(' const canOpen='));assert.ok(!customer.includes('<PizzaGuide'));
 for(const page of ['Suppliers','Inventory Review','Supplier Scorecards','Barcode Labels'])assert.ok(app.includes("label:'"+page+"'"));
 const review=await readFile('.github/workflows/erp-review.yml','utf8');assert.ok(!review.includes('deploy-pages'));assert.ok(!review.includes('pages: write'));assert.ok(!review.includes('supabase db push'));
-console.log('PASS: '+Object.keys(hashes).length+' original files are byte-for-byte unchanged; auth, latest POS/returns, receipt validators, and three database loaders preserved; five existing RPC connections intact; live screens remain routed; new screens present; no customer helper; review workflow cannot publish or migrate.');
+console.log('PASS: '+Object.keys(hashes).length+' reviewed protected files match approved hashes (including the Vite security update); original auth, latest POS/returns, receipt validators, and three database loaders preserved; five existing RPC connections intact; live screens remain routed; new screens present; no customer helper; review workflow cannot publish or migrate.');
