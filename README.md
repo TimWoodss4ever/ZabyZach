@@ -23,3 +23,7 @@ npm run dev
 ## Current data behavior
 
 The demo seeds sales and inventory activity on first load and stores changes in that browser's local storage. Data does not sync to other devices or browsers. The SQL migrations in `supabase/migrations/` are database setup material; the current frontend does not yet read or write Supabase. Do not put a Supabase service-role key in this public repository.
+
+## Inventory requirement implementation
+
+See [Inventory management changes](INVENTORY_MANAGEMENT.md) for backorders, item/location availability estimates, validated transfers/counts, the database rollout, and verification scenarios. The new inventory features use shared Supabase records; GitHub Pages deployment alone does not install their database migration.

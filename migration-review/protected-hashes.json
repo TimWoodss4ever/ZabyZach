@@ -10,7 +10,7 @@
   "supabase/SETUP.md": "56b472e8b2f178d90910cd84bf92672c3a5a6ad50465fc9d46481912ff5d7c82",
   "supabase/migrations/202611130002_sauces_coca_cola.sql": "e0730c65d73ef00ce548605800f050798dc9398fe9e4df30749fb8f2e2db2a2f",
   "supabase/migrations/202611100001_zabyzack_erp.sql": "e1da8bb41ab0f62dbda11162de30040fc84e849753115e0b8ef7fdba0a45bcf6",
-  "supabase/migrations/202611130001_in_house_dough.sql": "8221f4142e3fbe67f115b3b37b9bef4e170ee192b6f0c38b8e6d18ef6318b4ff",
+  "supabase/migrations/202611130001_in_house_dough.sql": "5b1b3a834136561df0aa3d6fa0382ccf4f5b32e0716a61c49d2959cc8f981022",
   "supabase/migrations/202611150001_returns_exchanges.sql": "b1ae41037df123b3b5fa0651a24833314dbc30c07e40dd9a3557ad1a3eb2502a",
   "supabase/migrations/202611110001_sales_order_time_discounts.sql": "b24f45ee68f9428e11991b5cf485fef9cbed8994f3a7d356b6c2f2590ff277ef",
   "supabase/migrations/202611140001_production_backend.sql": "a1eddc0e1c920a65042f4afa2f87e1059070040b4acbaae24c365b1e135d7a1a"

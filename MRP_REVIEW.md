@@ -27,7 +27,7 @@ Pickup orders and MRP now use shared Supabase records. Each location plans its o
 
 ## Database rollout
 
-Apply **only** `supabase/migrations/202611160004_shared_mrp.sql` to the existing, up-to-date project before deploying the new UI. This adds planning/order columns and RPCs and refines the existing sale/production RPCs without changing their signatures. It does not import browser demo transactions, rewrite historical sales/stock, reseed the catalog or replay previous migrations. Earlier browser demo orders remain saved separately.
+After confirming the merged inventory rollout is applied, apply **only** `supabase/migrations/202611160006_shared_mrp.sql` to the existing, up-to-date project before deploying the new UI. Version `006` follows inventory management (`004`) and seed timestamp repair (`005`). This adds planning/order columns and RPCs and refines the existing sale/production RPCs without changing their signatures. It does not import browser demo transactions, rewrite historical sales/stock, reseed the catalog or replay previous migrations. Earlier browser demo orders remain saved separately.
 
 Online card processing remains simulated. The shared order stores the simulation marker; revenue and COGS are recorded when prepared. No payment-card fields are sent to the order RPC. Existing POS reward-redemption/customization restrictions remain in place.
 
