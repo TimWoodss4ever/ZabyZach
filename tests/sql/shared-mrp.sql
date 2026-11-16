@@ -36,6 +36,9 @@ begin
  perform public.ci_assert(rejected,'request reuse accepted different payload');
  snapshot:=public.erp_planning_snapshot();perform public.ci_assert((snapshot->>'version')::integer=1,'snapshot version');
  perform public.ci_assert(exists(select 1 from jsonb_array_elements(snapshot->'orders')x where x->>'id'=request::text),'shared order missing from snapshot');
+ rejected:=false;begin perform public.erp_pickup_action(request,null);exception when others then rejected:=true;end;
+ perform public.ci_assert(rejected,'missing action prepared an order');
+ perform public.ci_assert((select count(*)=ledger_count from public.inventory_transactions),'invalid action changed inventory');
  answer:=public.erp_pickup_action(request,'prepare');sold:=(answer->>'sale_id')::uuid;
  perform public.ci_assert((select sum(quantity)=3 from public.inventory_transactions where item_sku='MRP-D' and location_id=loc),'wrong dough consumption');
  perform public.ci_assert((select sum(quantity)=24 from public.inventory_transactions where item_sku='MRP-C' and location_id=loc),'wrong cheese consumption');

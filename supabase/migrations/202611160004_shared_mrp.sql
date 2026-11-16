@@ -126,7 +126,7 @@ begin
   select l.id into loc from public.locations l where l.name=p_payload->>'location' and l.can_sell;
   if loc is null then raise exception 'Choose a selling location';end if;
   pickup:=(p_payload->>'pickup')::timestamptz;
-  if pickup is null or pickup<now() then raise exception 'Choose a future pickup date and time';end if;
+  if pickup is null or not isfinite(pickup) or pickup<now() then raise exception 'Choose a future pickup date and time';end if;
   percent:=coalesce((p_payload->>'discountPct')::numeric,0);fixed:=coalesce((p_payload->>'discountAmount')::numeric,0);
   if percent::text in ('NaN','Infinity','-Infinity') or fixed::text in ('NaN','Infinity','-Infinity') or percent<0 or percent>100 or fixed<0 then raise exception 'Invalid discount';end if;
   if role_name='Customer' then
@@ -162,7 +162,7 @@ declare o public.sales_orders%rowtype; lines jsonb; posted jsonb; begin
   if o.erp_prepared_at is not null or o.status not in ('Order Placed','Cancelled') then raise exception 'Prepared orders require the Returns workflow';end if;
   update public.sales_orders set status='Cancelled' where id=p_order;return jsonb_build_object('id',p_order);
  end if;
- if p_action not in ('prepare','fulfill') then raise exception 'Unknown pickup action';end if;
+ if p_action is null or p_action not in ('prepare','fulfill') then raise exception 'Unknown pickup action';end if;
  if o.status not in ('Order Placed','Fulfilled') then raise exception 'Order is not open';end if;
  if o.status='Fulfilled' then return jsonb_build_object('id',p_order,'sale_id',o.erp_sale_id);end if;
  if o.erp_prepared_at is null then
@@ -178,7 +178,7 @@ create or replace function public.erp_schedule_production(p_order uuid,p_due dat
 language plpgsql security definer set search_path=pg_catalog,public as $$
 begin
  if auth.uid() is null or coalesce(public.current_role(),'') not in ('Manager','Cashier') then raise exception 'Staff role required' using errcode='42501';end if;
- if p_due is null or p_due<(now() at time zone 'America/Denver')::date then raise exception 'Choose a current or future production date';end if;
+ if p_due is null or not isfinite(p_due) or p_due<(now() at time zone 'America/Denver')::date then raise exception 'Choose a current or future production date';end if;
  update public.production_orders set erp_due_date=p_due where id=p_order and status in ('Planned','In Progress');
  if not found then raise exception 'Production order is no longer open';end if;
 end $$;
