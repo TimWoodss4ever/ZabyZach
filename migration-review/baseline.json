@@ -1,7 +1,9 @@
 {
   "repository": "TimWoodss4ever/ZabyZach",
-  "main_commit": "b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf",
+  "main_commit": "bcc695824fae369403f6295e5077ffd861f7c2ea",
   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
-  "review_branch": "erp-reporting-quality",
-  "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline."
+  "review_branch": "erp-inventory-management-20261116",
+  "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline.",
+  "inventory_update": "Inventory requirement completion based on current main: additive backorders/availability, validated/idempotent stock writes, null-safe staff guard and reviewed migration repairs. Existing authentication, POS/returns handlers and original inventory/production loaders are preserved. No production database changes are applied by this branch.",
+  "financials_review": "Reviewed main bcc695824fae369403f6295e5077ffd861f7c2ea: Financials computes/displays money in integer cents. The merged PR preserves that Financials function and the surrounding reporting source exactly. Only latestReporting's expected source is refreshed; all other preservation snippets, protected file hashes and main-change checks remain enabled."
 }

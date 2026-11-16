@@ -1,7 +1,7 @@
 name: ERP branch checks (no deployment)
 on:
   push:
-    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality]
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, erp-inventory-management-20261116]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -61,11 +61,8 @@ jobs:
             if [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ] || [ "$(basename "$migration")" = 202611160003_reporting_quality.sql ]; then
               continue
             fi
-            # The base schema already seeds in-house dough. The old one-off
-            # frozen-dough conversion cannot be replayed over that modern seed.
-            # Assert the expected final BOM instead; never ignore SQL failures.
-            if [ "$(basename "$migration")" = 202611130001_in_house_dough.sql ]; then
-              psql -v ON_ERROR_STOP=1 -c "do \$ci\$ begin if not exists (select 1 from public.bom_lines where parent_sku='1030' and component_sku='1001' and quantity=9.6) or not exists (select 1 from public.items where sku='1001' and name='Bread flour' and conversion_factor=800) or exists (select 1 from public.bom_lines where parent_sku=component_sku) then raise exception 'CI base must already contain the valid in-house dough schema'; end if; end \$ci\$;"
+            # Test the deliberate inventory RPC hardening after preservation tests.
+            if [ "$(basename "$migration")" = 202611160004_inventory_management.sql ]; then
               continue
             fi
             if [ "$(basename "$migration")" = 202611150002_shared_purchasing.sql ]; then
@@ -79,3 +76,21 @@ jobs:
           node tests/sql/purchasing-concurrency.mjs
           psql -v ON_ERROR_STOP=1 -f tests/sql/shared-reporting.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/reporting-quality.sql
+          run_checked() {
+            local inventory_log
+            inventory_log="$(mktemp)"
+            if "$@" >"$inventory_log" 2>&1; then
+              cat "$inventory_log"
+              rm "$inventory_log"
+            else
+              local inventory_status=$?
+              cat "$inventory_log"
+              python3 -c 'import pathlib,sys; s=pathlib.Path(sys.argv[1]).read_text()[-3500:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))' "$inventory_log"
+              rm "$inventory_log"
+              return "$inventory_status"
+            fi
+          }
+          run_checked psql -v ON_ERROR_STOP=1 -f tests/sql/dough-migration.sql
+          run_checked node tests/sql/seed-retiming.mjs
+          run_checked psql -v ON_ERROR_STOP=1 -f tests/sql/inventory-management.sql
+          run_checked node tests/sql/inventory-concurrency.mjs
