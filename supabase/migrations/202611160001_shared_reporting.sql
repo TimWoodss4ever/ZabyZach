@@ -121,12 +121,12 @@ begin
  movements as materialized (select t.* from public.inventory_transactions t where t.occurred_at>=start_at and t.occurred_at<end_at
   and (p_location is null or t.location_id=p_location)),
  daily_events as (
-  select (s.created_at at time zone 'America/Denver')::date day,s.subtotal gross,s.discount discount,0::numeric refunds,s.tax tax from sales_in_period s
+  select (s.created_at at time zone 'America/Denver')::date AS day,s.subtotal gross,s.discount discount,0::numeric refunds,s.tax tax from sales_in_period s
   union all select (r.created_at at time zone 'America/Denver')::date,0,0,r.refund_subtotal,-r.refund_tax from returns_in_period r),
- days as (select d::date day from generate_series(p_from::timestamp,p_to::timestamp,interval '1 day')d),
+ days as (select d::date AS day from generate_series(p_from::timestamp,p_to::timestamp,interval '1 day')d),
  daily as (select d.day,coalesce(sum(e.gross),0) gross,coalesce(sum(e.discount),0) discount,coalesce(sum(e.refunds),0) refunds,
   coalesce(sum(e.gross-e.discount-e.refunds),0) net,coalesce(sum(e.tax),0) tax from days d left join daily_events e on e.day=d.day group by d.day),
- weekly as (select date_trunc('week',day)::date week,sum(net) net from daily group by 1),
+ weekly as (select date_trunc('week',daily.day)::date AS week,sum(net) net from daily group by 1),
  top_events as (
   select l.item_sku,l.quantity units,l.quantity*l.unit_price revenue from public.sale_lines l join sales_in_period s on s.id=l.sale_id
   union all select l.item_sku,-l.quantity,-l.refund_subtotal from return_lines l),
