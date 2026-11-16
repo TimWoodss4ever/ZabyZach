@@ -127,7 +127,19 @@ begin
   id:=public.post_transfer(p_payload->>'sku',(p_payload->>'fromId')::uuid,(p_payload->>'toId')::uuid,qty);
   after_value:=p_payload;
  when 'adjustment' then
-  qty:=public.erp_purchase_number(p_payload,'counted',0,1000000000);
+  if p_payload ? 'lossQuantity' then
+   if coalesce(trim(p_payload->>'reason'),'') not in ('Spoiled/Expired','Damaged','Dropped/Spilled','Theft/Unknown loss') then raise exception 'Choose a loss reason for quantity lost';end if;
+   qty:=public.erp_purchase_number(p_payload,'lossQuantity',0.000001,1000000000);
+   select * into i from public.items where items.sku=p_payload->>'sku' for update;
+   if not found then raise exception 'Item not found';end if;
+   if i.base_unit='each' and qty<>trunc(qty) then raise exception 'Each-unit items require a whole loss quantity';end if;
+   dest:=(p_payload->>'locationId')::uuid;
+   select coalesce(sum(quantity),0) into have from public.inventory_transactions where item_sku=i.sku and location_id=dest;
+   if qty>have then raise exception 'Loss quantity exceeds current stock: available %, requested %',have,qty;end if;
+   qty:=have-qty;
+  else
+   qty:=public.erp_purchase_number(p_payload,'counted',0,1000000000);
+  end if;
   variance:=public.post_adjustment(p_payload->>'sku',(p_payload->>'locationId')::uuid,qty,p_payload->>'reason');
   id:=p_request;after_value:=p_payload||jsonb_build_object('variance',variance);
  when 'create_backorder' then

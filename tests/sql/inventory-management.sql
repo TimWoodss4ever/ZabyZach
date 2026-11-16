@@ -67,10 +67,10 @@ begin
  end loop;
  failed:=false;begin perform public.post_transfer('INV-EACH',loc,loc,1);exception when others then failed:=true;end;perform public.ci_assert(failed,'same location transfer');
  failed:=false;begin perform public.post_transfer('INV-EACH',loc,other,1000);exception when others then failed:=true;end;perform public.ci_assert(failed,'oversized transfer');
- -- Physical count = 17, then damage quantity 3 is submitted as remaining stock 14.
+ -- Physical count = 17, then a loss of 3 is calculated from locked server stock.
  answer:=public.erp_inventory_write(gen_random_uuid(),'adjustment',jsonb_build_object('sku','INV-EACH','locationId',loc,'counted',17,'reason','Cycle count correction'));
  perform public.ci_assert((answer->>'variance')::numeric=2,'count variance');
- request:=gen_random_uuid();payload:=jsonb_build_object('sku','INV-EACH','locationId',loc,'counted',14,'reason','Damaged');
+ request:=gen_random_uuid();payload:=jsonb_build_object('sku','INV-EACH','locationId',loc,'lossQuantity',3,'reason','Damaged');
  answer:=public.erp_inventory_write(request,'adjustment',payload);again:=public.erp_inventory_write(request,'adjustment',payload);perform public.ci_assert(answer=again,'damage retry');
  perform public.ci_assert((answer->>'variance')::numeric=-3 and (select sum(quantity)=14 from public.inventory_transactions where item_sku='INV-EACH' and location_id=loc),'damage remaining count');
  perform public.ci_assert(exists(select 1 from public.inventory_transactions where item_sku='INV-EACH' and reason_code='Damaged' and transaction_type='Waste' and quantity=-3 and user_id=auth.uid() and metadata->>'counted_quantity'='14'),'damage reason/audit/type');
