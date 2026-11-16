@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import ts from 'typescript';
+import * as React from 'react';
+import * as jsxRuntime from 'react/jsx-runtime';
+import {renderToStaticMarkup} from 'react-dom/server';
+import * as management from '../src/inventoryManagement.ts';
+import * as logic from '../src/inventoryWorkspaceLogic.ts';
+const item=(sku,category='Ingredient',recipe={})=>({sku,name:sku,barcode:'BAR-'+sku,category,unit:'each',active:true,made:Object.keys(recipe).length>0,supplier:'Supplier',supplierActive:true,leadDays:5,cost:1,recipe});
+const items=[item('Dough'),item('Sauce'),item('Pizza','Pizza',{Dough:1,Sauce:2})];
+const snapshot={version:1,userId:'manager',today:'2026-11-16',items,locations:[{id:'a',name:'Store A'},{id:'b',name:'Store B'},{id:'c',name:'Commissary'}],stock:[{item_sku:'Dough',location_id:'a',on_hand:10},{item_sku:'Sauce',location_id:'a',on_hand:6}],incoming:[],backorders:[]};
+let seeds={},cursor=0;const hooks={...React,useState(initial){const index=cursor++;return[index in seeds?seeds[index]:initial,()=>{}];},useEffect(){},useRef(value){return{current:value};},useMemo(fn){return fn();}};
+const icons=new Proxy({},{get:(_target,name)=>props=>React.createElement('svg',{'data-icon':String(name),width:props.size,height:props.size})});
+const dialog=({title,children})=>React.createElement('div',{role:'dialog'},React.createElement('h2',null,title),children);
+async function compile(path,stubs){const source=await readFile(path,'utf8');const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;const exports={};const require=name=>{if(name==='react')return hooks;if(name==='react/jsx-runtime')return jsxRuntime;if(name==='lucide-react')return icons;if(name in stubs)return stubs[name];throw Error('Unexpected import '+name);};new Function('require','exports','localStorage',js)(require,exports,{getItem:()=>null,setItem(){},removeItem(){}});return exports;}
+const availability=await compile('src/InventoryAvailability.tsx',{'./supabase':{supabase:{rpc(){throw Error('Queue must use the parent snapshot');}}},'./inventoryManagement':management,'./InventoryDialog':{InventoryDialog:dialog}});
+const {InventoryWorkspace}=await compile('src/InventoryWorkspace.tsx',{'./supabase':{supabase:{}},'./InventoryAvailability':availability,'./InventoryDialog':{InventoryDialog:dialog},'./inventoryManagement':management,'./inventoryWorkspaceLogic':logic,'./InventoryWorkspaceData':{useInventoryWorkspace:()=>({data:{snapshot,items,usage:{Sauce:{a:180}}},loading:false,error:'',updatedAt:new Date('2026-11-16T12:00Z'),refresh(){}})}});
+const props={userId:'manager',search:'',safetyDays:2,onOpenLabels(){},canManage:true,renderMovement:selection=>React.createElement('div',{'data-selected-item':selection.sku,'data-selected-location':selection.locationId},selection.reason)};
+function render(values={},changes={}){seeds=values;cursor=0;return renderToStaticMarkup(React.createElement(InventoryWorkspace,{...props,...changes}));}
+let html=render();assert.match(html,/Stock by location/);assert.match(html,/3 can be made/);assert.match(html,/Store A/);assert.match(html,/Store B/);assert.match(html,/Commissary/);assert.match(html,/Transfer stock/);assert.match(html,/Record physical count/);assert.doesNotMatch(html,/Track quantities still owed/);assert.match(html,/aria-selected="true"[^>]*>.*?Stock/);
+html=render({0:'Backorders'});assert.match(html,/Record backorder/);assert.match(html,/No open backorders here/);assert.doesNotMatch(html,/Stock by location/);assert.match(html,/does not collect payment or update a Sales Order/);
+html=render({0:'History'});assert.match(html,/Movement history/);assert.doesNotMatch(html,/Stock by location/);assert.doesNotMatch(html,/Record backorder/);
+html=render({}, {canManage:false});assert.doesNotMatch(html,/Transfer stock/);assert.doesNotMatch(html,/Record physical count/);
+html=render({4:'Sauce'});assert.match(html,/role="dialog"/);assert.match(html,/180 each consumed over 180 days/);assert.match(html,/5 supplier days \+ 2 safety days/);assert.match(html,/Supplier estimate if ordered today/);
+html=render({4:'Pizza'});assert.match(html,/Can make from ingredients/);assert.match(html,/pickup date also depends on preparation/);
+html=render({5:{sku:'Sauce',locationId:'b',mode:'Cycle count',reason:'Damaged'}});assert.match(html,/data-selected-item="Sauce"/);assert.match(html,/data-selected-location="b"/);assert.match(html,/Record damage \/ loss/);
+console.log('PASS: server-rendered Inventory defaults to Stock with three locations; Backorders and History are separate panels; ingredient capacity, supplier/reorder evidence, manager-only actions and preselected movement forms are displayed. Not a browser or live-write test.');

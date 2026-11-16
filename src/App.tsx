@@ -72,7 +72,7 @@ function App(){
     {page==='POS'&&<POSView state={state} location={location} setLocation={setLocation} onCommit={mutate} flash={flash}/>}
     {page==='Sales Orders'&&<OrdersView state={state} onCommit={mutate} flash={flash}/>}
     {page==='Returns'&&<ReturnsPageView flash={flash}/>}
-    {page==='Inventory'&&<ConnectedInventoryPage userId={profile.userId} search={search} flash={flash} safetyDays={state.settings.safetyDays} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
+    {page==='Inventory'&&<ConnectedInventoryPage userId={profile.userId} canManage={role==='Manager'} search={search} flash={flash} safetyDays={state.settings.safetyDays} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
     {page==='Barcode Labels'&&<ConnectedBarcodeLabels state={state} flash={flash}/>}
     {page==='Transfers & Counts'&&<ConnectedMovements userId={profile.userId} flash={flash}/>}
     {page==='Production'&&<ConnectedProductionPage flash={flash}/>}
