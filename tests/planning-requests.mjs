@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {sendPlanningRequest} from '../src/planningRequests.ts';
+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
+const calls=[],payload={name:'Pickup',lines:[{sku:'pizza',qty:1}]};
+const failed=async(name,args)=>{calls.push({name,args});throw Error('Connection lost');};
+await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_order',payload,failed),/Connection lost/);
+assert.equal(memory.size,1);
+await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_order',{...payload,name:'Other'},failed),/earlier save/);
+assert.equal(calls.length,1);
+const success=async(name,args)=>{calls.push({name,args});return {data:{id:'order',total:12},error:null};};
+await sendPlanningRequest('user','pickup','erp_create_pickup_order',payload,success);
+assert.deepEqual(calls[0],calls[1],'retry keeps original request and payload');assert.equal(memory.size,0);
+await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_order',payload,async()=>({data:null,error:{message:'Invalid order',code:'P0001'}})),/Invalid order/);assert.equal(memory.size,0,'confirmed database rejection rolls back');
+await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_order',payload,async()=>({data:null,error:null})),/incomplete/);assert.equal(memory.size,1,'uncertain response is retained');
+await sendPlanningRequest('other-user','pickup','erp_create_pickup_order',payload,success);assert.equal(memory.size,1,'pending saves are isolated by user');
+console.log('PASS: durable request IDs, payload consistency, lost-response retry, definitive rollback, uncertain confirmation and user isolation.');

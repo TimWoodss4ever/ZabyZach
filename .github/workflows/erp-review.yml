@@ -1,7 +1,7 @@
 name: ERP branch checks (no deployment)
 on:
   push:
-    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality]
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, fix/shared-mrp]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -58,7 +58,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
           for migration in supabase/migrations/*.sql; do
             # Reporting tests capture existing rows/functions before applying it.
-            if [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ] || [ "$(basename "$migration")" = 202611160003_reporting_quality.sql ]; then
+            if [ "$(basename "$migration")" = 202611160004_shared_mrp.sql ] || [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ] || [ "$(basename "$migration")" = 202611160003_reporting_quality.sql ]; then
               continue
             fi
             # The base schema already seeds in-house dough. The old one-off
@@ -79,3 +79,8 @@ jobs:
           node tests/sql/purchasing-concurrency.mjs
           psql -v ON_ERROR_STOP=1 -f tests/sql/shared-reporting.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/reporting-quality.sql
+          # Apply the MRP change after the historical preservation suites. It
+          # intentionally refines record_sale while keeping its external API.
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160004_shared_mrp.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/shared-mrp.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160004_shared_mrp.sql

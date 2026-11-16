@@ -1,7 +1,8 @@
 {
   "repository": "TimWoodss4ever/ZabyZach",
-  "main_commit": "b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf",
+  "main_commit": "30281e03c82f88e7798e72fbd012a30dda6b598e",
   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
-  "review_branch": "erp-reporting-quality",
-  "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline."
+  "review_branch": "fix/shared-mrp",
+  "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline.",
+  "mrp_update": "Shared location-specific MRP and pickup orders; deduct stock at preparation or fulfillment. Reviewed current main before these changes."
 }
