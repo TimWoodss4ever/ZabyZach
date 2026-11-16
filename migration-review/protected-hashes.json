@@ -1,0 +1,17 @@
+{
+  "package.json": "48a7eca3a21af33d49541cb0f7d05b9c3a9067e2139d13fd40dc37e4e66ad107",
+  "package-lock.json": "ff10adab184bc6a08faf73d41f0ca53c57b79dd24eacea1be4b1e47a9acafa22",
+  "vite.config.ts": "20f362e0a5e32e66712aebe1da8332d342085222ce771db1f0b7d5608d71c1a4",
+  "index.html": "6d11b41fc98401cd38291ebb053f4584f0ad4112b08256dc50d63d4ca0d84ba6",
+  "src/supabase.ts": "b5c8c6433e6d25f27b02c0781d5622ecc1d387c177cadf3065a8c20f7627ca41",
+  "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+  ".github/workflows/deploy.yml": "7ac3a54b88d72792ab132a37bd836e2eee7e50af24884023c69812462763a017",
+  "workflows/deploy.yml": "1fe918c13b791e4953282de21abcc9dc7daf4685be8f6eb6a4e225bf9ed5e25a",
+  "supabase/SETUP.md": "56b472e8b2f178d90910cd84bf92672c3a5a6ad50465fc9d46481912ff5d7c82",
+  "supabase/migrations/202611130002_sauces_coca_cola.sql": "e0730c65d73ef00ce548605800f050798dc9398fe9e4df30749fb8f2e2db2a2f",
+  "supabase/migrations/202611100001_zabyzack_erp.sql": "e1da8bb41ab0f62dbda11162de30040fc84e849753115e0b8ef7fdba0a45bcf6",
+  "supabase/migrations/202611130001_in_house_dough.sql": "8221f4142e3fbe67f115b3b37b9bef4e170ee192b6f0c38b8e6d18ef6318b4ff",
+  "supabase/migrations/202611150001_returns_exchanges.sql": "b1ae41037df123b3b5fa0651a24833314dbc30c07e40dd9a3557ad1a3eb2502a",
+  "supabase/migrations/202611110001_sales_order_time_discounts.sql": "b24f45ee68f9428e11991b5cf485fef9cbed8994f3a7d356b6c2f2590ff277ef",
+  "supabase/migrations/202611140001_production_backend.sql": "a1eddc0e1c920a65042f4afa2f87e1059070040b4acbaae24c365b1e135d7a1a"
+}

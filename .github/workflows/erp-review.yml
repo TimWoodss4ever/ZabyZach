@@ -1,0 +1,81 @@
+name: ERP branch checks (no deployment)
+on:
+  push:
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check for newer work on main
+        run: |
+          git fetch origin main
+          node scripts/check-main-baseline.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build the combined app
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: npm run build
+      - name: Run workflow and preservation checks
+        run: node tests/run-all.mjs
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: erp_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test migrations and purchasing transactions in disposable PostgreSQL
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGDATABASE: erp_test
+          PGUSER: postgres
+          PGPASSWORD: local-ci-only
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
+          for migration in supabase/migrations/*.sql; do
+            # Reporting tests capture existing rows/functions before applying it.
+            if [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ] || [ "$(basename "$migration")" = 202611160003_reporting_quality.sql ]; then
+              continue
+            fi
+            # The base schema already seeds in-house dough. The old one-off
+            # frozen-dough conversion cannot be replayed over that modern seed.
+            # Assert the expected final BOM instead; never ignore SQL failures.
+            if [ "$(basename "$migration")" = 202611130001_in_house_dough.sql ]; then
+              psql -v ON_ERROR_STOP=1 -c "do \$ci\$ begin if not exists (select 1 from public.bom_lines where parent_sku='1030' and component_sku='1001' and quantity=9.6) or not exists (select 1 from public.items where sku='1001' and name='Bread flour' and conversion_factor=800) or exists (select 1 from public.bom_lines where parent_sku=component_sku) then raise exception 'CI base must already contain the valid in-house dough schema'; end if; end \$ci\$;"
+              continue
+            fi
+            if [ "$(basename "$migration")" = 202611150002_shared_purchasing.sql ]; then
+              psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-before-migration.sql
+            fi
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql -v ON_ERROR_STOP=1 -f tests/sql/shared-purchasing.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611150002_shared_purchasing.sql
+          psql -v ON_ERROR_STOP=1 -c "select public.ci_assert((select order_cost=35 from public.erp_purchasing_options),'repeat migration reset options'); select public.ci_assert((select count(*)=3 from public.erp_purchase_receipts),'repeat migration reset receipts'); select public.ci_assert((select count(*)=3 from public.erp_supplier_payments),'repeat migration reset payments');"
+          node tests/sql/purchasing-concurrency.mjs
+          psql -v ON_ERROR_STOP=1 -f tests/sql/shared-reporting.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/reporting-quality.sql

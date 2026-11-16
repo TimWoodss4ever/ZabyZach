@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {stripTypeScriptTypes} from 'node:module';
+import {setImmediate} from 'node:timers/promises';
+import {validateReport} from '../src/reporting.ts';
+const text=await readFile('src/SharedReporting.tsx','utf8');
+const code=text.slice(text.indexOf('function useReport('),text.indexOf('\nfunction Metric('));
+const fixture={version:2,quality:{costSales:[],stockHistory:[]},today:'2026-11-15',generatedAt:'2026-11-16T00:00:00Z',from:'2026-11-01',to:'2026-11-15',locations:[],pnl:{gross:0,discounts:0,refunds:0,tax:0,cogs:0,waste:0,adjustments:0,expenses:0,zeroCostSales:0},inventory:[],daily:[],weekly:[],topItems:[],lowStock:[],suppliers:[],expenses:[]};
+let effect,interval,cleanup,signal,focus,visibility,removed=0,requests=[],states=[],response={data:fixture,error:null},blockedResolve;
+const channel={on(){return channel;},subscribe(){return channel;}};
+const supabase={rpc(name,args){requests.push({name,args});return {abortSignal(s){signal=s;return blockedResolve?new Promise(resolve=>{blockedResolve=resolve;}):Promise.resolve(response);}};},channel:()=>channel,removeChannel:()=>{removed++;return Promise.resolve();}};
+const window={setInterval(fn,ms){interval=fn;assert.equal(ms,15000);return 1;},clearInterval(){},addEventListener(_,fn){focus=fn;},removeEventListener(){}};
+const document={visibilityState:'visible',addEventListener(_,fn){visibility=fn;},removeEventListener(){}};
+const useReport=new Function('supabase','useState','useRef','useCallback','useEffect','window','document','validateReport',stripTypeScriptTypes(code)+';return useReport;')(
+ supabase,x=>[x,v=>states.push(v)],x=>({current:x}),fn=>fn,fn=>{effect=fn;},window,document,validateReport);
+const hook=useReport('2026-11-01','2026-11-15','location-id');cleanup=effect();await setImmediate();
+assert.equal(requests.length,1);assert.deepEqual(requests[0],{name:'erp_reporting_snapshot_v2',args:{p_from:'2026-11-01',p_to:'2026-11-15',p_location:'location-id'}});assert.ok(states.includes(fixture));
+interval();await setImmediate();assert.equal(requests.length,2);
+document.visibilityState='hidden';interval();await setImmediate();assert.equal(requests.length,2);
+document.visibilityState='visible';visibility();await setImmediate();assert.equal(requests.length,3);
+response={data:null,error:{message:'permission denied'}};focus();await setImmediate();assert.ok(states.includes('permission denied'));assert.ok(!states.slice(states.lastIndexOf('permission denied')).includes(fixture));
+response={data:fixture,error:null};hook.reload();await setImmediate();assert.ok(states.includes(fixture));
+blockedResolve=()=>{};hook.reload();hook.reload();hook.reload();assert.equal(requests.length,6);const resolve=blockedResolve;blockedResolve=null;resolve(response);await setImmediate();await setImmediate();assert.equal(requests.length,7,'overlapping refreshes coalesce into one follow-up');
+cleanup();assert.equal(signal.aborted,true);assert.equal(removed,1);const count=requests.length;hook.reload();assert.equal(requests.length,count);
+console.log('PASS: shared report RPC filters, 15-second refresh, hidden-tab pause, visibility/focus refresh, explicit failures, retry, overlapping-request coalescing and unmount cleanup. Mock transport, not a browser or live database.');
