@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {sendPlanningRequest} from '../src/planningRequests.ts';
+import {sendPlanningRequest,retryPlanningRequest,sharedPickupConfirmation} from '../src/planningRequests.ts';
 const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
 const calls=[],payload={name:'Pickup',lines:[{sku:'pizza',qty:1}]};
 const failed=async(name,args)=>{calls.push({name,args});throw Error('Connection lost');};
@@ -14,3 +14,8 @@ await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_orde
 await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_order',payload,async()=>({data:null,error:null})),/incomplete/);assert.equal(memory.size,1,'uncertain response is retained');
 await sendPlanningRequest('other-user','pickup','erp_create_pickup_order',payload,success);assert.equal(memory.size,1,'pending saves are isolated by user');
 console.log('PASS: durable request IDs, payload consistency, lost-response retry, definitive rollback, uncertain confirmation and user isolation.');
+
+await retryPlanningRequest('user','pickup','erp_create_pickup_order',success);assert.equal(memory.size,0,'saved payload can be recovered after form/cart state is lost');
+const confirmation=sharedPickupConfirmation({name:'Pickup',phone:'8015550199',location:'Provo Campus Store',pickup:'2026-11-18T17:00:00 America/Denver',lines:[{sku:'pizza',qty:2}]},{id:'order',total:20});
+assert.equal(confirmation.pickup,'2026-11-18');assert.equal(confirmation.pickupTime,'17:00');assert.equal(confirmation.payment.status,'Simulated paid');assert.equal(confirmation.saleId,undefined);
+console.log('PASS: recovery from saved payload without a surviving form, and shared confirmation with no premature sale/inventory linkage.');
