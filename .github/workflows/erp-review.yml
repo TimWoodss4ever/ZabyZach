@@ -63,6 +63,12 @@ jobs:
             if [ "$(basename "$migration")" = 202611160004_shared_mrp.sql ] || [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ] || [ "$(basename "$migration")" = 202611160003_reporting_quality.sql ]; then
               continue
             fi
+            # This earlier correction targets eight verified live seed UUIDs.
+            # A fresh CI database has none of that imported dataset; do not
+            # rewrite or weaken the live migration's strict row-count guard.
+            if [ "$(basename "$migration")" = 202611160001_retime_seed_opening_stock.sql ]; then
+              continue
+            fi
             # The base schema already seeds in-house dough. The old one-off
             # frozen-dough conversion cannot be replayed over that modern seed.
             # Assert the expected final BOM instead; never ignore SQL failures.

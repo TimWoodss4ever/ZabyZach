@@ -42,7 +42,7 @@ export function calculateMrp(d:PlanSnapshot){
  const rows:PlanRow[]=[];
  for(const sku of order)for(const location of d.locations){
   const item=catalog.get(sku)!,made=recipes.has(sku),supplier=d.suppliers.find(s=>s.id===item.supplier_id);
-  const lead=made?Number(item.lead_days):Number(supplier?.quoted_lead_days??item.lead_days);
+  const lead=made?(Number(item.selling_price)>0?0:Number(item.lead_days)):Number(supplier?.quoted_lead_days??item.lead_days);
   if(!Number.isFinite(lead)||lead<0)throw Error('Invalid lead time for '+item.name);
   const sources=(demand.get(key(sku,location.id))??[]).sort((a,b)=>a.date.localeCompare(b.date));
   const incoming=receipts.filter(r=>r.item_sku===sku&&r.location_id===location.id&&localDate(r.due)<end);
