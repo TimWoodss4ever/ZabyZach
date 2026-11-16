@@ -17,7 +17,8 @@ export function summarizeUsage(rows:UsageRow[]):UsageByLocation{
 export function reorderLevel(item:InventoryItem,usage:UsageByLocation,locationId:string,safetyDays:number):number|null{
  const consumed=usage[item.sku]?.[locationId];
  if(!stockedItem(item)||!consumed||item.leadDays===null||!item.supplierActive||!item.supplier)return null;
- return consumed/usageDays*(item.leadDays+Math.max(0,safetyDays));
+ const level=consumed/usageDays*(item.leadDays+Math.max(0,safetyDays));
+ return item.unit==='each'?Math.ceil(level):level;
 }
 // Make-to-stock components (including dough) must already have been produced.
 // Combine repeated ingredients before checking capacity; locations never pool stock.

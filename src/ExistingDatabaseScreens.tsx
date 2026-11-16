@@ -64,8 +64,8 @@ async function loadInventorySnapshot():Promise<InventorySnapshot>{
  }
  return{items:catalog,locations:locationRows,stockBySku,usageBySku,transactionCount};
 }
-export function ConnectedInventoryPage({search,flash,safetyDays,onOpenLabels,userId,canManage=false}:{userId:string;search:string;flash:(s:string)=>void;safetyDays:number;onOpenLabels:()=>void;canManage?:boolean}){
- return <InventoryWorkspace userId={userId} search={search} safetyDays={safetyDays} onOpenLabels={onOpenLabels} canManage={canManage} renderMovement={selection=><ConnectedMovements userId={userId} flash={flash} initial={selection}/>}/>;
+export function ConnectedInventoryPage({search,flash,safetyDays,onOpenLabels,userId,canManage=false,onSearchChange}:{userId:string;search:string;flash:(s:string)=>void;safetyDays:number;onOpenLabels:()=>void;canManage?:boolean;onSearchChange:(value:string)=>void}){
+ return <InventoryWorkspace userId={userId} search={search} onSearchChange={onSearchChange} safetyDays={safetyDays} onOpenLabels={onOpenLabels} canManage={canManage} renderMovement={selection=><ConnectedMovements userId={userId} flash={flash} initial={selection}/>}/>;
 }
 
 type MovementItemRow={sku:string;name:string;category:string;barcode:string;base_unit:string;purchase_unit:string;conversion_factor:number;unit_cost:number;selling_price:number;shelf_life_days:number|null;lead_days:number};
