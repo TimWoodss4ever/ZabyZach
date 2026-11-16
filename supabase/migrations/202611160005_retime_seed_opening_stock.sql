@@ -3,7 +3,18 @@ begin;
 do $migration$
 declare
   v_updated integer;
+  v_present integer;
+  v_ids uuid[] := array['14e0f65b-66d6-5895-9712-06eb2fb5dc01'::uuid,'c0a0db68-4911-5c4c-a532-c62dcb05afc1'::uuid,'c7c56a65-8c4c-5513-ba4d-2ab6db9a5216'::uuid,'d60ff8d9-b756-58f4-87ad-36a38cac8788'::uuid,'2269feaa-c999-5b27-a475-94981b120925'::uuid,'9ea1bd08-fd05-558b-99ad-f0c8a311cfa2'::uuid,'172aa326-1dd7-533e-af55-6900c810f9d5'::uuid,'eec51a44-e447-5deb-ad4f-3bc82cc2bf2f'::uuid];
 begin
+  select count(*) into v_present from public.inventory_transactions where id=any(v_ids);
+  if v_present=0 then raise notice 'Verified seed rows are absent; no timestamp repair is needed';return;end if;
+  if v_present<>8 then raise exception 'Only % of the 8 verified seed receipts exist; no records changed',v_present;end if;
+  if (select count(*) from public.inventory_transactions where id=any(v_ids)
+    and occurred_at=timestamptz '2026-05-17 05:59:59.999999+00'
+    and metadata->>'original_occurred_at'='2026-05-18T06:00:00.000000Z'
+    and metadata->>'correction_reason'='Correct synthetic opening stock timestamp to precede the matching May 17 production withdrawal; retain the original timestamp in metadata.')=8 then
+    raise notice 'Verified seed timestamp repair already applied';return;
+  end if;
   update public.inventory_transactions as t
   set
     occurred_at = timestamptz '2026-05-17 05:59:59.999999+00',

@@ -1,0 +1,21 @@
+// DISPOSABLE CI DATABASE ONLY. Reads the reviewed fixture constants from the real migration.
+import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {spawnSync} from 'node:child_process';
+const path='supabase/migrations/202611160005_retime_seed_opening_stock.sql',source=readFileSync(path,'utf8'),match=source.match(/from\s*\(\s*values([\s\S]*?)\)\s*as e\(([\s\S]*?)\)\s*where/);assert(match,'seed fixture definition');const fixture='(values'+match[1]+') as e('+match[2]+')';
+function sql(query){const r=spawnSync('psql',['-X','-qAt','-v','ON_ERROR_STOP=1','-c',query],{encoding:'utf8'});assert.equal(r.status,0,r.stderr);return r.stdout.trim();}
+function migration(success=true){const r=spawnSync('psql',['-X','-qAt','-v','ON_ERROR_STOP=1','-f',path],{encoding:'utf8'});if(success)assert.equal(r.status,0,r.stderr);else assert.notEqual(r.status,0,'Expected a guarded seed-repair failure');return r;}
+// Empty installs must not fail just because an imported demo dataset is absent.
+assert.equal(sql('select count(*) from public.inventory_transactions where id in(select receipt_id from '+fixture+')'),'0');migration();migration();
+sql(`insert into public.locations(id,name) select distinct e.location_id,'Seed verification '||e.location_id::text from ${fixture} on conflict(id) do nothing;
+insert into public.inventory_transactions(id,item_sku,location_id,quantity,unit_cost,transaction_type,reference_document,occurred_at,metadata)
+select e.production_id,e.item_sku,e.location_id,e.production_quantity,e.unit_cost,'Production','Historical in-house dough production','2026-05-17T06:00:00Z',jsonb_build_object('source_row',e.production_source_row,'source_demo_id',e.production_demo_id) from ${fixture};
+insert into public.inventory_transactions(id,item_sku,location_id,quantity,unit_cost,transaction_type,reference_document,occurred_at,metadata)
+select e.receipt_id,e.item_sku,e.location_id,e.receipt_quantity,e.unit_cost,'Receipt','Seed opening stock','2026-05-18T06:00:00Z',jsonb_build_object('source_row',e.receipt_source_row,'source_demo_id',e.receipt_demo_id) from ${fixture} order by e.receipt_id limit 7;`);
+migration(false);assert.equal(sql(`select count(*) from public.inventory_transactions where id in(select receipt_id from ${fixture}) and metadata ? 'original_occurred_at'`),'0','partial dataset was modified');
+sql(`insert into public.inventory_transactions(id,item_sku,location_id,quantity,unit_cost,transaction_type,reference_document,occurred_at,metadata)
+select e.receipt_id,e.item_sku,e.location_id,e.receipt_quantity,e.unit_cost,'Receipt','Seed opening stock','2026-05-18T06:00:00Z',jsonb_build_object('source_row',e.receipt_source_row,'source_demo_id',e.receipt_demo_id) from ${fixture} where not exists(select 1 from public.inventory_transactions t where t.id=e.receipt_id);
+update public.inventory_transactions set quantity=quantity-1 where id=(select production_id from ${fixture} limit 1);`);
+migration(false);assert.equal(sql(`select count(*) from public.inventory_transactions where id in(select receipt_id from ${fixture}) and metadata ? 'original_occurred_at'`),'0','partially matched update did not roll back');
+sql(`update public.inventory_transactions t set quantity=e.production_quantity from ${fixture} where t.id=e.production_id;`);migration();
+const snapshot=sql(`select jsonb_agg(to_jsonb(t) order by t.id) from public.inventory_transactions t where t.id in(select receipt_id from ${fixture})`);migration();assert.equal(sql(`select jsonb_agg(to_jsonb(t) order by t.id) from public.inventory_transactions t where t.id in(select receipt_id from ${fixture})`),snapshot,'repeat changed verified receipts');
+assert.equal(sql(`select count(*) from public.inventory_transactions t join ${fixture} on t.id=e.receipt_id where t.quantity=e.receipt_quantity and t.unit_cost=e.unit_cost and t.occurred_at=timestamptz '2026-05-17 05:59:59.999999+00' and t.metadata->>'original_occurred_at'='2026-05-18T06:00:00.000000Z' and (t.metadata->>'source_row')::integer=e.receipt_source_row`),'8');
+console.log('PASS: seed repair tolerates absent fixtures, refuses partial/tampered matches atomically, corrects exactly eight verified receipts, retains quantity/cost/source metadata, and safely repeats.');
