@@ -43,7 +43,7 @@ export function SharedMrpScreen({flash,onPurchase,onTransfers}:{flash:(message:s
  if(!d)return <LoadState api={api}/>;
  if(!computed?.plan)return <section className="panel p-form"><p className="p-error" role="alert">{computed?.error}</p><Status api={api}/></section>;
  const plan=computed.plan,loc=location||d.locations.find(l=>l.can_sell)?.id||d.locations[0]?.id;
- const rows=plan.rows.filter(r=>r.location===loc&&(!onlyActions||r.actions.length));const chosen=rows.find(r=>r.item.sku===sku)??rows.find(r=>r.actions.length)??rows[0];
+ const rows=plan.rows.filter(r=>r.location===loc&&(!onlyActions||r.actions.length));const chosen=rows.find(r=>r.item.sku===sku)??rows.find(r=>!r.made&&r.actions.length)??rows.find(r=>r.actions.length)??rows[0];
  const locationName=(id:string)=>d.locations.find(l=>l.id===id)?.name??id;
  const draftRows=d.purchaseDrafts??[];
  const draftExists=(r:PlanRow)=>draftRows.some(p=>p.location_id===r.location&&p.item_sku===r.item.sku);
@@ -55,7 +55,7 @@ export function SharedMrpScreen({flash,onPurchase,onTransfers}:{flash:(message:s
    group.lines.push({sku:r.item.sku,qty:r.actions.reduce((n,a)=>n+a.packs,0),price:Math.round(Number(r.item.unit_cost)*Number(r.item.conversion_factor)*100)/100});grouped.set(key,group);
   }
   if(!grouped.size)throw Error('No new purchased-component suggestions. Review any existing MRP drafts.');
-  await sendPlanningRequest(d.userId,'mrp-purchase','erp_purchasing_write',{orders:[...grouped.values()]},(name,args)=>supabase.rpc(name,args));flash('Shared draft POs created. Review and issue them in Purchase Orders.');
+  await sendPlanningRequest(d.userId,'mrp-purchase','erp_mrp_purchase_drafts',{orders:[...grouped.values()]},(name,args)=>supabase.rpc(name,args));flash('Shared draft POs created. Review and issue them in Purchase Orders.');
  });
  const parent=bomParent||d.bom[0]?.parent_sku;
  return <><div className="mrp-hero"><div><b>Four-week material plan</b><span>Shared confirmed orders · {dateLabel(d.today)}–{dateLabel(shiftDate(d.today,27))} · Separate stock and receipts for every location</span></div><Status api={api}/></div>

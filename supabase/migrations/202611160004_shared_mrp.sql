@@ -183,8 +183,66 @@ begin
  if not found then raise exception 'Production order is no longer open';end if;
 end $$;
 
+-- Production and sales take the same stock locks. Good output plus scrap must
+-- account for the whole batch. Receipt then scrap leaves exactly good stock;
+-- scrap must not deduct a second quantity from already-consumed ingredients.
+create or replace function public.issue_production_order(p_order uuid) returns void
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare o public.production_orders%rowtype; b record; have numeric; begin
+ if auth.uid() is null or coalesce(public.current_role(),'') not in ('Manager','Cashier') then raise exception 'Staff role required' using errcode='42501';end if;
+ select * into o from public.production_orders where id=p_order for update;
+ if not found or o.status<>'Planned' then raise exception 'Production order is not planned';end if;
+ perform 1 from public.items order by sku for update;
+ if not exists(select 1 from public.bom_lines where parent_sku=o.parent_sku) then raise exception 'Production needs a BOM';end if;
+ for b in select * from public.bom_lines where parent_sku=o.parent_sku order by component_sku loop
+  select coalesce(sum(quantity),0) into have from public.inventory_transactions where item_sku=b.component_sku and location_id=o.location_id and occurred_at<=now();
+  if have<b.quantity*o.quantity_started then raise exception 'Insufficient component % at this location',b.component_sku;end if;
+  insert into public.inventory_transactions(item_sku,location_id,quantity,unit_cost,transaction_type,reference_document,user_id)
+   values(b.component_sku,o.location_id,-b.quantity*o.quantity_started,public.erp_plan_unit_cost(b.component_sku),'Production Issue',o.order_no,auth.uid());
+ end loop;
+ update public.production_orders set status='In Progress',started_at=now() where id=p_order;
+end $$;
+
+create or replace function public.complete_production_order(p_order uuid,p_good numeric,p_scrapped numeric,p_reason text default null) returns void
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare o public.production_orders%rowtype; cost numeric; begin
+ if auth.uid() is null or coalesce(public.current_role(),'') not in ('Manager','Cashier') then raise exception 'Staff role required' using errcode='42501';end if;
+ select * into o from public.production_orders where id=p_order for update;
+ if not found or o.status<>'In Progress' then raise exception 'Production must be in progress';end if;
+ if p_good is null or p_scrapped is null or p_good::text in ('NaN','Infinity','-Infinity') or p_scrapped::text in ('NaN','Infinity','-Infinity') or p_good<0 or p_scrapped<0 or p_good+p_scrapped<>o.quantity_started then raise exception 'Good plus scrap must equal the batch quantity';end if;
+ if p_scrapped>0 and coalesce(trim(p_reason),'')='' then raise exception 'Scrap reason required';end if;
+ perform 1 from public.items order by sku for update;
+ cost:=public.erp_plan_unit_cost(o.parent_sku);
+ insert into public.inventory_transactions(item_sku,location_id,quantity,unit_cost,transaction_type,reference_document,user_id)
+  values(o.parent_sku,o.location_id,p_good+p_scrapped,cost,'Production Receipt',o.order_no,auth.uid());
+ if p_scrapped>0 then insert into public.inventory_transactions(item_sku,location_id,quantity,unit_cost,transaction_type,reason_code,reference_document,user_id)
+  values(o.parent_sku,o.location_id,-p_scrapped,cost,'Waste',p_reason,o.order_no,auth.uid());end if;
+ update public.production_orders set status='Completed',quantity_good=p_good,quantity_scrapped=p_scrapped,finished_at=now(),reason_code=p_reason where id=p_order;
+end $$;
+
+-- Serialize MRP drafts with the existing purchasing API and reject another
+-- manager's pending draft for the same component/destination.
+create or replace function public.erp_mrp_purchase_drafts(p_request uuid,p_action text,p_payload jsonb) returns jsonb
+language plpgsql security definer set search_path=pg_catalog,public as $$
+declare o jsonb; l jsonb; begin
+ if auth.uid() is null or public.current_role() is distinct from 'Manager' then raise exception 'Manager role required' using errcode='42501';end if;
+ if p_action is distinct from 'create_orders' then raise exception 'Only MRP draft creation is allowed';end if;
+ perform pg_advisory_xact_lock(1179468369,1);
+ if not exists(select 1 from public.erp_purchasing_requests where id=p_request) then
+  for o in select * from jsonb_array_elements(p_payload->'orders') loop
+   if (o->>'send')::boolean is distinct from false or coalesce(o->>'notes','') not like 'MRP confirmed requirements%' then raise exception 'MRP orders must be reviewable drafts';end if;
+   for l in select * from jsonb_array_elements(o->'lines') loop
+    if exists(select 1 from public.purchase_orders p join public.purchase_order_lines b on b.purchase_order_id=p.id where p.status='Draft' and p.erp_notes like 'MRP confirmed requirements%' and p.ship_to_location_id=(o->>'locationId')::uuid and b.item_sku=l->>'sku') then raise exception 'An MRP draft already exists for this item and location. Refresh and review Purchase Orders.';end if;
+   end loop;
+  end loop;
+ end if;
+ return public.erp_purchasing_write(p_request,'create_orders',p_payload);
+end $$;
+
 revoke all on function public.erp_plan_unit_cost(text,text[]),public.erp_plan_post_sale(uuid,jsonb,numeric,numeric,uuid) from public,anon,authenticated;
 revoke all on function public.erp_planning_snapshot(),public.erp_create_pickup_order(uuid,jsonb),public.erp_pickup_action(uuid,text),public.erp_schedule_production(uuid,date) from public,anon,authenticated;
 grant execute on function public.erp_planning_snapshot(),public.erp_create_pickup_order(uuid,jsonb),public.erp_pickup_action(uuid,text),public.erp_schedule_production(uuid,date) to authenticated;
 revoke all on function public.record_sale(uuid,jsonb,numeric,uuid) from public,anon;
 grant execute on function public.record_sale(uuid,jsonb,numeric,uuid) to authenticated;
+revoke all on function public.issue_production_order(uuid),public.complete_production_order(uuid,numeric,numeric,text),public.erp_mrp_purchase_drafts(uuid,text,jsonb) from public,anon;
+grant execute on function public.issue_production_order(uuid),public.complete_production_order(uuid,numeric,numeric,text),public.erp_mrp_purchase_drafts(uuid,text,jsonb) to authenticated;

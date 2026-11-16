@@ -68,6 +68,19 @@ begin
  prod:=public.create_production_order('MRP-D',loc,4);
  perform public.erp_schedule_production(prod,(now() at time zone 'America/Denver')::date+1);
  perform public.ci_assert((select erp_due_date is not null from public.production_orders where id=prod),'production schedule not saved');
+ perform public.issue_production_order(prod);
+ perform public.complete_production_order(prod,3,1,'Damaged');
+ perform public.ci_assert((select sum(quantity)=6 from public.inventory_transactions where item_sku='MRP-D' and location_id=loc),'scrap deducted twice from good output');
+ -- A second open order supplies the dated planning receipt.
+ prod:=public.create_production_order('MRP-D',loc,2);
+ perform public.erp_schedule_production(prod,(now() at time zone 'America/Denver')::date+1);
+ perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
+ update public.items set supplier_id='00000000-0000-0000-0000-000000000010' where sku='MRP-F';
+ payload:=jsonb_build_object('orders',jsonb_build_array(jsonb_build_object('supplierId','00000000-0000-0000-0000-000000000010','locationId',loc,'date',(now() at time zone 'America/Denver')::date,'send',false,'notes','MRP confirmed requirements test','lines','[{"sku":"MRP-F","qty":1,"price":10}]'::jsonb)));
+ request:=gen_random_uuid();answer:=public.erp_mrp_purchase_drafts(request,'create_orders',payload);again:=public.erp_mrp_purchase_drafts(request,'create_orders',payload);
+ perform public.ci_assert(answer=again,'MRP draft retry duplicated an order');
+ rejected:=false;begin perform public.erp_mrp_purchase_drafts(gen_random_uuid(),'create_orders',payload);exception when others then rejected:=true;end;
+ perform public.ci_assert(rejected,'duplicate item/location MRP draft accepted');
  snapshot:=public.erp_planning_snapshot();
  perform public.ci_assert(exists(select 1 from jsonb_array_elements(snapshot->'receipts')x where x->>'id'=prod::text and x->>'kind'='Production'),'dated production not in plan');
 end $$;
