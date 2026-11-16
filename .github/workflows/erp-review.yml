@@ -1,7 +1,7 @@
 name: ERP branch checks (no deployment)
 on:
   push:
-    branches: [erp-updates, erp-updates-current, erp-shared-purchasing]
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -57,6 +57,10 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
           for migration in supabase/migrations/*.sql; do
+            # Reporting tests capture existing rows/functions before applying it.
+            if [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ]; then
+              continue
+            fi
             # The base schema already seeds in-house dough. The old one-off
             # frozen-dough conversion cannot be replayed over that modern seed.
             # Assert the expected final BOM instead; never ignore SQL failures.
@@ -73,3 +77,4 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611150002_shared_purchasing.sql
           psql -v ON_ERROR_STOP=1 -c "select public.ci_assert((select order_cost=35 from public.erp_purchasing_options),'repeat migration reset options'); select public.ci_assert((select count(*)=3 from public.erp_purchase_receipts),'repeat migration reset receipts'); select public.ci_assert((select count(*)=3 from public.erp_supplier_payments),'repeat migration reset payments');"
           node tests/sql/purchasing-concurrency.mjs
+          psql -v ON_ERROR_STOP=1 -f tests/sql/shared-reporting.sql
