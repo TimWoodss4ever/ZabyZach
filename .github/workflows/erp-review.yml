@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  statuses: write
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -55,6 +56,7 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: local-ci-only
         run: |
+          exec > >(tee /tmp/erp-postgres.log) 2>&1
           psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
           for migration in supabase/migrations/*.sql; do
             # Reporting tests capture existing rows/functions before applying it.
@@ -84,3 +86,15 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160004_shared_mrp.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/shared-mrp.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160004_shared_mrp.sql
+      - name: Publish database diagnostic on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          let log='';try{log=readFileSync('/tmp/erp-postgres.log','utf8');}catch{}
+          const detail=log.split('\n').find(line=>/ERROR:|FATAL:/.test(line))??'Database check failed; see the workflow log.';
+          const response=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+'/statuses/'+process.env.GITHUB_SHA,{method:'POST',headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'},body:JSON.stringify({state:'failure',context:'Database diagnostic',description:detail.slice(0,140),target_url:'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID})});
+          if(!response.ok)throw Error('Unable to publish database diagnostic: '+response.status);
+          JS
