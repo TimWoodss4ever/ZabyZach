@@ -1,11 +1,13 @@
 import {useCallback,useEffect,useRef,useState,type FormEvent,type ReactNode} from 'react';
 import {supabase} from './supabase';
-import {reportDate,shiftReportDate,validateReport,reportTotals,replenish,type ReportSnapshot,type ReportExpense} from './reporting';
+import {reportDate,shiftReportDate,validateReport,reportTotals,replenish,type ReportSnapshot,type ReportExpense,type ReportQuality,type ReportLowStock} from './reporting';
 import './reporting.css';
 
 const money=(n:number)=>n.toLocaleString('en-US',{style:'currency',currency:'USD'});
+const unitMoney=(n:number)=>n.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:6});
 const number=(n:number)=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 const shortDate=(s:string)=>new Date(s+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});
+const postedDate=(s:string)=>new Date(s).toLocaleString('en-US',{timeZone:'America/Denver',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
 
 function useReport(from:string,to:string,location:string){
  const [data,setData]=useState<ReportSnapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(true);
@@ -17,9 +19,10 @@ function useReport(from:string,to:string,location:string){
   const load=async()=>{
    if(!active)return;if(running){again=true;return;}running=true;setBusy(true);
    try{
-    const result=await supabase.rpc('erp_reporting_snapshot',{p_from:from,p_to:to,p_location:location||null}).abortSignal(abort.signal);
+    const result=await supabase.rpc('erp_reporting_snapshot_v2',{p_from:from,p_to:to,p_location:location||null}).abortSignal(abort.signal);
     if(result.error)throw Error(result.error.message);
     const report=validateReport(result.data);
+    if(report.version!==2)throw Error('The reporting endpoint needs the reporting-quality migration.');
     if(active){setData(report);setError('');}
    }catch(reason){if(active)setError(reason instanceof Error?reason.message:'Unable to load shared reports.');}
    finally{running=false;if(active){setBusy(false);if(again){again=false;void load();}}}
@@ -41,6 +44,37 @@ function Metric({label,value,note}:{label:string;value:string;note?:string}){
 }
 function Empty(){return <p className="empty-inline">No shared records match this selection.</p>;}
 function ReportTable({children}:{children:ReactNode}){return <div className="table-scroll sr-table"><table>{children}</table></div>;}
+
+function LowStockRow({row:r,today}:{row:ReportLowStock;today:string}){
+ const plan=replenish(r,today),activeSupplier=!!r.supplier&&!!r.supplier_active;
+ const enoughOpenSupply=plan.packages===0&&r.on_order>0&&r.daily_usage>0&&plan.position>=r.daily_usage*(r.lead+r.safety+r.review);
+ return <tr><td>{r.name}<small className="cell-sub">{r.location_name} · {r.item_sku}</small></td>
+  <td>{r.supplier||'Unassigned'}<small className="cell-sub">{r.lead} days quoted lead{r.supplier&&!r.supplier_active?' · Inactive':''}</small></td>
+  <td className="right">{number(r.quantity)} / {number(r.on_order)} {r.base_unit}<small className="cell-sub">{number(r.daily_usage)} {r.base_unit}/day</small>
+   {!!r.openOrders?.length&&<details className="sr-open-orders"><summary>Outstanding deliveries ({r.openOrders.length})</summary><ul>{r.openOrders.map((o,index)=><li key={o.id+index}>{o.po_no} · {number(o.remaining_base)} {r.base_unit}<br/>{o.expected_on<today?'Delivery overdue · Expected ':o.expected_on===today?'Expected today · ':'Expected '}{shortDate(o.expected_on)}</li>)}</ul></details>}
+  </td>
+  <td className="right">{!activeSupplier?'Assign active supplier':r.daily_usage<=0?'Insufficient usage history':`${number(plan.packages)} ${r.purchase_unit}`}<small className="cell-sub">{plan.exceedsShelfLife?'Pack size exceeds shelf-life demand; review manually.':enoughOpenSupply?'Open orders cover the calculated target.':plan.packages===0&&r.daily_usage>0?'No additional quantity suggested; review stock and shelf-life limits.':''}</small></td>
+  <td>{r.daily_usage<=0?'Unavailable':!activeSupplier?'Supplier review required':plan.packages===0?'No new order suggested':plan.orderBy?(plan.orderBy<today?'New order overdue · ':'')+shortDate(plan.orderBy):'Unavailable'}</td>
+ </tr>;
+}
+
+function QualityDetails({quality,negativeHistory}:{quality:ReportQuality;negativeHistory:boolean}){
+ return <>
+  {quality.costSales.length>0&&<section className="panel sr-quality" aria-label="Recorded cost warnings"><p className="p-note" role="status">{quality.costSales.length} sale(s) affecting this period have recorded cost issues. Profit and turnover use posted costs and remain unverified. No costs have been substituted.</p>
+   <details className="sr-details"><summary>View affected receipts, lines and returns</summary>{quality.costSales.map(s=><article className="sr-issue" key={s.sale_id}>
+    <h3>{s.receipt_no} · {s.location_name}</h3><p>Sale {s.sale_id} · {postedDate(s.created_at)}</p><ul>{s.reasons.map(reason=><li key={reason}>{reason}</li>)}</ul>
+    <p>Header COGS {money(s.header_cogs)} · Sum of line costs {money(s.line_cogs)}. Differences are assessed at half-cent precision before display rounding.</p>
+    <ReportTable><thead><tr><th>ITEM / LINE ID</th><th className="right">QUANTITY</th><th className="right">POSTED UNIT COST</th><th className="right">POSTED LINE COST</th></tr></thead><tbody>{s.lines.map(l=><tr key={l.id}><td>{l.name} · {l.sku}<small className="cell-sub">{l.id}</small></td><td className="right">{number(l.quantity)}</td><td className="right">{unitMoney(l.unit_cost)}</td><td className="right">{money(l.quantity*l.unit_cost)}</td></tr>)}</tbody></ReportTable>
+    {s.returns.length>0&&<><h4>Linked recorded returns through report end</h4><ul>{s.returns.map(r=><li key={r.id}>{r.id} · {postedDate(r.created_at)} · Refund before tax {money(r.refund_subtotal)} · Posted restock cost {money(r.restock_cost)}</li>)}</ul></>}
+   </article>)}</details>
+  </section>}
+  {negativeHistory&&<section className="panel sr-quality" aria-label="Historical stock warnings"><p className="p-note" role="status">The ledger contains negative stock history. Inventory values remain unverified and turnover remains unavailable. Later positive stock does not erase these historical entries.</p>
+   <details className="sr-details"><summary>View affected stock history ({quality.stockHistory.length} item/location pairs)</summary><p>Costs are pooled across locations, so source history from another store may appear here. Entries are ordered by timestamp and UUID; the final column distinguishes a negative timestamp-batch balance from a warning limited to ordering within that timestamp.</p>
+    {!quality.stockHistory.length?<p>No location-level detail was returned. The existing historical warning is retained; review the company cost-pool history.</p>:<ReportTable><thead><tr><th>ITEM / LOCATION</th><th>RECORDED DATES</th><th className="right">LOWEST / CLOSING QUANTITY</th><th>FIRST NEGATIVE ENTRY</th><th>HISTORY BASIS</th></tr></thead><tbody>{quality.stockHistory.map(s=><tr key={s.sku+s.location_name}><td>{s.name}<small className="cell-sub">{s.sku} · {s.location_name}</small></td><td>First: {postedDate(s.first_negative_at)}<small className="cell-sub">Last: {postedDate(s.last_negative_at)}</small></td><td className="right">{number(s.lowest_balance)} / {number(s.closing_quantity)} {s.base_unit}</td><td>{s.reference_document||s.transaction_type}<small className="cell-sub">{s.transaction_type} · {s.transaction_id}</small><small className="cell-sub">Posted quantity {number(s.transaction_quantity)} · Unit cost {unitMoney(s.posted_unit_cost)}</small></td><td>{s.timestamp_batch_negative?'Negative after timestamp batch':'Within-timestamp order only; sequence unverified'}</td></tr>)}</tbody></ReportTable>}
+   </details>
+  </section>}
+ </>;
+}
 
 export function SharedReporting({view}:{view:'financials'|'reports'}){
  const today=reportDate();
@@ -65,8 +99,7 @@ export function SharedReporting({view}:{view:'financials'|'reports'}){
   {!data&&!error&&<div className="panel empty-inline">Loading shared reports…</div>}
   {data&&totals&&<>
    {location&&<p className="p-note">This location excludes company-wide expenses. Choose All locations for the company P&amp;L.</p>}
-   {data.pnl.zeroCostSales>0&&<p className="p-note" role="status">{data.pnl.zeroCostSales} sale(s) have zero recorded cost. Profit uses posted costs; review those sales before relying on the result.</p>}
-   {data.inventory.some(v=>v.negative_history)&&<p className="p-note">The ledger contains negative stock history. Valuations may be incomplete; turnover is unavailable until the stock history is reviewed.</p>}
+   {data.quality&&<QualityDetails quality={data.quality} negativeHistory={data.inventory.some(v=>v.negative_history)}/>}
    {view==='financials'?<>
     <div className="sr-metrics"><Metric label="Net sales" value={money(totals.net)} note="Before tax, after discounts and refunds"/><Metric label="Gross profit" value={money(totals.grossProfit)} note="Net sales less posted COGS"/><Metric label="Recorded operating result" value={money(totals.result)} note="After saved expenses, waste and stock adjustments"/><Metric label="Inventory at period end" value={money(totals.closing)} note="Ledger-derived moving weighted average"/></div>
     <section className="panel"><div className="panel-head"><div><h2>Profit &amp; loss</h2><p>Only stored transactions are included. Unrecorded labor, rent or other expenses are excluded.</p></div></div>
@@ -81,10 +114,10 @@ export function SharedReporting({view}:{view:'financials'|'reports'}){
     <div className="sr-two"><section className="panel"><div className="panel-head"><div><h2>Sales by {grouping==='daily'?'day':'week'}</h2><p>Net of discounts and refunds; before tax. Weeks start Monday.</p></div><select aria-label="Sales grouping" value={grouping} onChange={e=>setGrouping(e.target.value as 'daily'|'weekly')}><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div><ReportTable><thead><tr><th>PERIOD</th><th className="right">NET SALES</th></tr></thead><tbody>{(grouping==='daily'?data.daily.map(d=>({date:d.day,net:d.net})):data.weekly.map(w=>({date:w.week,net:w.net}))).map(row=><tr key={row.date}><td>{shortDate(row.date)}</td><td className="right">{money(row.net)}</td></tr>)}</tbody></ReportTable></section>
     <section className="panel"><div className="panel-head"><div><h2>Top-selling items</h2><p>Net units sold during this period, after returns. Top 20.</p></div></div>{!data.topItems.length?<Empty/>:<ReportTable><thead><tr><th>ITEM</th><th className="right">NET UNITS</th></tr></thead><tbody>{data.topItems.map(i=><tr key={i.item_sku}><td>{i.name}<small className="cell-sub">{i.item_sku}</small></td><td className="right">{number(i.units)}</td></tr>)}</tbody></ReportTable>}</section></div>
     <section className="panel"><div className="panel-head"><div><h2>Low stock &amp; suggested replenishment</h2><p>Trailing 30-day posted usage; lead time, safety stock, review interval and open supplier orders.</p></div></div>
-     {to!==data.today?<p className="empty-inline">Choose an end date of today for current replenishment suggestions.</p>:!data.lowStock.length?<Empty/>:<ReportTable><thead><tr><th>ITEM / LOCATION</th><th>SUPPLIER</th><th className="right">ON HAND / ON ORDER</th><th className="right">SUGGESTED ORDER</th><th>ORDER BY</th></tr></thead><tbody>{data.lowStock.map(r=>{const plan=replenish(r,data.today);return <tr key={r.item_sku+r.location_id}><td>{r.name}<small className="cell-sub">{r.location_name} · {r.item_sku}</small></td><td>{r.supplier||'Unassigned'}<small className="cell-sub">{r.lead} days quoted lead{r.supplier&&!r.supplier_active?' · Inactive':''}</small></td><td className="right">{number(r.quantity)} / {number(r.on_order)} {r.base_unit}<small className="cell-sub">{number(r.daily_usage)} {r.base_unit}/day</small></td><td className="right">{!r.supplier||!r.supplier_active?'Assign active supplier':plan.orderBy===null?'Insufficient usage history':`${number(plan.packages)} ${r.purchase_unit}`}<small className="cell-sub">{plan.exceedsShelfLife?'Pack size exceeds shelf-life demand; review manually.':plan.packages===0&&r.on_order>0?'Open orders cover the calculated target.':''}</small></td><td>{plan.orderBy?(plan.orderBy<data.today?'Overdue · ':'')+shortDate(plan.orderBy):'Unavailable'}</td></tr>;})}</tbody></ReportTable>}
+     {to!==data.today?<p className="empty-inline">Choose an end date of today for current replenishment suggestions.</p>:!data.lowStock.length?<Empty/>:<ReportTable><thead><tr><th>ITEM / LOCATION</th><th>SUPPLIER</th><th className="right">ON HAND / ON ORDER</th><th className="right">SUGGESTED ORDER</th><th>ORDER BY</th></tr></thead><tbody>{data.lowStock.map(r=><LowStockRow key={r.item_sku+r.location_id} row={r} today={data.today}/>)}</tbody></ReportTable>}
      <p className="sr-footnote">Suggestions require manager review. Open receipts may be overdue; no orders are created automatically.</p>
     </section>
-    <section className="panel"><div className="panel-head"><div><h2>Supplier performance</h2><p>Completed orders received within the selected period. Actual days to last delivery versus quoted days at ordering.</p></div></div><ReportTable><thead><tr><th>SUPPLIER</th><th className="right">ORDERS</th><th className="right">AVG ACTUAL DAYS</th><th className="right">AVG QUOTED DAYS</th><th className="right">LATE ORDERS</th></tr></thead><tbody>{data.suppliers.map(s=><tr key={s.id}><td>{s.name}</td><td className="right">{s.deliveries}</td><td className="right">{s.actual===null?'No receipt history':number(s.actual)}</td><td className="right">{s.quoted===null?'—':number(s.quoted)}</td><td className="right">{s.late}</td></tr>)}</tbody></ReportTable><p className="sr-footnote">Legacy orders without a saved quote use the supplier’s current quote. Partial orders are excluded until closed.</p></section>
+    <section className="panel"><div className="panel-head"><div><h2>Supplier performance</h2><p>Completed orders received within the selected period. Actual days to last delivery versus quoted days at ordering.</p></div></div><ReportTable><thead><tr><th>SUPPLIER</th><th className="right">ORDERS</th><th className="right">AVG ACTUAL DAYS</th><th className="right">AVG QUOTED DAYS</th><th className="right">LATE ORDERS</th></tr></thead><tbody>{data.suppliers.map(s=><tr key={s.id}><td>{s.name}</td><td className="right">{s.deliveries}</td><td className="right">{s.actual===null?'No receipt history':number(s.actual)}</td><td className="right">{s.quoted===null?'—':number(s.quoted)}{(s.legacy_quote_orders??0)>0&&<small className="cell-sub">{s.legacy_quote_orders} order(s) use current quote</small>}</td><td className="right">{s.late}</td></tr>)}</tbody></ReportTable><p className="sr-footnote">Received and Closed orders are included. Final delivery is determined across all receipts before filtering dates. Legacy orders without a saved quote use the supplier’s current quote; partial orders are excluded until completed.</p></section>
    </>}
    <section className="panel"><div className="panel-head"><div><h2>Inventory valuation by location</h2><p>As of {shortDate(data.to)} · base units · moving weighted-average cost reconstructed from posted ledger history.</p></div><select aria-label="Inventory detail location" value={stockLocation} onChange={e=>setStockLocation(e.target.value)}><option value="">All report locations</option>{data.locations.filter(l=>!location||l.id===location).map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
     <ReportTable><thead><tr><th>LOCATION</th><th className="right">VALUE</th></tr></thead><tbody>{data.locations.filter(l=>!location||l.id===location).map(l=><tr key={l.id}><td>{l.name}</td><td className="right">{money(data.inventory.filter(i=>i.location_id===l.id).reduce((s,i)=>s+i.quantity*i.average_cost,0))}</td></tr>)}</tbody></ReportTable>

@@ -5,7 +5,7 @@ import {setImmediate} from 'node:timers/promises';
 import {validateReport} from '../src/reporting.ts';
 const text=await readFile('src/SharedReporting.tsx','utf8');
 const code=text.slice(text.indexOf('function useReport('),text.indexOf('\nfunction Metric('));
-const fixture={version:1,today:'2026-11-15',generatedAt:'2026-11-16T00:00:00Z',from:'2026-11-01',to:'2026-11-15',locations:[],pnl:{gross:0,discounts:0,refunds:0,tax:0,cogs:0,waste:0,adjustments:0,expenses:0,zeroCostSales:0},inventory:[],daily:[],weekly:[],topItems:[],lowStock:[],suppliers:[],expenses:[]};
+const fixture={version:2,quality:{costSales:[],stockHistory:[]},today:'2026-11-15',generatedAt:'2026-11-16T00:00:00Z',from:'2026-11-01',to:'2026-11-15',locations:[],pnl:{gross:0,discounts:0,refunds:0,tax:0,cogs:0,waste:0,adjustments:0,expenses:0,zeroCostSales:0},inventory:[],daily:[],weekly:[],topItems:[],lowStock:[],suppliers:[],expenses:[]};
 let effect,interval,cleanup,signal,focus,visibility,removed=0,requests=[],states=[],response={data:fixture,error:null},blockedResolve;
 const channel={on(){return channel;},subscribe(){return channel;}};
 const supabase={rpc(name,args){requests.push({name,args});return {abortSignal(s){signal=s;return blockedResolve?new Promise(resolve=>{blockedResolve=resolve;}):Promise.resolve(response);}};},channel:()=>channel,removeChannel:()=>{removed++;return Promise.resolve();}};
@@ -14,7 +14,7 @@ const document={visibilityState:'visible',addEventListener(_,fn){visibility=fn;}
 const useReport=new Function('supabase','useState','useRef','useCallback','useEffect','window','document','validateReport',stripTypeScriptTypes(code)+';return useReport;')(
  supabase,x=>[x,v=>states.push(v)],x=>({current:x}),fn=>fn,fn=>{effect=fn;},window,document,validateReport);
 const hook=useReport('2026-11-01','2026-11-15','location-id');cleanup=effect();await setImmediate();
-assert.equal(requests.length,1);assert.deepEqual(requests[0],{name:'erp_reporting_snapshot',args:{p_from:'2026-11-01',p_to:'2026-11-15',p_location:'location-id'}});assert.ok(states.includes(fixture));
+assert.equal(requests.length,1);assert.deepEqual(requests[0],{name:'erp_reporting_snapshot_v2',args:{p_from:'2026-11-01',p_to:'2026-11-15',p_location:'location-id'}});assert.ok(states.includes(fixture));
 interval();await setImmediate();assert.equal(requests.length,2);
 document.visibilityState='hidden';interval();await setImmediate();assert.equal(requests.length,2);
 document.visibilityState='visible';visibility();await setImmediate();assert.equal(requests.length,3);

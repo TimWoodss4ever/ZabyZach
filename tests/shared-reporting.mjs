@@ -10,10 +10,12 @@ const r={version:1,today:'2026-11-15',generatedAt:'2026-11-16T00:00:00Z',from:'2
 assert.equal(validateReport(r),r);let t=reportTotals(r);
 assert.deepEqual(t,{net:92,grossProfit:44,result:26,opening:20,closing:60,average:40,turnover:1.2});
 r.inventory[0].negative_history=true;assert.equal(reportTotals(r).turnover,null);r.inventory=[];assert.equal(reportTotals(r).turnover,null);
-assert.throws(()=>validateReport({...r,pnl:{...r.pnl,cogs:NaN}}),/incomplete/);assert.throws(()=>validateReport(null),/no report/);assert.throws(()=>validateReport({...r,version:2}),/unsupported/);
+assert.throws(()=>validateReport({...r,pnl:{...r.pnl,cogs:NaN}}),/incomplete/);assert.throws(()=>validateReport(null),/no report/);assert.throws(()=>validateReport({...r,version:3}),/unsupported/);
 const row={quantity:12,on_order:0,daily_usage:4,lead:3,safety:2,review:7,conversion_factor:10,shelf_life_days:null};
 assert.deepEqual(replenish(row,'2026-11-15'),{position:12,packages:4,base:40,exceedsShelfLife:false,orderBy:'2026-11-13'});
 assert.equal(replenish({...row,on_order:100},'2026-11-15').packages,0);
+assert.equal(replenish({...row,on_order:100},'2026-11-15').orderBy,null,'covered inventory must not have a new-order date');
+assert.equal(replenish({...row,shelf_life_days:2},'2026-11-15').orderBy,null,'shelf-life cap producing zero quantity must not have a new-order date');
 assert.equal(replenish({...row,daily_usage:0},'2026-11-15').orderBy,null);
 const capped=replenish({...row,shelf_life_days:4},'2026-11-15');assert.equal(capped.packages,1);assert.equal(capped.exceedsShelfLife,true);
 console.log('PASS: shared-report financial arithmetic, period turnover, negative-stock guard, Denver date boundaries, DST-safe date arithmetic, malformed-response rejection, replenishment pack rounding, open-order netting and shelf-life cap. Pure calculations, not live Supabase.');
