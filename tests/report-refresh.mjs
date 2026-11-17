@@ -14,7 +14,7 @@ const document={visibilityState:'visible',addEventListener(_,fn){visibility=fn;}
 const useReport=new Function('supabase','useState','useRef','useCallback','useEffect','window','document','validateReport',stripTypeScriptTypes(code)+';return useReport;')(
  supabase,x=>[x,v=>states.push(v)],x=>({current:x}),fn=>fn,fn=>{effect=fn;},window,document,validateReport);
 const hook=useReport('2026-11-01','2026-11-15','location-id');cleanup=effect();await setImmediate();
-assert.equal(requests.length,1);assert.deepEqual(requests[0],{name:'erp_reporting_snapshot_v2',args:{p_from:'2026-11-01',p_to:'2026-11-15',p_location:'location-id'}});assert.ok(states.includes(fixture));
+assert.equal(requests.length,1);assert.deepEqual(requests[0],{name:'erp_reporting_snapshot_with_history',args:{p_from:'2026-11-01',p_to:'2026-11-15',p_location:'location-id'}});assert.ok(states.includes(fixture));
 interval();await setImmediate();assert.equal(requests.length,2);
 document.visibilityState='hidden';interval();await setImmediate();assert.equal(requests.length,2);
 document.visibilityState='visible';visibility();await setImmediate();assert.equal(requests.length,3);

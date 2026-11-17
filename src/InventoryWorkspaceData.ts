@@ -19,6 +19,9 @@ export async function readInventoryWorkspace(userId:string):Promise<InventoryWor
   const result=await supabase.from('inventory_transactions').select('item_sku,location_id,quantity,transaction_type').lt('quantity',0).gte('occurred_at',since).order('occurred_at').order('id').range(from,from+999);
   if(result.error)throw Error(result.error.message);const page=(result.data??[]) as UsageRow[];rows.push(...page);if(page.length<1000)break;
  }
+ const sample=await supabase.rpc('erp_inventory_sample_usage');if(sample.error)throw Error(sample.error.message);
+ if(!Array.isArray(sample.data))throw Error('Sample usage history could not be loaded.');
+ for(const row of sample.data){if(typeof row.item_sku!=='string'||typeof row.location_id!=='string'||!Number.isFinite(row.quantity)||row.quantity>=0)throw Error('Sample usage history is invalid.');rows.push({...row,transaction_type:'Sale'});}
  return{snapshot,items,usage:summarizeUsage(rows)};
 }
 // One refresh owner updates Stock and Backorders from the same stock snapshot.
