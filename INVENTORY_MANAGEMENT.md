@@ -10,7 +10,9 @@ Inventory opens on **Stock**, with one tab each for **Stock**, **Backorders**, a
 
 Made-to-order pizzas and sides show physical finished stock separately from **can be made** ingredient capacity at each location. The capacity calculation combines repeated recipe ingredients, expands made-to-order subrecipes, and requires make-to-stock components such as dough to have been produced already. It does not reserve ingredients or promise a preparation time.
 
-Reorder levels use actual Sale, Production/Production Issue and Backorder Fulfillment consumption at that location over 180 days, divided by 180, multiplied by the current supplier lead time plus stored safety days. Waste and transfer withdrawals are excluded from demand. Missing usage or an active supplier lead time produces no invented reorder value. The original historical inventory loader remains preserved, but the active workspace uses the shared snapshot and filtered usage reads instead.
+Reorder levels use actual Sale, Production/Production Issue and Backorder Fulfillment consumption at that location over 180 days, divided by 180, multiplied by the current supplier lead time plus stored safety days. Waste and transfer withdrawals are excluded from demand. Missing usage or an active supplier lead time produces no invented reorder value. The original historical inventory loader remains preserved, but the active workspace uses the shared snapshot and server-side usage aggregates instead.
+
+The Inventory timeout fix separates essential stock/backorder reads from supplementary recorded and sample-usage calculations. Stock remains usable if usage fails, while reorder figures are explicitly marked loading or unavailable. The fix requires the additive `202611170002_inventory_usage_performance.sql` migration before frontend deployment; it adds targeted indexes and authenticated staff-only aggregate RPCs without changing business rows or weakening access controls.
 
 **History** shows up to 100 of the newest matching real ledger records with location, reference, quantity change and reason. Times use America/Denver. It is a read-only view, not a browser demo ledger.
 
