@@ -1,10 +1,11 @@
 {
   "repository": "TimWoodss4ever/ZabyZach",
-  "main_commit": "42b3b0da9e7e2ae26124aa0dd3ca12b1acdce725",
+  "main_commit": "9e689bb375e441c5f5e33617107254a949f5f0bb",
   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
   "review_branch": "erp-inventory-workspace-20261116",
   "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline.",
   "inventory_update": "Inventory requirement completion based on current main: additive backorders/availability, validated/idempotent stock writes, null-safe staff guard and reviewed migration repairs. Existing authentication, POS/returns handlers and original inventory/production loaders are preserved. No production database changes are applied by this branch.",
+  "mrp_update": "Shared MRP and pickup orders, including the team Financials cent-rounding change from bcc695824fae369403f6295e5077ffd861f7c2ea.",
   "financials_review": "Reviewed main bcc695824fae369403f6295e5077ffd861f7c2ea: Financials computes/displays money in integer cents. The merged PR preserves that Financials function and the surrounding reporting source exactly. Only latestReporting's expected source is refreshed; all other preservation snippets, protected file hashes and main-change checks remain enabled.",
   "inventory_ux_review": "Inventory workspace redesign on merged inventory main: Stock/Backorders/History tabs, shared refresh, direct existing movement forms, per-location recorded usage, current supplier lead times and ingredient capacity. Existing authentication, POS/returns, Financials, MRP and SQL functions/migrations are unchanged."
 }
