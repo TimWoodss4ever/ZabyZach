@@ -42,3 +42,17 @@ The original live-data timestamp correction migration expects eight specific imp
 - CI runs the production TypeScript/Vite build and the database/preservation suites. Existing dependencies and authentication/POS/returns UI code are preserved.
 
 The branch includes the team's Financials cent-rounding change from `bcc695824fae369403f6295e5077ffd861f7c2ea`. The corresponding preservation snapshot and calculation test now exercise that current implementation.
+
+## MRP workspace UI update
+
+The MRP screen now follows the app's navy, gold, white-panel and status-color theme. Requirements, Recipes & BOMs, and Planning alerts are separate keyboard-accessible tabs. Location-specific order/action/transfer counts, search, demand filters and an explicit no-demand view replace the long unfiltered list.
+
+Select a component to inspect its dated receipts, available quantity, required quantity, net shortage, pack rounding and exact order-by date. Original order IDs remain traceable through nested dough requirements. The Recipes tab exposes per-parent component quantities and effective lead times. Alerts are scoped to the chosen location and flag negative ledger balances, inactive/missing suppliers, overdue receipts/orders and production dates.
+
+Purchasing now starts with explicit component selection and a supplier/quantity/cost preview. Draft creation rechecks eligibility against the current snapshot, preserves interrupted-save recovery, uses the existing idempotent purchasing RPC and directs the user to review/issue existing drafts. It never issues orders or moves stock automatically.
+
+The functionality review also corrects planned-production ingredient dates: raw materials are required by the batch's start date (completion minus in-house lead), including when that start falls in the four-week window but completion falls just outside it. In-progress batches still exclude already-issued ingredients.
+
+**No additional database migration is needed for this UI update.** The already-installed 006 RPCs and all historical migrations are unchanged. Existing POS, pickup preparation/collection, inventory tabs and stock-consumption logic are preserved.
+
+Additional checks: `tests/sql/mrp-rubric.sql` exercises exact component consumption for five actual seeded pizza parents in the disposable database. `tests/mrp-workspace.mjs`, the updated server-rendered planning test, and `tests/browser/mrp-workspace.mjs`. The browser suite runs the actual components with synthetic data; it tests desktop/mobile layout, tabs and keyboard navigation, filters, detail/focus behavior, selected-draft review, existing-draft/stale-data guards and the app's navy palette. CI retains screenshots as `mrp-ui-screenshots`. No production records are created by these checks.
