@@ -1,12 +1,13 @@
 name: ERP branch checks (no deployment)
 on:
   push:
-    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, erp-inventory-management-20261116]
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, erp-inventory-management-20261116, fix/shared-mrp]
   pull_request:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
+  statuses: write
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -55,10 +56,17 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: local-ci-only
         run: |
+          exec > >(tee /tmp/erp-postgres.log) 2>&1
           psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
           for migration in supabase/migrations/*.sql; do
             # Reporting tests capture existing rows/functions before applying it.
-            if [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ] || [ "$(basename "$migration")" = 202611160003_reporting_quality.sql ]; then
+            if [ "$(basename "$migration")" = 202611160006_shared_mrp.sql ] || [ "$(basename "$migration")" = 202611160001_shared_reporting.sql ] || [ "$(basename "$migration")" = 202611160003_reporting_quality.sql ]; then
+              continue
+            fi
+            # This earlier correction targets eight verified live seed UUIDs.
+            # A fresh CI database has none of that imported dataset; do not
+            # rewrite or weaken the live migration's strict row-count guard.
+            if [ "$(basename "$migration")" = 202611160005_retime_seed_opening_stock.sql ]; then
               continue
             fi
             # Test the deliberate inventory RPC hardening after preservation tests.
@@ -94,3 +102,20 @@ jobs:
           run_checked node tests/sql/seed-retiming.mjs
           run_checked psql -v ON_ERROR_STOP=1 -f tests/sql/inventory-management.sql
           run_checked node tests/sql/inventory-concurrency.mjs
+          # Apply MRP after the existing inventory rollout and preservation
+          # suites; the production migration is versioned after inventory.
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160006_shared_mrp.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/shared-mrp.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160006_shared_mrp.sql
+      - name: Publish database diagnostic on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          let log='';try{log=readFileSync('/tmp/erp-postgres.log','utf8');}catch{}
+          const detail=log.split('\n').find(line=>/ERROR:|FATAL:/.test(line))??'Database check failed; see the workflow log.';
+          const response=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+'/statuses/'+process.env.GITHUB_SHA,{method:'POST',headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'},body:JSON.stringify({state:'failure',context:'Database diagnostic',description:detail.slice(0,140),target_url:'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID})});
+          if(!response.ok)throw Error('Unable to publish database diagnostic: '+response.status);
+          JS
