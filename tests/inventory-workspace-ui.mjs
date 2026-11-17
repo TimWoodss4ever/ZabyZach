@@ -26,7 +26,7 @@ html=render({4:'Sauce'});assert.match(html,/role="dialog"/);assert.match(html,/1
 html=render({4:'Pizza'});assert.match(html,/Can make from ingredients/);assert.match(html,/pickup date also depends on preparation/);
 html=render({5:{sku:'Sauce',locationId:'b',mode:'Cycle count',reason:'Damaged'}});assert.match(html,/data-selected-item="Sauce"/);assert.match(html,/data-selected-location="b"/);assert.match(html,/Record damage \/ loss/);
 workspaceData={snapshot,items,usage:null,usageError:'Usage history is loading.',usageLoading:true};
-html=render();assert.match(html,/Reorder figures loading/);assert.match(html,/Stock by location/);
+html=render();assert.match(html,/Reorder figures loading/);assert.match(html,/Stock by location/);assert.match(html,/>Refresh</);assert.doesNotMatch(html,/Refreshing…/);
 html=render({4:'Sauce'});assert.match(html,/Reorder figures are loading; no reorder level is available/);
 html=render({0:'Backorders'});assert.match(html,/Record backorder/);
 workspaceData={snapshot,items,usage:null,usageError:'Sample usage unavailable: statement timeout',usageLoading:false};
