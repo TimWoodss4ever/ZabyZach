@@ -68,6 +68,7 @@ export function useInventoryWorkspace(userId:string){
   let active=true,running=false,queued=false;setData(null);setError('');setUpdatedAt(null);
   const load=async()=>{if(running){queued=true;return;}running=true;
    do{queued=false;if(active)setLoading(true);try{const next=await readInventoryWorkspace(userId);if(active){setData(next);setUpdatedAt(new Date());setError('');}
+     if(active)setLoading(false);
      const usage=await readInventoryWorkspaceUsage(next.snapshot.today);if(active)setData(current=>current?{...current,...usage}:current);}
     catch(e){if(active)setError(e instanceof Error?e.message:'Unable to refresh shared inventory.');}
    }while(active&&queued);
