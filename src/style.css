@@ -112,3 +112,11 @@
 .review-recent{border-top:1px solid #e6edf2;padding:16px 24px;color:#536f84;font-size:13px}.review-recent summary{cursor:pointer;font-weight:600}.review-recent article{padding:14px 0;border-bottom:1px solid #edf1f5}.review-recent article p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0;color:#6e8091;line-height:1.6}
 .shared-ordering-settings{margin:18px 0 24px}.shared-ordering-settings form{padding:0 18px 20px}.shared-ordering-settings .setting-row label{display:block}.shared-ordering-settings .setting-row small{display:block}.shared-ordering-settings .p-muted{line-height:1.6}
 @media(max-width:600px){.review-metrics{gap:7px}.review-metrics article{padding:12px 10px}.review-metrics b{font-size:20px}.review-finish .panel-head{flex-wrap:wrap;gap:10px}.review-schedule{margin-inline:16px}.review-finish>.p-form,.review-recent{padding-inline:16px}.review-finish .button{width:100%;min-height:42px}.review-destination{width:100%}.review-destination select{flex:1;min-width:0}}
+
+/* Let the native store selector receive clicks across the entire control. */
+.select-wrap.location-select{position:relative;display:block;width:220px;max-width:100%;padding:0;border:0;background:transparent}
+.select-wrap.location-select select{display:block;width:100%;height:100%;max-width:none;padding:0 32px;border:1px solid #e3e8ee;border-radius:inherit;background:white;cursor:pointer}
+.select-wrap.location-select>svg{position:absolute;top:50%;transform:translateY(-50%);pointer-events:none;z-index:1}
+.select-wrap.location-select>svg:first-child{left:10px}
+.select-wrap.location-select>svg:last-child{right:10px}
+.select-wrap.location-select:focus-within{outline:2px solid #4d8fbd;outline-offset:2px}
