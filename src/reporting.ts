@@ -11,7 +11,7 @@ export type ReportLowStock=ReportInventory&{supplier:string|null;supplier_active
 export type ReportQuality={costSales:{sale_id:string;receipt_no:string;created_at:string;location_name:string;header_cogs:number;line_cogs:number;zero_cost_lines:number;reasons:string[];lines:{id:string;sku:string;name:string;quantity:number;unit_price:number;unit_cost:number}[];returns:{id:string;created_at:string;refund_subtotal:number;restock_cost:number}[]}[];
  stockHistory:{sku:string;name:string;location_name:string;base_unit:string;first_negative_at:string;last_negative_at:string;lowest_balance:number;closing_quantity:number;transaction_id:string;transaction_type:string;reference_document:string|null;transaction_quantity:number;posted_unit_cost:number;timestamp_batch_negative:boolean}[]};
 export type ReportExpense={id:string;expense_date:string;location_id:string|null;category:string;amount:number;description:string;voided_at:string|null;void_reason:string|null};
-export type ReportSnapshot={version:1|2;today:string;generatedAt:string;from:string;to:string;locations:{id:string;name:string}[];quality?:ReportQuality;
+export type ReportSnapshot={version:1|2;today:string;generatedAt:string;from:string;to:string;locations:{id:string;name:string}[];quality?:ReportQuality;sampleHistory?:{from:string;to:string;includedDays:number;includedUnits:number;method:string};
  pnl:{gross:number;discounts:number;refunds:number;tax:number;cogs:number;waste:number;adjustments:number;expenses:number;zeroCostSales:number};
  inventory:ReportInventory[];daily:{day:string;net:number}[];weekly:{week:string;net:number}[];topItems:{item_sku:string;name:string;units:number}[];
  lowStock:ReportLowStock[];suppliers:{id:string;name:string;deliveries:number;actual:number|null;quoted:number|null;late:number;legacy_quote_orders?:number}[];expenses:ReportExpense[]};
@@ -44,7 +44,7 @@ export function reportTotals(r:ReportSnapshot){
  const opening=r.inventory.reduce((s,v)=>s+v.opening_quantity*v.opening_cost,0);
  const closing=r.inventory.reduce((s,v)=>s+v.quantity*v.average_cost,0),average=(opening+closing)/2;
  return {net,grossProfit,result:grossProfit-p.waste+p.adjustments-p.expenses,opening,closing,average,
-  turnover:average>0&&p.cogs>=0&&!r.inventory.some(v=>v.negative_history)?p.cogs/average:null};
+  turnover:!(r.sampleHistory?.includedUnits)&&average>0&&p.cogs>=0&&!r.inventory.some(v=>v.negative_history)?p.cogs/average:null};
 }
 export function replenish(r:ReportLowStock,today:string){
  const position=r.quantity+r.on_order;
