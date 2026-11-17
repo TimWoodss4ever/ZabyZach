@@ -239,3 +239,7 @@
 .mrpw-status.warn { color: #8d601a; }
 .mrpw-status.bad { color: #a45243; }
 .mrpw-status.good { color: #347958; }
+@media (max-width: 440px) {
+  /* The sticky component name remains the accessible detail control on phones. */
+  .mrpw-table tr > th:last-child, .mrpw-table tr > td:last-child { display: none; }
+}

@@ -1,16 +1,16 @@
 // Real browser interaction with synthetic data. No Supabase client is imported.
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdir} from 'node:fs/promises';
+import {mkdir,writeFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 const output='test-results/mrp';await mkdir(output,{recursive:true});
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','tests/browser/fixture','--config','tests/browser/fixture/vite.config.ts'],{stdio:['ignore','pipe','pipe']});
 let logs='';server.stdout.on('data',s=>logs+=s);server.stderr.on('data',s=>logs+=s);
-let browser;
+let browser,page;const errors=[];
 try {
  for(let n=0;n<100;n++){try{if((await fetch('http://127.0.0.1:4178/')).ok)break;}catch{}if(n===99)throw Error(logs);await new Promise(resolve=>setTimeout(resolve,200));}
  browser=await chromium.launch({headless:true});
- const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];
+ page=await browser.newPage({viewport:{width:1440,height:1050}});
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto('http://127.0.0.1:4178/');
  await page.getByRole('heading',{name:'Four-week material plan'}).waitFor();
@@ -56,7 +56,7 @@ try {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no page overflow at '+width);
   await page.screenshot({path:output+'/requirements-'+width+'.png',fullPage:true});
  }
- await page.getByRole('button',{name:'View plan for Shredded mozzarella',exact:true}).click();
+ await page.locator('.mrpw-item').filter({hasText:'Shredded mozzarella'}).click();
  await page.getByRole('dialog').waitFor();
  assert.equal(await page.getByRole('dialog').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1;}),true,'mobile dialog fits viewport');
  await page.screenshot({path:output+'/detail-mobile.png',fullPage:true});
@@ -64,4 +64,8 @@ try {
  assert.deepEqual(errors,[],'no client-side runtime errors');
  assert.equal(await page.evaluate(()=>window.qaLog.filter(Array.isArray).length),1,'one deliberate draft save, no automatic writes');
  console.log('PASS: browser tabs/keyboard, location and search filters, exact recipe rows, dated detail, selected draft review, duplicate guard, focus restoration, stale state, navy theme, desktop/mobile overflow and dialog bounds. Synthetic data only.');
+} catch(error) {
+ let body='';try{body=await page.locator('body').innerText();await page.screenshot({path:output+'/failure.png',fullPage:true});}catch{}
+ await writeFile(output+'/diagnostic.json',JSON.stringify({error:String(error),pageError:errors.join(' | '),server:logs.slice(-4000),body:body.slice(0,6000)},null,2));
+ throw error;
 } finally {if(browser)await browser.close();server.kill('SIGTERM');}
