@@ -114,6 +114,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160006_shared_mrp.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/menu-history.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/inventory-usage-performance.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/pos-loyalty.sql
       - name: Publish database diagnostic on failure
         if: failure()
         env:
@@ -143,6 +144,15 @@ jobs:
           git diff --exit-code -- package.json package-lock.json
       - name: Exercise the MRP workspace with synthetic data
         run: node tests/browser/mrp-workspace.mjs
+      - name: Exercise POS checkout and independent scrolling with synthetic data
+        run: node tests/browser/pos-workspace.mjs
+      - name: Save POS layout screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pos-ui-screenshots
+          path: test-results/pos/*.png
+          if-no-files-found: ignore
       - name: Save MRP layout screenshots
         if: always()
         uses: actions/upload-artifact@v4
