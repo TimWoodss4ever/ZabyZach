@@ -1,7 +1,7 @@
 name: ERP branch checks (no deployment)
 on:
   push:
-    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, erp-inventory-management-20261116, fix/shared-mrp]
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, erp-inventory-management-20261116, fix/shared-mrp, erp-mrp-workspace-20261116]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -119,3 +119,27 @@ jobs:
           const response=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+'/statuses/'+process.env.GITHUB_SHA,{method:'POST',headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'},body:JSON.stringify({state:'failure',context:'Database diagnostic',description:detail.slice(0,140),target_url:'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID})});
           if(!response.ok)throw Error('Unable to publish database diagnostic: '+response.status);
           JS
+
+  mrp-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser test tools without changing app dependencies
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.62.1
+          npx playwright install --with-deps chromium
+          git diff --exit-code -- package.json package-lock.json
+      - name: Exercise the MRP workspace with synthetic data
+        run: node tests/browser/mrp-workspace.mjs
+      - name: Save MRP layout screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrp-ui-screenshots
+          path: test-results/mrp
+          if-no-files-found: ignore

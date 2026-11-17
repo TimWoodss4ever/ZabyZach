@@ -83,7 +83,7 @@ function App(){
     {page==='Help & Support'&&<HelpSupportScreen role={role} onNavigate={helpNavigate}/> }
     {role==='Manager'&&page==='Purchase Orders'&&<SharedPurchasingScreen view="Purchase Orders" flash={flash} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
     {role==='Manager'&&page==='Supplier Scorecards'&&<SharedPurchasingScreen view="Supplier Scorecards" flash={flash}/>}
-    {page==='MRP'&&<SharedMrpScreen flash={flash} onPurchase={()=>navigatePage('Purchase Orders')} onTransfers={()=>navigatePage('Transfers & Counts')}/>}
+    {page==='MRP'&&<SharedMrpScreen flash={flash} onPurchase={()=>navigatePage('Purchase Orders')} onTransfers={()=>navigatePage('Transfers & Counts')} onProduction={()=>navigatePage('Production')} onOrders={()=>navigatePage('Sales Orders')} onSuppliers={()=>navigatePage('Suppliers')}/>}
     {role==='Manager'&&page==='Financials'&&<><SharedReporting view="financials"/><SharedPurchasingScreen view="Payables" flash={flash}/></>}
     {role==='Manager'&&page==='Reports'&&<SharedReporting view="reports"/>}
     {page==='Settings'&&<SettingsPageView state={state} onCommit={mutate} flash={flash}/>}
