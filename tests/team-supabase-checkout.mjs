@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {stripTypeScriptTypes} from 'node:module';
 import {customizedItem,normalizeCustomerPhone,today} from '../src/domain.ts';
 // Exercise the preserved team's actual handler with mocked transport, not a reimplementation.
-const source=await readFile('src/App.tsx','utf8');const pos=source.slice(source.indexOf('function POS('),source.indexOf('function CameraScanner('));
+const source=await readFile('src/App.tsx','utf8');const pos=source.slice(source.indexOf('function POS('),source.indexOf('\nfunction Orders(',source.indexOf('function POS(')));
 const handler=pos.slice(pos.indexOf(' const finish=async()=>{'),pos.indexOf(' const editLine='));
 const validators=source.slice(source.indexOf('type RecordSaleResult='),source.indexOf('function App(){'));
 const guards=new Function(stripTypeScriptTypes(validators)+';return {isRecordSaleResult,isReturnRpcResult};')();

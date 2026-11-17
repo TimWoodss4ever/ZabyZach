@@ -1,7 +1,7 @@
 name: ERP branch checks (no deployment)
 on:
   push:
-    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, erp-inventory-management-20261116, fix/shared-mrp, erp-menu-history, erp-mrp-workspace-20261116]
+    branches: [erp-updates, erp-updates-current, erp-shared-purchasing, erp-shared-reporting, erp-reporting-quality, erp-inventory-management-20261116, fix/shared-mrp, erp-menu-history, erp-mrp-workspace-20261116, erp-final-completion, erp-final-completion-v2]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -60,7 +60,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
           for migration in supabase/migrations/*.sql; do
             # New history wrappers depend on the reporting/inventory suites below.
-            if [ "$(basename "$migration")" = 202611170001_menu_history_contacts.sql ] || [ "$(basename "$migration")" = 202611170002_inventory_usage_performance.sql ]; then
+            if [ "$(basename "$migration")" = 202611170001_menu_history_contacts.sql ] || [ "$(basename "$migration")" = 202611170002_inventory_usage_performance.sql ] || [ "$(basename "$migration")" = 202611170003_erp_completion.sql ]; then
               continue
             fi
             # Reporting tests capture existing rows/functions before applying it.
@@ -114,6 +114,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611160006_shared_mrp.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/menu-history.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/inventory-usage-performance.sql
+          psql -v ON_ERROR_STOP=1 -f tests/sql/completion.sql
       - name: Publish database diagnostic on failure
         if: failure()
         env:
