@@ -81,21 +81,21 @@ begin
  tax_rate:=coalesce(tax_rate,.0725);
  insert into public.erp_sample_history_batches values('menu-history-v1',first_day,last_day,
   'AI-generated course simulation, not actual sales. Catalog prices and rolled-up BOM costs frozen at import; weekdays/weekends, school/summer seasonality, gradual growth and deterministic bounded demand variation. Real store-days take precedence. No stock, bills or payments are posted.',now());
- with days as(select d::date day from generate_series(first_day::timestamp,last_day::timestamp,interval '1 day') d),
+ with days as(select d::date AS trading_date from generate_series(first_day::timestamp,last_day::timestamp,interval '1 day') d),
  store_days as(
-  select day,l.id location_id,l.name,
+  select trading_date,l.id location_id,l.name,
    (case when l.name ilike '%Provo%' then 72 else 51 end)::numeric *
-   (case extract(isodow from day)::int when 1 then .78 when 2 then .84 when 3 then .92 when 4 then 1.08 when 5 then 1.48 when 6 then 1.42 else .86 end) *
-   (case when l.name ilike '%Provo%' and extract(month from day) in(5,6,7) then .70
-    when l.name ilike '%Provo%' and extract(month from day) in(9,10,11) then 1.14 else 1 end) *
-   (case when to_char(day,'MM-DD') in('12-25','01-01','07-04') then .38 else 1 end) *
-   (0.95+0.10*(day-first_day)::numeric/greatest(1,last_day-first_day)) *
-   (1+0.06*sin(2*pi()*(day-first_day)/28.0)) *
-   (.90+mod(('x'||substr(md5(day::text||l.id::text),1,8))::bit(32)::bigint,201)/1000.0) as demand
+   (case extract(isodow from trading_date)::int when 1 then .78 when 2 then .84 when 3 then .92 when 4 then 1.08 when 5 then 1.48 when 6 then 1.42 else .86 end) *
+   (case when l.name ilike '%Provo%' and extract(month from trading_date) in(5,6,7) then .70
+    when l.name ilike '%Provo%' and extract(month from trading_date) in(9,10,11) then 1.14 else 1 end) *
+   (case when to_char(trading_date,'MM-DD') in('12-25','01-01','07-04') then .38 else 1 end) *
+   (0.95+0.10*(trading_date-first_day)::numeric/greatest(1,last_day-first_day)) *
+   (1+0.06*sin(2*pi()*(trading_date-first_day)/28.0)) *
+   (.90+mod(('x'||substr(md5(trading_date::text||l.id::text),1,8))::bit(32)::bigint,201)/1000.0) as demand
   from days cross join public.locations l where l.can_sell
   and not exists(select 1 from public.sales s where s.location_id=l.id and s.status='Completed'
-   and s.created_at>=day::timestamp at time zone 'America/Denver'
-   and s.created_at<(day+1)::timestamp at time zone 'America/Denver')
+   and s.created_at>=trading_date::timestamp at time zone 'America/Denver'
+   and s.created_at<(trading_date+1)::timestamp at time zone 'America/Denver')
  ), mix as(
   select sd.*,i.sku,i.selling_price,public.erp_inventory_unit_cost(i.sku) unit_cost,
    case i.sku when '2001' then .22 when '2002' then .34 when '2003' then .10
@@ -104,29 +104,29 @@ begin
     when '1054' then .11 when '1055' then .06 when '1017' then .17
     when '1041' then .08 when '1042' then .05 when '1043' then .06 when '1044' then .04
     else case when i.category='Pizza' then .06 when i.category='Beverage' then .04 else .05 end end as share,
-   (.82+mod(('x'||substr(md5(sd.day::text||sd.location_id::text||i.sku),1,8))::bit(32)::bigint,361)/1000.0) item_factor,
-   case when i.category='Beverage' and extract(month from sd.day) in(6,7,8) then 1.18
-    when i.sku='2007' and extract(isodow from sd.day) in(5,6) then 1.12 else 1 end item_season
+   (.82+mod(('x'||substr(md5(sd.trading_date::text||sd.location_id::text||i.sku),1,8))::bit(32)::bigint,361)/1000.0) item_factor,
+   case when i.category='Beverage' and extract(month from sd.trading_date) in(6,7,8) then 1.18
+    when i.sku='2007' and extract(isodow from sd.trading_date) in(5,6) then 1.12 else 1 end item_season
   from store_days sd cross join public.items i where i.active and i.selling_price>0
  ), quantities as(
   select *,greatest(1,round(demand*share*item_factor*item_season))::integer quantity,
-   case when extract(isodow from day) in(1,2) then .045 else .015 end discount_rate from mix
+   case when extract(isodow from trading_date) in(1,2) then .045 else .015 end discount_rate from mix
  )
  insert into public.erp_sample_menu_history(batch_id,sale_date,location_id,item_sku,quantity,unit_price,unit_cost,discount,tax)
- select 'menu-history-v1',day,location_id,sku,quantity,selling_price,unit_cost,
+ select 'menu-history-v1',trading_date,location_id,sku,quantity,selling_price,unit_cost,
   round(quantity*selling_price*discount_rate,2),round((quantity*selling_price-round(quantity*selling_price*discount_rate,2))*tax_rate,2)
  from quantities;
  -- All nested components, including dough, are planned from the actual BOM.
  -- Keep intermediate ingredients too: dough usage and flour requirements stay visible.
- with recursive explosion(day,location_id,sku,quantity,path) as(
+ with recursive explosion(trading_date,location_id,sku,quantity,path) as(
   select sale_date,location_id,item_sku,quantity::numeric,array[item_sku] from public.erp_sample_menu_history where batch_id='menu-history-v1'
-  union all select e.day,e.location_id,b.component_sku,e.quantity*b.quantity,e.path||b.component_sku
+  union all select e.trading_date,e.location_id,b.component_sku,e.quantity*b.quantity,e.path||b.component_sku
    from explosion e join public.bom_lines b on b.parent_sku=e.sku where not b.component_sku=any(e.path) and cardinality(e.path)<64
  )
  insert into public.erp_sample_material_history(batch_id,usage_date,location_id,item_sku,quantity)
- select 'menu-history-v1',day,location_id,sku,sum(quantity) from explosion e
+ select 'menu-history-v1',trading_date,location_id,sku,sum(quantity) from explosion e
  where not exists(select 1 from public.items i where i.sku=e.sku and i.selling_price>0 and exists(select 1 from public.bom_lines b where b.parent_sku=i.sku))
- group by day,location_id,sku;
+ group by trading_date,location_id,sku;
 end $$;
 
 -- Source precedence applies at STORE-DAY level to avoid mixing partial real
@@ -142,7 +142,7 @@ $$;
 create or replace function public.erp_history_usage(p_from date,p_to date,p_location uuid default null)
 returns table(item_sku text,location_id uuid,daily numeric) language sql stable security definer set search_path=pg_catalog,public as $$
  with actual_days as materialized(
-  select distinct s.location_id,(s.created_at at time zone 'America/Denver')::date day from public.sales s where s.status='Completed'
+  select distinct s.location_id,(s.created_at at time zone 'America/Denver')::date AS trading_date from public.sales s where s.status='Completed'
    and s.created_at>=p_from::timestamp at time zone 'America/Denver' and s.created_at<least((p_to+1)::timestamp at time zone 'America/Denver',now())
   union select distinct t.location_id,(t.occurred_at at time zone 'America/Denver')::date from public.inventory_transactions t
    where t.quantity<0 and t.transaction_type in('Sale','Production Issue','Backorder Fulfillment')
@@ -154,7 +154,7 @@ returns table(item_sku text,location_id uuid,daily numeric) language sql stable 
    and (p_location is null or t.location_id=p_location)
   union all select h.item_sku,h.location_id,h.quantity from public.erp_sample_material_history h
    where h.usage_date between p_from and p_to and (p_location is null or h.location_id=p_location)
-   and not exists(select 1 from actual_days d where d.location_id=h.location_id and d.day=h.usage_date)
+   and not exists(select 1 from actual_days d where d.location_id=h.location_id and d.trading_date=h.usage_date)
  ) select e.item_sku,e.location_id,sum(e.quantity)/greatest(1,p_to-p_from+1) from events e group by e.item_sku,e.location_id;
 $$;
 
@@ -203,7 +203,7 @@ declare result jsonb;pnl jsonb;days jsonb;weeks jsonb;tops jsonb;lows jsonb;hist
  select coalesce(jsonb_agg(d.value||jsonb_build_object('net',(d.value->>'net')::numeric+coalesce(s.net,0),'gross',(d.value->>'gross')::numeric+coalesce(s.gross,0),'discount',(d.value->>'discount')::numeric+coalesce(s.discount,0),'tax',(d.value->>'tax')::numeric+coalesce(s.tax,0)) order by d.value->>'day'),'[]'::jsonb)
  into days from jsonb_array_elements(result->'daily')d(value) left join sample s on s.sale_date=(d.value->>'day')::date;
  select coalesce(jsonb_agg(to_jsonb(w) order by w.week),'[]'::jsonb) into weeks from(
-  select date_trunc('week',(d->>'day')::date)::date week,sum((d->>'net')::numeric) net from jsonb_array_elements(days)d group by 1)w;
+  select date_trunc('week',(d->>'day')::date)::date AS week,sum((d->>'net')::numeric) net from jsonb_array_elements(days)d group by 1)w;
  -- Recompute full rankings rather than merging only the original top 20.
  with units as(
   select sl.item_sku,sl.quantity units from public.sale_lines sl join public.sales s on s.id=sl.sale_id
