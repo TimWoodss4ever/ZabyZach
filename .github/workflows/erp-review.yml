@@ -143,12 +143,21 @@ jobs:
           git diff --exit-code -- package.json package-lock.json
       - name: Exercise the MRP workspace with synthetic data
         run: node tests/browser/mrp-workspace.mjs
+      - name: Exercise navigation, store context, and purchasing with synthetic data
+        run: node tests/browser/navigation-workspace.mjs
       - name: Save MRP layout screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mrp-ui-screenshots
           path: test-results/mrp
+          if-no-files-found: ignore
+      - name: Save navigation and purchasing screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navigation-ui-screenshots
+          path: test-results/navigation
           if-no-files-found: ignore
       - name: Publish MRP browser diagnostic on failure
         if: failure()
