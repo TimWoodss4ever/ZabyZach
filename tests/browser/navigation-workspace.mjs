@@ -7,6 +7,7 @@ const output='test-results/navigation';await mkdir(output,{recursive:true});
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','tests/browser/fixture','--config','tests/browser/fixture/vite.config.ts'],{stdio:['ignore','pipe','pipe']});
 let logs='';server.stdout.on('data',value=>logs+=value);server.stderr.on('data',value=>logs+=value);
 let browser,page;const errors=[];
+const clickNav=label=>page.getByRole('button',{name:label,exact:true}).click({position:{x:30,y:14}});
 try{
  for(let attempt=0;attempt<100;attempt++){try{if((await fetch('http://127.0.0.1:4178/app.html')).ok)break;}catch{}if(attempt===99)throw Error(logs);await new Promise(resolve=>setTimeout(resolve,200));}
  browser=await chromium.launch({headless:true});
@@ -41,12 +42,12 @@ try{
  for(const x of [2,14,bounds.width/2,bounds.width-14,bounds.width-2])await page.mouse.click(bounds.x+x,bounds.y+bounds.height/2);
  assert.equal(await page.evaluate(()=>window.storeClickCount),5,'icons, arrow and outer padding all hit the native store selector');
  await select.selectOption('Orem Store');
- await page.getByRole('button',{name:'POS',exact:true}).click();
+ await clickNav('POS');
  await page.getByRole('heading',{name:'POS'}).waitFor();
  assert.equal(await page.getByLabel('Store location').inputValue(),'Orem Store','store context is shared from Dashboard to POS');
  await page.screenshot({path:output+'/pos-desktop.png',fullPage:true});
 
- await page.getByRole('button',{name:'Settings',exact:true}).click();
+ await clickNav('Settings');
  await page.getByRole('heading',{name:'Ordering options'}).waitFor();
  await page.getByLabel('Annual holding cost').fill('12.5');
  await page.getByRole('button',{name:'Save ordering options'}).click();
@@ -56,7 +57,7 @@ try{
  await page.getByRole('button',{name:'Go to dashboard'}).click();
  await page.getByRole('heading',{name:'Good morning, Zack'}).waitFor();
 
- await page.getByRole('button',{name:'Inventory Review',exact:true}).click();
+ await clickNav('Inventory Review');
  await page.getByRole('heading',{name:'Shared inventory review'}).waitFor();
  await page.getByRole('button',{name:'Select reorder suggestions'}).click();
  const item=page.getByRole('checkbox',{name:'Select Synthetic flour'});
