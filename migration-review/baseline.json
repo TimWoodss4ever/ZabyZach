@@ -1,6 +1,6 @@
 {
   "repository": "TimWoodss4ever/ZabyZach",
-  "main_commit": "5a00da95d3a5509d8a6945af769a738ad05830f7",
+  "main_commit": "ad4a63a0f896454032f1e5f37c8e97048e05cb41",
   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
   "review_branch": "erp-menu-history and erp-mrp-workspace-20261116",
   "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline.",
