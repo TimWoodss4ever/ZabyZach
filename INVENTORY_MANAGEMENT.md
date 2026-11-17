@@ -1,10 +1,18 @@
 # Inventory management changes
 
-Based on `main` commit `30281e03c82f88e7798e72fbd012a30dda6b598e`.
+Based on `main` commit `42b3b0da9e7e2ae26124aa0dd3ca12b1acdce725`.
 
 ## Staff workflow
 
-Inventory retains the existing item-by-location balance table and adds a shared **Backorders & estimated availability** section above it. Choose a location, review items needing attention, or select **All items**. Quantities come from Supabase, never browser sample inventory. The existing catalog seeds Provo Campus Store, Orem Store, and Central Commissary; the screen flags databases with fewer than three locations.
+Inventory opens on **Stock**, with one tab each for **Stock**, **Backorders**, and **History**. Stock compares physical quantities across Provo Campus Store, Orem Store, and Central Commissary, or a selected location. Backorders are not stacked above the stock table. The shared location filter applies to every tab.
+
+**Choose action** on a stocked item opens the existing validated Transfer, Physical count, or Damage/loss form with that item and a starting location selected. These actions remain Manager-only in the UI. Physical-count inputs start empty; zero is accepted only when explicitly entered. **View item & availability** shows the location balances, incoming PO evidence, recorded backorders, supplier lead time and reorder calculation. **Barcodes & labels** opens the existing printable barcode catalog.
+
+Made-to-order pizzas and sides show physical finished stock separately from **can be made** ingredient capacity at each location. The capacity calculation combines repeated recipe ingredients, expands made-to-order subrecipes, and requires make-to-stock components such as dough to have been produced already. It does not reserve ingredients or promise a preparation time.
+
+Reorder levels use actual Sale, Production/Production Issue and Backorder Fulfillment consumption at that location over 180 days, divided by 180, multiplied by the current supplier lead time plus stored safety days. Waste and transfer withdrawals are excluded from demand. Missing usage or an active supplier lead time produces no invented reorder value. The original historical inventory loader remains preserved, but the active workspace uses the shared snapshot and filtered usage reads instead.
+
+**History** shows up to 100 of the newest matching real ledger records with location, reference, quantity change and reason. Times use America/Denver. It is a read-only view, not a browser demo ledger.
 
 **Record backorder** saves an order/customer reference, item, destination, quantity still owed, and optional notes. The queue records requested, issued, remaining, and cancelled quantities. Recording demand does not change physical stock. **Issue stock** handles partial or complete fulfillment and debits inventory once; **Cancel remainder** retains the issued history and a cancellation reason. These actions do not create sales or payments, so the same stock must not be charged/issued a second time at checkout. Older backorders are considered first when estimating availability and issuing stock. They are planning demand, not a new POS reservation mechanism.
 
@@ -17,7 +25,7 @@ Inventory retains the existing item-by-location balance table and adds a shared 
 - Made-in-house items: show stock or actual inbound receipts; otherwise request a production completion date instead of inventing a supplier date.
 - Missing/inactive suppliers: no new-order estimate. Negative on-hand balances require reconciliation before promising an availability date.
 
-Open backorders and current quantities are refreshed every 15 seconds while visible, on focus, and after inventory writes. All open backorders and the most recent 100 closed records are included. Stock can change after a forecast; the server rechecks quantities when issuing it.
+Stock and Backorders share one stock snapshot and refresh owner. They refresh together every 15 seconds while visible, on focus, and after inventory writes. A write arriving during a read queues another read; errors retain the last successful data with a visible stale-data warning. History refreshes when that shared refresh completes. All open backorders and the most recent 100 closed records are included. Stock can change after a forecast; the server rechecks quantities when issuing it.
 
 ## Transfers, counts, and damage
 
@@ -44,3 +52,10 @@ The team's seed timestamp repair was renamed to `202611160005_retime_seed_openin
 - `tests/sql/seed-retiming.mjs`: absent, partial, tampered, matched, and already corrected seed receipts.
 
 The PR workflow runs database fixtures only against disposable PostgreSQL. It never publishes the website or migrates a live database. Existing checkout, reporting, purchasing, and protected-source checks remain enabled. The reviewed baseline and one intentionally changed historical-migration hash are updated explicitly; authentication, POS/returns handlers and the original three database loaders remain preserved.
+
+
+## Inventory workspace rollout
+
+This UI update adds no migration, table, or RPC. It uses the inventory functions already installed by PR #5. Merge/deploy through the existing GitHub Pages workflow after the PR checks pass. Customer sales-order linking remains a separate integration task: current backorders retain a manual order reference and issuing them changes inventory only, not sales status or payment. Coordinate that work with the MRP/sales-order branch rather than introducing a competing order lifecycle here.
+
+`tests/inventory-workspace.mjs` exercises location-specific recorded usage, zero/missing history, supplier rules, nested recipe capacity, pre-produced dough, paginated data reads, one shared refresh loop, writes arriving during reads, failure preservation, hidden tabs and cleanup. Existing inventory SQL/idempotency/concurrency tests remain unchanged.
