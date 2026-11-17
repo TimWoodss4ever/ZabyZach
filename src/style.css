@@ -120,3 +120,8 @@
 .select-wrap.location-select>svg:first-child{left:10px}
 .select-wrap.location-select>svg:last-child{right:10px}
 .select-wrap.location-select:focus-within{outline:2px solid #4d8fbd;outline-offset:2px}
+
+/* The workspace logo doubles as an accessible dashboard shortcut. */
+.sidebar .brand-home{border:0;padding:0;line-height:1;appearance:none;cursor:pointer}
+.sidebar .brand-home:hover{background:#f6bb72}
+.sidebar .brand-home:focus-visible{outline:2px solid #fff;outline-offset:3px}
