@@ -14,6 +14,9 @@ alter table public.sales add column rewards_earned integer not null default 0 ch
  add column rewards_redeemed integer not null default 0 check(rewards_redeemed in (0,100)),
  add column rewards_discount numeric not null default 0 check(rewards_discount in (0,5)),
  add column pickup_name text;
+create index erp_pos_sales_customer on public.sales(customer_id) where customer_id is not null;
+create index erp_pos_return_sale on public.sales_return_lines(original_sale_id);
+create index erp_pos_normalized_customer_phone on public.customers(public.erp_rewards_phone(phone));
 create table public.erp_pos_requests (
  request_id uuid primary key, user_id uuid not null references auth.users(id),
  payload jsonb not null, result jsonb not null
@@ -30,7 +33,7 @@ language sql security definer set search_path=pg_catalog,public as $$
   -least(s.rewards_earned,ceil(s.rewards_earned*r.fraction))
   +least(s.rewards_redeemed,floor(s.rewards_redeemed*r.fraction))),0)::integer
  from public.sales s cross join lateral (
-  select coalesce(least(1,sum(sr.quantity*sl.unit_price)/nullif(s.subtotal,0)),0) fraction
+  select least(1,coalesce(sum(sr.quantity*sl.unit_price)/nullif(s.subtotal,0),0)) fraction
   from public.sales_return_lines sr join public.sale_lines sl on sl.id=sr.original_sale_line_id where sr.original_sale_id=s.id
  ) r where s.customer_id=p_customer
 $$;

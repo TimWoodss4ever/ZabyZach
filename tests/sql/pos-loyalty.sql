@@ -13,7 +13,7 @@ begin
  result:=public.erp_pos_customer('(801)555-0199','CI Andrew');customer:=(result->>'id')::uuid;
  perform public.ci_assert((public.erp_pos_customer('+1 801 555 0199')->>'id')::uuid=customer,'phone normalization mismatch');
  result:=public.erp_pos_sale(request,store,'[{"sku":"CI-POS","qty":24}]',0,'8015550199','CI Andrew',false);
- perform public.ci_assert((result->>'rewards_earned')::integer=120,'earn before tax');
+ perform public.ci_assert((result->>'rewards_earned')::integer=120 and (result->>'rewards_balance')::integer=120,'earn before tax and retain unreturned points');
  select count(*) into before_count from public.sales;
  perform public.ci_assert(public.erp_pos_sale(request,store,'[{"sku":"CI-POS","qty":24}]',0,'8015550199','CI Andrew',false)=result,'idempotent reply changed');
  perform public.ci_assert((select count(*) from public.sales)=before_count,'duplicate request posted twice');
