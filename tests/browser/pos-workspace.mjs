@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 const output='test-results/pos',root=output+'/fixture';await mkdir(root,{recursive:true});
 const source=await readFile('src/App.tsx','utf8');
-const imports=source.split('\n').filter(l=>l.includes("from 'react'")||l.includes("from 'lucide-react'")||l.includes("from './domain'")||l.includes("from './paymentFormatting'")).map(l=>l.replaceAll("'./","'../../../src/")).join('\n');
+const imports="import {CameraScanner} from '../../../src/CameraScanner';\n"+source.split('\n').filter(l=>l.includes("from 'react'")||l.includes("from 'lucide-react'")||l.includes("from './domain'")||l.includes("from './paymentFormatting'")).map(l=>l.replaceAll("'./","'../../../src/")).join('\n');
 const types=source.slice(source.indexOf('type RecordSaleResult='),source.indexOf('type ReturnSaleLine='));
 const location=source.slice(source.indexOf('function LocationSelect('),source.indexOf('function StatCard('));
 const pos=source.slice(source.indexOf('function POS('),source.indexOf('function Orders('));

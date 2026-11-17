@@ -7,7 +7,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import * as purchasing from '../src/sharedPurchasing.ts';
 const snapshot={version:1,userId:'manager',today:'2026-11-17',suppliers:[],items:[],locations:[{id:'store',name:'Store'}],orders:[],lines:[],receipts:[],receiptLines:[],invoices:[],payments:[],reviews:[],inventoryReviews:[],audit:[],options:{order_cost:25,holding_rate:.25,safety_days:2,review_days:7,revision:3},stock:{},dailyUsage:{}};
 let cursor=0;
-const hooks={...React,useState(initial){const n=cursor++;return[n===0?snapshot:typeof initial==='function'?initial():initial,()=>{}];},useEffect(){},useCallback(fn){return fn;},useRef(value){return{current:value};}};
+const hooks={...React,useState(initial){const n=cursor++;return[n===0?snapshot:typeof initial==='function'?initial():initial,()=>{}];},useMemo(fn){return fn();},useEffect(){},useCallback(fn){return fn;},useRef(value){return{current:value};}};
 const source=await readFile('src/SharedPurchasingScreens.tsx','utf8');
 const js=ts.transpileModule(source.replaceAll('import.meta.env.VITE_SUPABASE_URL',"'https://test.invalid'"),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
 const require=name=>({'react':hooks,'react/jsx-runtime':runtime,'./supabase':{supabase:{}},'./domain':{fmt:n=>'$'+n},'./purchasing':{formatSupplierPercent:String,formatSupplierScore:String},'./sharedPurchasing':purchasing}[name]);
