@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {stripTypeScriptTypes} from 'node:module';
 import {customizedItem,normalizeCustomerPhone} from '../src/domain.ts';
 const source=await readFile('src/App.tsx','utf8');
-const pos=source.slice(source.indexOf('function POS('),source.indexOf('function CameraScanner('));
+const pos=source.slice(source.indexOf('function POS('),source.indexOf('\nfunction Orders(',source.indexOf('function POS(')));
 const handler=pos.slice(pos.indexOf(' const finish=async()=>{'),pos.indexOf(' const editLine='));
 const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
 function setup(overrides={}){

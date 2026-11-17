@@ -21,8 +21,10 @@ export function readPurchasingSnapshot(value:unknown):PurchasingSnapshot{
  for(const name of ['suppliers','items','locations','orders','lines','receipts','receiptLines','invoices','payments','reviews','inventoryReviews','audit'] as const)if(!Array.isArray(data[name]))throw Error('Incomplete purchasing response: '+name);
  return data;
 }
-export const poLines=(d:PurchasingSnapshot,id:string)=>d.lines.filter(l=>l.purchase_order_id===id);
-export function invoicePaidShared(d:PurchasingSnapshot,i:SharedInvoice){const paid=d.payments.filter(p=>p.invoice_id===i.id).reduce((n,p)=>n+Number(p.amount),0);return i.paid_at?Number(i.amount):paid;}
+const lineIndexes=new WeakMap<SharedLine[],{length:number;groups:Map<string,SharedLine[]>}>();
+export function poLines(d:PurchasingSnapshot,id:string){let cached=lineIndexes.get(d.lines);if(!cached||cached.length!==d.lines.length){const groups=new Map<string,SharedLine[]>();for(const line of d.lines){const rows=groups.get(line.purchase_order_id)??[];rows.push(line);groups.set(line.purchase_order_id,rows);}cached={length:d.lines.length,groups};lineIndexes.set(d.lines,cached);}return cached.groups.get(id)??[];}
+const paymentIndexes=new WeakMap<SharedPayment[],{length:number;totals:Map<string,number>}>();
+export function invoicePaidShared(d:PurchasingSnapshot,i:SharedInvoice){if(i.paid_at)return Number(i.amount);let cached=paymentIndexes.get(d.payments);if(!cached||cached.length!==d.payments.length){const totals=new Map<string,number>();for(const p of d.payments)totals.set(p.invoice_id,(totals.get(p.invoice_id)??0)+Number(p.amount));cached={length:d.payments.length,totals};paymentIndexes.set(d.payments,cached);}return cached.totals.get(i.id)??0;}
 export const invoiceOwedShared=(d:PurchasingSnapshot,i:SharedInvoice)=>Math.max(0,Math.round((Number(i.amount)-invoicePaidShared(d,i))*100)/100);
 export const dateOnly=(v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:businessDate(new Date(v));
 const difference=(a:string,b:string)=>(Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/86400000;

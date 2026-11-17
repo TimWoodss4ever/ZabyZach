@@ -33,7 +33,7 @@ export function calculateMrp(d:PlanSnapshot){
  for(const i of d.items)visit(i.sku);order.reverse();
  const demand=new Map<string,PlanDemand[]>(),key=(sku:string,loc:string)=>loc+'|'+sku;
  const add=(r:PlanDemand)=>{if(r.qty>0)demand.set(key(r.sku,r.location),[...(demand.get(key(r.sku,r.location))??[]),r]);};
- for(const so of d.orders.filter(o=>o.status==='Order Placed'&&!o.erp_prepared_at)){
+ for(const so of d.orders.filter(o=>o.status==='Order Placed'&&!o.erp_prepared_at&&!o.erp_sale_id)){
   const due=localDate(so.pickup_at);if(due>=end)continue;
   if(due<d.today)warn({kind:'order',location:so.location_id,reference:so.id,message:'Overdue pickup '+so.id.slice(0,8)+' is included in Week 1.'});
   for(const l of d.lines.filter(l=>l.order_id===so.id)){if(!catalog.has(l.item_sku)||!positive(l.quantity))throw Error('Invalid sales-order line: '+so.id);add({sku:l.item_sku,location:so.location_id,date:due,qty:Number(l.quantity),reference:'Order '+so.id.slice(0,8),orderIds:[so.id]});}

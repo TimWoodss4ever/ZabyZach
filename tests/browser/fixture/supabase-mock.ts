@@ -22,9 +22,17 @@ export function createClient(){
    const query={select(){return query;},eq(){return query;},async maybeSingle(){return{data:{role:'Manager',customer_id:null},error:null};}};
    return query;
   },
-  async rpc(name:string,args:Record<string,unknown>={}){
+  channel(){const channel={on(){return channel;},subscribe(){return channel;}};return channel;},
+  async removeChannel(){},
+  rpc(name:string,args:Record<string,unknown>={}){const response=this.requestRpc(name,args);return Object.assign(response,{abortSignal(){return response;}});},
+  async requestRpc(name:string,args:Record<string,unknown>={}){
    const calls=(window as typeof window&{qaCalls?:unknown[]}).qaCalls??=((window as typeof window&{qaCalls?:unknown[]}).qaCalls=[]);
    calls.push({name,args});
+   if(name==='erp_dashboard_summary')return{data:{today:snapshot.today,daily:[{day:snapshot.today,net:0}],todaySales:0,weekSales:0,weekProfit:0,awaiting:0,ready:0,owed:0,costWarnings:0},error:null};
+   if(name==='erp_purchasing_snapshot_current'){
+    const revision=String(calls.filter((c:any)=>c.name==='erp_purchasing_write').length);
+    return{data:args.p_revision===revision?{unchanged:true,serverRevision:revision}:{...structuredClone(snapshot),serverRevision:revision},error:null};
+   }
    if(name==='erp_purchasing_snapshot_with_history')return{data:structuredClone(snapshot),error:null};
    if(name==='erp_purchasing_write'){
     const action=args.p_action,payload=args.p_payload as Record<string,unknown>;

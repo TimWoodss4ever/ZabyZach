@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {stripTypeScriptTypes} from 'node:module';
+const hash=s=>createHash('sha256').update(s).digest('hex');
+const reviewed=JSON.parse(await readFile('migration-review/combined-team.json','utf8'));
+for(const [file,expected]of Object.entries(reviewed.files))assert.equal(hash(await readFile(file)),expected,'Team source changed: '+file);
+const app=await readFile('src/App.tsx','utf8'),start=app.indexOf('function POS(');
+assert.equal(hash(app.slice(start,app.indexOf('\nfunction Orders(',start)).trim()),reviewed.pos_sha256,'Latest POS/rewards component changed');
+const migrations=await readdir('supabase/migrations'),versions=migrations.map(p=>p.split('_')[0]);assert.equal(new Set(versions).size,versions.length,'Duplicate migration version');
+const mockSource=(await readFile('tests/browser/fixture/supabase-mock.ts','utf8')).replace('export function','function');
+const win={};const createClient=new Function('window',stripTypeScriptTypes(mockSource)+';return createClient;')(win);const client=createClient();
+let r=await client.rpc('erp_dashboard_summary',{p_location:'Provo Campus Store'}).abortSignal(new AbortController().signal);assert.equal(r.data.todaySales,0);
+r=await client.rpc('erp_purchasing_snapshot_current',{});assert.equal(r.data.serverRevision,'0');
+r=await client.rpc('erp_purchasing_snapshot_current',{p_revision:'0'});assert.equal(r.data.unchanged,true);
+await client.rpc('erp_purchasing_write',{p_action:'save_options',p_payload:{orderCost:30,holdingRate:.2,safetyDays:3,reviewDays:14}});
+r=await client.rpc('erp_purchasing_snapshot_current',{p_revision:'0'});assert.equal(r.data.options.order_cost,30);assert.equal(r.data.serverRevision,'1');
+console.log('PASS: latest main POS component and team files retained exactly; unique migration versions; browser fixture supports shared dashboard, abortable requests, compact purchasing refresh and settings-change invalidation. Mock transport only.');
