@@ -14,7 +14,8 @@ export function summarizeUsage(rows:UsageRow[]):UsageByLocation{
   const locations=usage[row.item_sku]??(usage[row.item_sku]={});locations[row.location_id]=(locations[row.location_id]??0)-row.quantity;
  }return usage;
 }
-export function reorderLevel(item:InventoryItem,usage:UsageByLocation,locationId:string,safetyDays:number):number|null{
+export function reorderLevel(item:InventoryItem,usage:UsageByLocation|null,locationId:string,safetyDays:number):number|null{
+ if(!usage)return null;
  const consumed=usage[item.sku]?.[locationId];
  if(!stockedItem(item)||!consumed||item.leadDays===null||!item.supplierActive||!item.supplier)return null;
  const level=consumed/usageDays*(item.leadDays+Math.max(0,safetyDays));
@@ -34,7 +35,7 @@ export function canMake(data:InventorySnapshot,items:StockItem[],sku:string,loca
   return Math.max(0,Math.min(...[...needed].map(([child,quantity])=>Math.floor((inventoryOnHand(data,child,locationId)+1e-8)/quantity))));
  }catch{return null;}
 }
-export function itemNeedsAttention(data:InventorySnapshot,item:InventoryItem,usage:UsageByLocation,locationIds:string[],safetyDays:number){
+export function itemNeedsAttention(data:InventorySnapshot,item:InventoryItem,usage:UsageByLocation|null,locationIds:string[],safetyDays:number){
  if(!stockedItem(item))return false;
  return locationIds.some(id=>{const onHand=inventoryOnHand(data,item.sku,id),level=reorderLevel(item,usage,id,safetyDays);return onHand<=0||(level!==null&&onHand<level);});
 }
