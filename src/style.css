@@ -77,3 +77,38 @@
 @media(max-width:620px){.inventory-title-row{flex-direction:column;gap:14px}.inventory-title-row h1{font-size:24px}.inventory-top-actions{justify-content:start;width:100%}.inventory-toolbar{align-items:stretch;flex-direction:column;gap:8px}.inventory-tabs>button{padding:12px 10px;font-size:12px}.inventory-location-picker{padding-bottom:12px}.inventory-metric{padding:14px}.inventory-stock .panel-head,.inventory-history .panel-head,.inventory-backorders .panel-head{flex-direction:column;align-items:stretch}.inventory-stock-filters>label{flex:1}.inventory-dialog{width:calc(100vw - 22px);padding:18px!important}.inventory-detail-grid{grid-template-columns:1fr}.inventory-supplier-line{flex-direction:column;gap:7px}.inventory-dialog-heading h2{font-size:18px}.inventory-help{padding:10px}.inventory-sync{font-size:9px}}
 
 .inventory-search{display:flex;align-items:center;gap:10px;padding:10px 13px;border:1px solid #dbe3eb;border-radius:8px;background:white;color:#788d9e;max-width:520px}.inventory-search input{border:0;background:transparent;outline:none;min-width:0;flex:1;font:inherit;font-size:12px;color:#274056}.inventory-search:focus-within{outline:2px solid #7ab5df;outline-offset:1px}.inventory-search input:focus-visible{outline:none}
+
+
+/* Compact rail and hover drawer share one stable list of targets. */
+.sidebar,.sidebar.collapsed{height:100dvh;min-height:0}
+.sidebar .brand,.sidebar.collapsed .brand{height:54px;min-height:54px}
+.sidebar .workspace-pill,.sidebar.collapsed .workspace-pill{display:none}
+.sidebar nav{flex:1;min-height:0;padding:8px 10px;overflow-y:auto}
+.sidebar .nav-group{margin:0;padding:4px 0}
+.sidebar .nav-group+.nav-group{border-top:1px solid #ffffff14}
+.sidebar nav .nav-label,.sidebar.collapsed nav .nav-label{display:none}
+.sidebar nav .nav-link,.sidebar.collapsed nav .nav-link{height:clamp(26px,3.8dvh,36px);margin:0;font-size:12px}
+.sidebar .sidebar-bottom,.sidebar.collapsed .sidebar-bottom{padding:8px 13px}
+.sidebar .sidebar-foot{margin-top:6px}
+.sidebar:not(.collapsed){box-shadow:12px 0 28px #102c4426}
+.sidebar .nav-link:focus-visible{outline:2px solid #f0b567;outline-offset:-2px}
+@media(max-height:950px){.sidebar .sidebar-bottom,.sidebar.collapsed .sidebar-bottom{display:none}}
+/* Small heights and zoom retain scrolling so every destination stays reachable. */
+@media(max-height:620px){.sidebar nav .nav-link,.sidebar.collapsed nav .nav-link{height:30px}}
+@media(hover:hover) and (pointer:fine){.nav-scrim{display:none}}
+@media(hover:none){.sidebar nav .nav-link,.sidebar.collapsed nav .nav-link{height:44px}}
+.review-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.review-metrics article{border:1px solid #e1e9ef;border-radius:10px;background:#fff;padding:16px 18px}
+.review-metrics span,.review-schedule span{display:block;color:#718497;font-size:12px}
+.review-metrics b{display:block;font:700 24px Manrope,sans-serif;color:#204f73;margin-top:6px}
+.review-tools{flex-wrap:wrap}.review-tools>span{font-size:12px;color:#6d8092;flex:1;min-width:220px}
+.review-destination{display:flex;align-items:center;gap:10px;color:#496277}
+.review-finish{overflow:hidden}.review-finish .panel-head{padding:22px 24px 14px}.review-finish .panel-head h2{font-size:18px;margin-top:5px}.review-finish .panel-head p{font-size:13px;line-height:1.6}
+.review-schedule{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:0 24px;padding:16px;background:#f3f7fa;border-radius:9px}.review-schedule b{display:block;font-size:14px;color:#254d69;margin-top:7px}
+.review-finish>.p-form{padding:18px 24px}.review-finish fieldset,.shared-ordering-settings fieldset{border:0;padding:0;margin:0;min-width:0}
+.review-finish label{display:block;margin-bottom:8px;font-size:13px;font-weight:600}.review-finish textarea{width:100%;min-height:95px;resize:vertical;font:13px/1.6 'DM Sans',sans-serif}
+.review-completion-help{color:#6b8092;font-size:12px;line-height:1.6}.review-selection-warning{padding:12px;background:#fff7e8;border:1px solid #efd9ad;border-radius:7px;color:#8b601e;font-size:12px;line-height:1.6}
+.review-success{color:#286845;background:#edf8f1;padding:12px;border-radius:7px;font-size:13px;line-height:1.6}
+.review-recent{border-top:1px solid #e6edf2;padding:16px 24px;color:#536f84;font-size:13px}.review-recent summary{cursor:pointer;font-weight:600}.review-recent article{padding:14px 0;border-bottom:1px solid #edf1f5}.review-recent article p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0;color:#6e8091;line-height:1.6}
+.shared-ordering-settings{margin:18px 0 24px}.shared-ordering-settings form{padding:0 18px 20px}.shared-ordering-settings .setting-row label{display:block}.shared-ordering-settings .setting-row small{display:block}.shared-ordering-settings .p-muted{line-height:1.6}
+@media(max-width:600px){.review-metrics{gap:7px}.review-metrics article{padding:12px 10px}.review-metrics b{font-size:20px}.review-finish .panel-head{flex-wrap:wrap;gap:10px}.review-schedule{margin-inline:16px}.review-finish>.p-form,.review-recent{padding-inline:16px}.review-finish .button{width:100%;min-height:42px}.review-destination{width:100%}.review-destination select{flex:1;min-width:0}}
