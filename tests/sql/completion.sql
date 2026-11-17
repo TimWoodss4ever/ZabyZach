@@ -1,11 +1,18 @@
 -- DISPOSABLE DATABASE ONLY. Never run this test script in the live project.
 \set ON_ERROR_STOP on
+\timing on
+-- Bound each statement so a regression reports an error instead of running for hours.
+set statement_timeout='5min';
+set lock_timeout='30s';
+\echo 'Completion: capture original records and balances'
 create temporary table completion_original_rows(table_name text,row_value jsonb);
 do $$declare t record;begin
  for t in select tablename from pg_tables where schemaname='public' loop
   execute format('insert into completion_original_rows select %L,to_jsonb(t) from public.%I t',t.tablename,t.tablename);
  end loop;
 end $$;
+create index completion_original_rows_table_idx on completion_original_rows(table_name);
+analyze completion_original_rows;
 create temporary table completion_stock as select item_sku,location_id,sum(quantity) AS qty from public.inventory_transactions group by item_sku,location_id;
 select set_config('request.jwt.claim.sub',(select user_id::text from public.profiles where role='Manager' limit 1),false);
 create temporary table completion_before_report as select public.erp_reporting_snapshot_with_history(
@@ -14,12 +21,19 @@ create temporary table completion_before_usage as
  select 'recorded'::text AS kind,coalesce(jsonb_agg(to_jsonb(u)order by item_sku,location_id),'[]'::jsonb) AS rows
  from public.erp_inventory_recorded_usage((((now() at time zone 'America/Denver')::date-180)::timestamp at time zone 'UTC'))u
  union all select 'history',coalesce(jsonb_agg(to_jsonb(u)order by item_sku,location_id),'[]'::jsonb) from public.erp_inventory_sample_usage()u;
+\echo 'Completion: install linked purchasing and checkout migration'
 \ir ../../supabase/migrations/202611170003_erp_completion.sql
 -- Old data must stay intact; additions must not change current stock balances.
-do $$declare r record;present boolean;begin
- for r in select * from completion_original_rows loop
-  execute format('select exists(select 1 from public.%I t where to_jsonb(t)=$1)',r.table_name) into present using r.row_value;
-  if not present then raise exception 'Existing team record changed in %',r.table_name;end if;
+\echo 'Completion: compare all original rows by table (no repeated per-row scans)'
+do $$declare t record;changed boolean;begin
+ for t in select distinct table_name from completion_original_rows order by table_name loop
+  raise notice 'Checking preserved records in %',t.table_name;
+  execute format('select exists(select 1 from (
+   select row_value from completion_original_rows where table_name=$1
+   except all
+   select to_jsonb(current_row) from public.%I current_row
+  ) missing_original_rows)',t.table_name) into changed using t.table_name;
+  if changed then raise exception 'Existing team record changed or removed in %',t.table_name;end if;
  end loop;
 end $$;
 select public.ci_assert(not exists(with after_stock as(select item_sku,location_id,sum(quantity) AS qty from public.inventory_transactions group by item_sku,location_id)
@@ -44,6 +58,7 @@ create temporary table completion_after_usage as
  from public.erp_inventory_recorded_usage((((now() at time zone 'America/Denver')::date-180)::timestamp at time zone 'UTC'))u
  union all select 'history',coalesce(jsonb_agg(to_jsonb(u)order by item_sku,location_id),'[]'::jsonb) from public.erp_inventory_sample_usage()u;
 select public.ci_assert(not exists(select 1 from completion_before_usage b full join completion_after_usage a using(kind) where a.rows is distinct from b.rows),'purchasing history changed the team usage/reorder inputs');
+\echo 'Completion: verify recorded profit, inventory valuation, reports and access'
 -- Report P&L and recorded valuation remain unchanged by a historical purchasing import.
 create temporary table completion_after_report as select public.erp_reporting_current(
  (select from_date from public.erp_sample_history_batches where id='menu-history-v1'),(now() at time zone 'America/Denver')::date) AS data;
@@ -55,12 +70,14 @@ create temporary table completion_first_tokens as select public.erp_read_revisio
 select public.ci_assert((public.erp_purchasing_snapshot_current((select revision from completion_first_tokens))->>'unchanged')::boolean,'unchanged purchasing request still downloads the full dataset');
 select public.ci_assert(jsonb_array_length(public.erp_barcode_catalog()->'items')=(select count(*)from public.items where active),'barcode catalog truncated or missing active menu items');
 select public.ci_assert(not has_function_privilege('authenticated','public.erp_checkout_post_sale(uuid,jsonb,numeric,numeric,uuid)','EXECUTE'),'private posting engine exposed');
+\echo 'Completion: verify safe repeated installation'
 -- Reinstall preserves imported/user records and does not regenerate past balances.
 create temporary table completion_purchase_digest as select md5(string_agg(to_jsonb(p)::text,'' order by id)) AS digest from public.purchase_orders p;
 create temporary table completion_payment_digest as select md5(string_agg(to_jsonb(p)::text,'' order by id)) AS digest from public.erp_supplier_payments p;
 \ir ../../supabase/migrations/202611170003_erp_completion.sql
 select public.ci_assert((select digest=(select md5(string_agg(to_jsonb(p)::text,'' order by id))from public.purchase_orders p)from completion_purchase_digest),'reinstall changed or duplicated purchase orders');
 select public.ci_assert((select digest=(select md5(string_agg(to_jsonb(p)::text,'' order by id))from public.erp_supplier_payments p)from completion_payment_digest),'reinstall reset payment history');
+\echo 'Completion: verify phone checkout, stock, collection and shared financial totals'
 -- Completed phone checkout posts revenue, costs and stock once; collection never reposts.
 insert into auth.users(id) values('f3000000-0000-0000-0000-000000000001')on conflict do nothing;
 insert into public.profiles(user_id,role)values('f3000000-0000-0000-0000-000000000001','Customer')on conflict(user_id)do nothing;
@@ -98,3 +115,7 @@ select set_config('request.jwt.claim.sub','',false);
 do $$begin begin perform public.erp_barcode_catalog();raise exception 'Anonymous barcode access allowed';exception when insufficient_privilege then null;end;
  begin perform public.erp_dashboard_summary('Provo Campus Store');raise exception 'Anonymous dashboard access allowed';exception when insufficient_privilege then null;end;end $$;
 select 'PASS: linked supplier history, invoices and payments; preserved team records and reconciled stock/valuation/P&L; import idempotency; report cache and compact refresh; immediate phone sale with exactly-once costs/stock; collection safety; shared dashboard; permissions.';
+
+reset lock_timeout;
+reset statement_timeout;
+\timing off
