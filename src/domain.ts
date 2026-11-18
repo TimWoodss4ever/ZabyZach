@@ -1,3 +1,4 @@
+import {browserStorage as localStorage} from './browserStorage.ts';
 import type { Supplier, PurchaseReceipt, SupplierInvoice, SupplierPayment, InventoryReview, SupplierReview, PurchasingCorrection } from './purchasing.ts';
 import { upgradePurchasing, receivePurchaseOrder, isOpenPO, addDays, supplierForItem } from './purchasing.ts';
 export type Role = 'Manager' | 'Cashier' | 'Customer';
