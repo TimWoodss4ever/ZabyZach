@@ -43,3 +43,7 @@ try{
  await page.getByRole('button',{name:'Close receipt'}).click();await page.setViewportSize({width:390,height:844});await page.screenshot({path:output+'/pos-mobile.png',fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile horizontal overflow');
  assert.deepEqual(errors,[]);console.log('PASS: actual POS browser at 1440/1280/1024 and mobile; menu/order scroll independently, checkout stays visible, shared lookup autofills, redemption and points receipt work.');
 }finally{await browser?.close();server.kill();}
+
+// Run native IndexedDB migration/reload checks with the browser tools already
+// installed by this job. Existing POS assertions above remain unchanged.
+await import('./workspace-storage.mjs');
