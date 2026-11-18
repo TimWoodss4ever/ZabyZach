@@ -65,6 +65,6 @@ export function purchaseOrderEmail(d:PurchasingSnapshot,po:SharedPO){
  const recipient=(supplier?.email??'').replace(/[\r\n]/g,'').trim();
  const destination=d.locations.find(l=>l.id===po.ship_to_location_id)?.name??'';
  const lines=poLines(d,po.id).map(l=>`${l.quantity_purchase} × ${d.items.find(i=>i.sku===l.item_sku)?.name??l.item_sku} (${l.item_sku})`);
- const body=`Hello ${supplier?.contact_name||supplier?.name||'Orders team'},\n\nPlease find purchase order ${po.po_no} attached.\nRequested delivery: ${dateOnly(po.expected_at)}\nDeliver to: ${destination}\n\n${lines.join('\n')}\n\nThank you,\nZa by Zack`;
- return `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent('Za by Zack purchase order '+po.po_no)}&body=${encodeURIComponent(body)}`;
+ const body=`Hello ${supplier?.contact_name||supplier?.name||'Orders team'},\n\nPlease find purchase order ${po.po_no} attached.\nRequested delivery: ${dateOnly(po.expected_at)}\nDeliver to: ${destination}\n\n${lines.join('\n')}\n\nThank you,\nZa by Zach`;
+ return `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent('Za by Zach purchase order '+po.po_no)}&body=${encodeURIComponent(body)}`;
 }
