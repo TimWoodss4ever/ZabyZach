@@ -13,7 +13,7 @@ export type ReportQuality={costSales:{sale_id:string;receipt_no:string;created_a
 export type ReportExpense={id:string;expense_date:string;location_id:string|null;category:string;amount:number;description:string;voided_at:string|null;void_reason:string|null};
 export type ReportSnapshot={version:1|2;today:string;generatedAt:string;from:string;to:string;locations:{id:string;name:string}[];quality?:ReportQuality;sampleHistory?:{from:string;to:string;includedDays:number;includedUnits:number;method:string};
  pnl:{gross:number;discounts:number;refunds:number;tax:number;cogs:number;waste:number;adjustments:number;expenses:number;zeroCostSales:number};
- inventory:ReportInventory[];daily:{day:string;net:number}[];weekly:{week:string;net:number}[];topItems:{item_sku:string;name:string;units:number}[];
+ inventory:ReportInventory[];daily:{day:string;net:number;tax:number}[];weekly:{week:string;net:number}[];topItems:{item_sku:string;name:string;units:number}[];
  lowStock:ReportLowStock[];suppliers:{id:string;name:string;deliveries:number;actual:number|null;quoted:number|null;late:number;legacy_quote_orders?:number}[];expenses:ReportExpense[]};
 export function validateReport(value:unknown):ReportSnapshot {
  if(!value||typeof value!=='object')throw Error('The reporting service returned no report.');
@@ -24,7 +24,7 @@ export function validateReport(value:unknown):ReportSnapshot {
   throw Error('The reporting service returned an unsupported or incomplete report.');
  const finiteFields=(rows:unknown[],keys:string[])=>rows.every(row=>row!==null&&typeof row==='object'&&keys.every(k=>typeof (row as Record<string,unknown>)[k]==='number'&&Number.isFinite((row as Record<string,unknown>)[k])));
  if(!finiteFields(r.inventory,['opening_quantity','quantity','opening_cost','average_cost'])||
-  !finiteFields(r.daily,['net'])||!finiteFields(r.weekly,['net'])||!finiteFields(r.topItems,['units'])||
+  !finiteFields(r.daily,['net','tax'])||!finiteFields(r.weekly,['net'])||!finiteFields(r.topItems,['units'])||
   !finiteFields(r.lowStock,['quantity','on_order','daily_usage','lead','safety','review','conversion_factor'])||
   !finiteFields(r.expenses,['amount']))throw Error('The reporting service returned incomplete numeric records.');
  if(r.version===2){
@@ -57,4 +57,23 @@ export function replenish(r:ReportLowStock,today:string){
  const days=r.daily_usage>0?Math.floor(r.quantity/r.daily_usage-r.safety-r.lead):null;
  return {position,packages,base:packages*pack,exceedsShelfLife:packages>0&&position+packages*pack>cap,
   orderBy:days===null||packages===0?null:shiftReportDate(today,days)};
+}
+
+// The RPC already filters stored sales/refunds/history by Denver day and location.
+// Weekly tax uses only those returned days, including partial boundary weeks.
+export function salesByPeriod(r:Pick<ReportSnapshot,'daily'|'weekly'>,grouping:'daily'|'weekly') {
+ const taxes=new Map<string,number>();
+ for(const day of r.daily){
+  if(typeof day.tax!=='number'||!Number.isFinite(day.tax))
+   throw Error('The reporting service returned incomplete sales tax amounts.');
+  const date=new Date(day.day+'T12:00:00Z');
+  const key=grouping==='daily'?day.day:shiftReportDate(day.day,-((date.getUTCDay()+6)%7));
+  taxes.set(key,(taxes.get(key)??0)+Math.round(day.tax*100));
+ }
+ const rows=grouping==='daily'?r.daily.map(d=>({date:d.day,net:d.net})):r.weekly.map(w=>({date:w.week,net:w.net}));
+ return rows.map(row=>{
+  const taxCents=taxes.get(row.date);
+  if(taxCents===undefined)throw Error('The reporting service returned incomplete sales tax amounts.');
+  return {...row,tax:taxCents/100,total:(Math.round(row.net*100)+taxCents)/100};
+ });
 }
