@@ -2,7 +2,7 @@
   "package.json": "48a7eca3a21af33d49541cb0f7d05b9c3a9067e2139d13fd40dc37e4e66ad107",
   "package-lock.json": "ff10adab184bc6a08faf73d41f0ca53c57b79dd24eacea1be4b1e47a9acafa22",
   "vite.config.ts": "20f362e0a5e32e66712aebe1da8332d342085222ce771db1f0b7d5608d71c1a4",
-  "index.html": "6d11b41fc98401cd38291ebb053f4584f0ad4112b08256dc50d63d4ca0d84ba6",
+  "index.html": "f2e1c8f17cd65ade8f0297febdf6a2e34daf7f3b2e0ccfc43218574323a0a32c",
   "src/supabase.ts": "b5c8c6433e6d25f27b02c0781d5622ecc1d387c177cadf3065a8c20f7627ca41",
   "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
   ".github/workflows/deploy.yml": "7ac3a54b88d72792ab132a37bd836e2eee7e50af24884023c69812462763a017",
