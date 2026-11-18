@@ -72,7 +72,7 @@ export const suppliers=[
 {name:'Cascade Beverage & Sides',lead:4,terms:30,phone:'(801) 555-0195',email:'sales@cascadesides.example'},
 {name:'Provo Water Utility',lead:1,terms:30,phone:'(801) 555-0120',email:'service@provowater.example'}
 ];
-export const customers=['Maya Chen','Jordan Ellis','Avery Patel','Noah Williams','Sofia Ramirez','Ethan Walker','Heritage Halls Dorm Council','Provo 42nd Ward Activities','BYU Rugby Club','Marriott School Study Group','Orem Family Reunion Committee','Za by Zack Demo Customer'];
+export const customers=['Maya Chen','Jordan Ellis','Avery Patel','Noah Williams','Sofia Ramirez','Ethan Walker','Heritage Halls Dorm Council','Provo 42nd Ward Activities','BYU Rugby Club','Marriott School Study Group','Orem Family Reunion Committee','Za by Zach Demo Customer'];
 export const fmt=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
 export const businessDate=(date=new Date())=>{const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Denver',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);return ['year','month','day'].map(type=>parts.find(p=>p.type===type)!.value).join('-');};
 export const today=()=>businessDate();
