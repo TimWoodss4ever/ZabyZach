@@ -19,7 +19,7 @@ function useReport(from:string,to:string,location:string){
   const load=async()=>{
    if(!active)return;if(running){again=true;return;}running=true;setBusy(true);
    try{
-    const result=await supabase.rpc('erp_reporting_snapshot_v2',{p_from:from,p_to:to,p_location:location||null}).abortSignal(abort.signal);
+    const result=await supabase.rpc('erp_reporting_current',{p_from:from,p_to:to,p_location:location||null}).abortSignal(abort.signal);
     if(result.error)throw Error(result.error.message);
     const report=validateReport(result.data);
     if(report.version!==2)throw Error('The reporting endpoint needs the reporting-quality migration.');
@@ -91,13 +91,14 @@ export function SharedReporting({view}:{view:'financials'|'reports'}){
    <label>From<input aria-label="Report start date" type="date" value={inputs.from} max={today} onChange={e=>setInputs({...inputs,from:e.target.value})}/></label>
    <label>Through<input aria-label="Report end date" type="date" value={inputs.to} max={today} onChange={e=>setInputs({...inputs,to:e.target.value})}/></label>
    <label>Location<select value={inputs.location} onChange={e=>setInputs({...inputs,location:e.target.value})}><option value="">All locations</option>{data?.locations.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
-   <button className="button primary" type="submit">Apply</button><button className="button secondary" type="button" onClick={reload} disabled={busy}>{busy?'Refreshing…':'Refresh now'}</button>
+   <button className="button primary" type="submit">Apply</button><button className="button secondary" type="button" onClick={()=>{const d=new Date(today+'T12:00:00Z');d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()-6);const start=d.toISOString().slice(0,10);setInputs({...inputs,from:start,to:today});setFrom(start);setTo(today);setLocation(inputs.location);}}>Six months</button><button className="button secondary" type="button" onClick={reload} disabled={busy}>{busy?'Refreshing…':'Refresh now'}</button>
   </form>
   {validation&&<p role="alert" className="login-error">{validation}</p>}
   <p className="sr-status" aria-live="polite">Shared Supabase records · Mountain Time · refreshes every 15 seconds while visible{data&&<> · Updated {new Date(data.generatedAt).toLocaleTimeString()} · {shortDate(data.from)}–{shortDate(data.to)}</>}</p>
   {error&&<div role="alert" className="login-error">{data?'Refresh failed; the displayed report is stale. ':''}{error}<button className="table-action" onClick={reload}>Retry</button></div>}
   {!data&&!error&&<div className="panel empty-inline">Loading shared reports…</div>}
   {data&&totals&&<>
+   {data.sampleHistory&&<p className="p-note">History available: {shortDate(data.sampleHistory.from)}–{shortDate(data.sampleHistory.to)}. Material costs use recorded catalog and recipe costs. Historical inventory turnover is unavailable where opening stock valuation is incomplete.</p>}
    {location&&<p className="p-note">This location excludes company-wide expenses. Choose All locations for the company P&amp;L.</p>}
    {data.quality&&<QualityDetails quality={data.quality} negativeHistory={data.inventory.some(v=>v.negative_history)}/>}
    {view==='financials'?<>
@@ -113,7 +114,7 @@ export function SharedReporting({view}:{view:'financials'|'reports'}){
     <div className="sr-metrics"><Metric label="Net sales" value={money(totals.net)}/><Metric label="Recorded COGS" value={money(data.pnl.cogs)}/><Metric label="Gross profit" value={money(totals.grossProfit)}/><Metric label="Inventory value" value={money(totals.closing)}/></div>
     <div className="sr-two"><section className="panel"><div className="panel-head"><div><h2>Sales by {grouping==='daily'?'day':'week'}</h2><p>Net of discounts and refunds; before tax. Weeks start Monday.</p></div><select aria-label="Sales grouping" value={grouping} onChange={e=>setGrouping(e.target.value as 'daily'|'weekly')}><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div><ReportTable><thead><tr><th>PERIOD</th><th className="right">NET SALES</th></tr></thead><tbody>{(grouping==='daily'?data.daily.map(d=>({date:d.day,net:d.net})):data.weekly.map(w=>({date:w.week,net:w.net}))).map(row=><tr key={row.date}><td>{shortDate(row.date)}</td><td className="right">{money(row.net)}</td></tr>)}</tbody></ReportTable></section>
     <section className="panel"><div className="panel-head"><div><h2>Top-selling items</h2><p>Net units sold during this period, after returns. Top 20.</p></div></div>{!data.topItems.length?<Empty/>:<ReportTable><thead><tr><th>ITEM</th><th className="right">NET UNITS</th></tr></thead><tbody>{data.topItems.map(i=><tr key={i.item_sku}><td>{i.name}<small className="cell-sub">{i.item_sku}</small></td><td className="right">{number(i.units)}</td></tr>)}</tbody></ReportTable>}</section></div>
-    <section className="panel"><div className="panel-head"><div><h2>Low stock &amp; suggested replenishment</h2><p>Trailing 30-day posted usage; lead time, safety stock, review interval and open supplier orders.</p></div></div>
+    <section className="panel"><div className="panel-head"><div><h2>Low stock &amp; suggested replenishment</h2><p>Trailing 180-day material demand; lead time, safety stock, review interval and open supplier orders.</p></div></div>
      {to!==data.today?<p className="empty-inline">Choose an end date of today for current replenishment suggestions.</p>:!data.lowStock.length?<Empty/>:<ReportTable><thead><tr><th>ITEM / LOCATION</th><th>SUPPLIER</th><th className="right">ON HAND / ON ORDER</th><th className="right">SUGGESTED ORDER</th><th>ORDER BY</th></tr></thead><tbody>{data.lowStock.map(r=><LowStockRow key={r.item_sku+r.location_id} row={r} today={data.today}/>)}</tbody></ReportTable>}
      <p className="sr-footnote">Suggestions require manager review. Open receipts may be overdue; no orders are created automatically.</p>
     </section>

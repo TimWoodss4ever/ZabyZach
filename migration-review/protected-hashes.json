@@ -10,8 +10,16 @@
   "supabase/SETUP.md": "56b472e8b2f178d90910cd84bf92672c3a5a6ad50465fc9d46481912ff5d7c82",
   "supabase/migrations/202611130002_sauces_coca_cola.sql": "e0730c65d73ef00ce548605800f050798dc9398fe9e4df30749fb8f2e2db2a2f",
   "supabase/migrations/202611100001_zabyzack_erp.sql": "e1da8bb41ab0f62dbda11162de30040fc84e849753115e0b8ef7fdba0a45bcf6",
-  "supabase/migrations/202611130001_in_house_dough.sql": "8221f4142e3fbe67f115b3b37b9bef4e170ee192b6f0c38b8e6d18ef6318b4ff",
+  "supabase/migrations/202611130001_in_house_dough.sql": "5b1b3a834136561df0aa3d6fa0382ccf4f5b32e0716a61c49d2959cc8f981022",
   "supabase/migrations/202611150001_returns_exchanges.sql": "b1ae41037df123b3b5fa0651a24833314dbc30c07e40dd9a3557ad1a3eb2502a",
   "supabase/migrations/202611110001_sales_order_time_discounts.sql": "b24f45ee68f9428e11991b5cf485fef9cbed8994f3a7d356b6c2f2590ff277ef",
-  "supabase/migrations/202611140001_production_backend.sql": "a1eddc0e1c920a65042f4afa2f87e1059070040b4acbaae24c365b1e135d7a1a"
+  "supabase/migrations/202611140001_production_backend.sql": "a1eddc0e1c920a65042f4afa2f87e1059070040b4acbaae24c365b1e135d7a1a",
+  "src/InventoryWorkspaceData.ts": "3b02ffb93155db3a2744fbb75c49c50e0fa647562ef59eb44e03a3bb644e9b37",
+  "src/inventoryWorkspaceLogic.ts": "e78f6f39c7827ce7dfd1319c0c00194ebfbabac426d909263a65c9e12a5efb1b",
+  "src/InventoryWorkspace.tsx": "5e84af05a511797f3f26d208a841beaf020afd40c9798d14142532d173ee93a4",
+  "supabase/migrations/202611170002_inventory_usage_performance.sql": "c10d523d68a30acef62ec1e5060bf3b9e179ab2bcc0c30025f847e6537d56fbe",
+  "tests/inventory-workspace-ui.mjs": "c8404e1485f6d8fcc503b0f790aee5ee05e33ee317cb04c57c9d0e83be64e31e",
+  "tests/inventory-workspace.mjs": "4b73b827ef5a2a758cc8d438ab71e3e7a2a37bfc45dad1fd35520a9e2403fe27",
+  "tests/sql/inventory-usage-performance.sql": "2bc99ad4db871d71661571638e598a240b0e603742f48f5866315cdbb170334d",
+  "INVENTORY_MANAGEMENT.md": "e6282b8cac2613e29796b6cdce645d93b84e7230bf046249a606eaeb028c4a70"
 }

@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {calculateMrp,planLead,shiftDate} from '../src/sharedMrp.ts';
+import {buildMrpDrafts,materialStatus,purchaseBlocker} from '../src/mrpWorkspaceLogic.ts';
+import {items} from '../src/domain.ts';
+const item=(sku,extra={})=>({sku,name:sku,category:'Ingredient',base_unit:'oz',purchase_unit:'bag',conversion_factor:10,lead_days:2,supplier_id:'supplier',active:true,selling_price:0,unit_cost:1,...extra});
+const base=()=>({version:1,userId:'manager',today:'2026-11-16',items:[item('pizza',{category:'Pizza',selling_price:10,lead_days:7}),item('dough',{base_unit:'each',lead_days:2}),item('flour'),item('cheese')],bom:[{parent_sku:'pizza',component_sku:'dough',quantity:1},{parent_sku:'pizza',component_sku:'cheese',quantity:2},{parent_sku:'dough',component_sku:'flour',quantity:4}],locations:[{id:'A',name:'Store A',can_sell:true},{id:'B',name:'Store B',can_sell:true}],suppliers:[{id:'supplier',name:'Supplier',quoted_lead_days:3,erp_active:true}],orders:[],lines:[],stock:[],receipts:[],production:[]});
+const row=(d,sku)=>calculateMrp(d).rows.find(r=>r.location==='A'&&r.item.sku===sku);
+let d=base();
+d.production.push({id:'production',order_no:'PR-1',parent_sku:'dough',location_id:'A',quantity_started:3,status:'Planned',erp_due_date:'2026-11-24'});
+let flour=row(d,'flour');assert.equal(flour.sources[0].date,'2026-11-22','planned ingredients are required at batch START');assert.equal(flour.actions[0].orderBy,'2026-11-19','supplier lead backs off the batch start date');
+d.production[0].erp_due_date=shiftDate(d.today,29);assert.equal(row(d,'flour').gross[3],12,'production beyond the horizon can need ingredients within the horizon');
+d.production[0].status='In Progress';assert.equal(row(d,'flour').gross.reduce((n,q)=>n+q,0),0,'already issued ingredients are not planned again');
+d=base();d.orders.push({id:'ORDER-A',location_id:'A',pickup_at:'2026-11-23',status:'Order Placed',erp_prepared_at:null});d.lines.push({order_id:'ORDER-A',item_sku:'pizza',quantity:3});
+assert.equal(planLead(d,d.items[0]),0,'menu parents do not inherit purchasing supplier lead');flour=row(d,'flour');assert.deepEqual(flour.sources[0].orderIds,['ORDER-A'],'original confirmed order remains traceable through dough explosion');
+const cheese=row(d,'cheese');assert.equal(cheese.timeline[0].gross,6);assert.equal(cheese.timeline[0].available,0);assert.equal(cheese.timeline[0].net,6);assert.equal(cheese.timeline[0].planned,10);assert.equal(cheese.timeline[0].projected,4);
+const payload=buildMrpDrafts(d,[flour,cheese]);assert.equal(payload.orders.length,1);assert.equal(payload.orders[0].send,false);assert.equal(payload.orders[0].locationId,'A');assert.deepEqual(payload.orders[0].lines.map(l=>[l.sku,l.qty,l.price]),[['flour',2,10],['cheese',1,10]]);
+assert.throws(()=>buildMrpDrafts(d,[]),/Select at least/);assert.throws(()=>buildMrpDrafts(d,[cheese,cheese]),/more than once/);assert.throws(()=>buildMrpDrafts(d,[row(d,'dough')]),/Production/);
+d.purchaseDrafts=[{location_id:'A',item_sku:'cheese'}];assert.match(purchaseBlocker(d,cheese),/awaiting review/);assert.throws(()=>buildMrpDrafts(d,[cheese]),/awaiting review/);assert.equal(materialStatus(d,cheese).label,'Draft to review');
+d.purchaseDrafts=[];d.suppliers[0].erp_active=false;assert.match(purchaseBlocker(d,cheese),/active supplier/);assert.throws(()=>buildMrpDrafts(d,[cheese]),/active supplier/);assert.ok(calculateMrp(d).alerts.some(a=>a.kind==='supplier'&&a.location==='A'));
+d.suppliers[0].erp_active=true;cheese.item.unit_cost=NaN;assert.match(purchaseBlocker(d,cheese),/unit cost/);
+d=base();d.stock.push({item_sku:'cheese',location_id:'B',quantity:-3});const plan=calculateMrp(d);assert.ok(plan.alerts.some(a=>a.kind==='stock'&&a.location==='B'));const negative=plan.rows.find(r=>r.item.sku==='cheese'&&r.location==='B');assert.equal(materialStatus(d,negative).label,'Check stock');assert.equal(materialStatus(d,row(d,'cheese')).label,'No demand');
+d=base();d.items[2].conversion_factor=Infinity;assert.throws(()=>calculateMrp(d),/conversion/);d=base();d.bom[0].quantity=Infinity;assert.throws(()=>calculateMrp(d),/BOM/);d=base();d.stock.push({item_sku:'cheese',location_id:'A',quantity:NaN});assert.throws(()=>calculateMrp(d),/stock balance/);
+const parents=items.filter(i=>i.recipe);assert.ok(parents.length>=5,'assignment needs at least five actual catalog parents');for(const parent of parents)for(const [sku,q]of Object.entries(parent.recipe)){const child=items.find(i=>i.sku===sku);assert.ok(child&&q>0);assert.ok(Number.isInteger(child.lead)&&child.lead>=0,'component must carry lead time');}
+console.log('PASS: planned batch start dates and horizon offsets, original-order tracing, dated calculation evidence, selected pack/supplier drafts, draft/inactive-supplier guards, negative-stock alerts, finite numeric validation and five-parent catalog requirement.');

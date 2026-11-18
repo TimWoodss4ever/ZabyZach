@@ -1,0 +1,47 @@
+import {useMemo,useState} from 'react';
+import {CalendarClock,AlertTriangle} from 'lucide-react';
+import {MrpWorkspace} from './MrpWorkspace';
+import {useSharedPlan} from './SharedPlanningData';
+import {buildMrpDrafts,rowKey} from './mrpWorkspaceLogic';
+import {supabase} from './supabase';
+import {calculateMrp,localDate,shiftDate} from './sharedMrp';
+import type {PlanRow} from './sharedMrp';
+import {sendPlanningRequest,hasPendingPlanningRequest,retryPlanningRequest} from './planningRequests';
+
+const amount=(q:number)=>q.toLocaleString('en-US',{maximumFractionDigits:3});
+const dateLabel=(d:string)=>new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+function LoadState({api}:{api:ReturnType<typeof useSharedPlan>}){return <section className="panel mrpw-loading" role="status">{api.loading?<CalendarClock size={30}/>:<AlertTriangle size={30}/>}<h2>{api.loading?'Building the shared plan':'Planning could not load'}</h2><p>{api.loading?'Reading confirmed orders, recipes, inventory and dated receipts.':api.error}</p>{!api.loading&&<><p>Check the connection and retry. Saved orders and stock have not changed.</p><button className="button primary" onClick={()=>void api.load()}>Retry</button></>}</section>;}
+function Status({api}:{api:ReturnType<typeof useSharedPlan>}){return <>{api.error&&<p className="p-error" role="alert">{api.error}</p>}<button className="button secondary" disabled={api.busy||api.loading} onClick={()=>void api.load()}>{api.loading?'Refreshing…':'Refresh shared records'}</button></>;}
+
+export function SharedOrdersScreen({flash}:{flash:(message:string)=>void}){
+ const api=useSharedPlan(),d=api.data;
+ const [showNew,setShowNew]=useState(false),[lineCount,setLineCount]=useState(1);
+ if(!d)return <LoadState api={api}/>;
+ const locationName=(id:string)=>d.locations.find(l=>l.id===id)?.name??id;
+ const act=(id:string,action:string)=>void api.write(async()=>{const r=await supabase.rpc('erp_pickup_progress',{p_order:id,p_action:action});if(r.error)throw Error(r.error.message);if(!r.data)throw Error('Confirmation was incomplete; retry this action.');flash(action==='prepare'?'Prepared. Sale and stock posted once.':action==='fulfill'?'Pickup completed.':'Order cancelled.');});
+ return <><div className="p-intro"><div><h2>Confirmed pickup orders</h2><p>{d.orders.filter(o=>o.status==='Order Placed'&&!o.erp_prepared_at).length} awaiting preparation · Completed online checkout records the sale and inventory once. Unpaid staff orders post when prepared.</p></div><Status api={api}/><button className="button primary" disabled={api.locked||hasPendingPlanningRequest(d.userId,'pickup')} onClick={()=>setShowNew(!showNew)}>Create pickup order</button></div>{hasPendingPlanningRequest(d.userId,'pickup')&&<button className="button secondary" disabled={api.locked} onClick={()=>void api.write(async()=>{await retryPlanningRequest(d.userId,'pickup','erp_create_pickup_order',(name,args)=>supabase.rpc(name,args));setShowNew(false);flash('Pending pickup save confirmed.');})}>Confirm pending pickup save</button>}<p className="p-note">Orders and completed checkouts are shared across devices. Preparing or collecting a posted order does not deduct inventory or count revenue again.</p>
+ {showNew&&<form className="panel p-form p-spaced" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const payload={name:String(f.get('name')),phone:String(f.get('phone')??''),location:String(f.get('location')),pickup:String(f.get('date'))+'T'+String(f.get('time'))+':00',lines:Array.from({length:lineCount},(_,n)=>({sku:String(f.get('sku'+n)),qty:Number(f.get('qty'+n))}))};
+ // Interpret the restaurant pickup time in Mountain time on the server.
+ payload.pickup=payload.pickup+' America/Denver';
+ void api.write(async()=>{await sendPlanningRequest(d.userId,'pickup','erp_create_pickup_order',payload,(name,args)=>supabase.rpc(name,args));setShowNew(false);flash('Confirmed order added to shared MRP demand.');});}}><h3>Create a confirmed order</h3><fieldset disabled={api.locked} className="p-form"><div className="p-form-grid"><label>Pickup name<input name="name" maxLength={60} required/></label><label>Phone (optional)<input name="phone" type="tel" maxLength={24}/></label><label>Pickup location<select name="location">{d.locations.filter(l=>l.can_sell).map(l=><option key={l.id} value={l.name}>{l.name}</option>)}</select></label><label>Pickup date<input name="date" type="date" min={d.today} defaultValue={shiftDate(d.today,1)} required/></label><label>Pickup time<input name="time" type="time" defaultValue="17:00" required/></label></div>{Array.from({length:lineCount},(_,n)=><div className="p-form-grid" key={n}><label>Menu item<select name={'sku'+n}>{d.items.filter(i=>i.active&&Number(i.selling_price)>0).map(i=><option key={i.sku} value={i.sku}>{i.name}</option>)}</select></label><label>Quantity<input name={'qty'+n} type="number" min={1} step={1} defaultValue={1} required/></label></div>)}<button className="button secondary" type="button" onClick={()=>setLineCount(lineCount+1)}>Add item</button><button className="button primary">Confirm order</button></fieldset></form>}
+ <section className="panel p-spaced"><div className="table-scroll"><table><thead><tr><th>ORDER / NAME</th><th>PICKUP</th><th>ITEMS</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>{d.orders.map(o=><tr key={o.id}><td><b>{o.id.slice(0,8).toUpperCase()}</b><small className="cell-sub">{o.erp_name||'Pickup customer'} · {o.erp_phone}</small></td><td>{dateLabel(localDate(o.pickup_at))}<small className="cell-sub">{new Date(o.pickup_at).toLocaleTimeString('en-US',{timeZone:'America/Denver',hour:'numeric',minute:'2-digit'})} Mountain · {locationName(o.location_id)}</small></td><td>{d.lines.filter(l=>l.order_id===o.id).map((l,n)=><small className="cell-sub" key={n}>{amount(Number(l.quantity))} × {d.items.find(i=>i.sku===l.item_sku)?.name??l.item_sku}</small>)}</td><td>{o.status==='Order Placed'?(o.erp_prepared_at?'Prepared / ready':'Confirmed / awaiting prep'):o.status}{o.erp_sale_id&&<small className="cell-sub">Sale {o.erp_sale_id.slice(0,8)}</small>}</td><td>{o.status==='Order Placed'&&<div className="p-row-actions">{!o.erp_prepared_at&&<button className="table-action" disabled={api.locked} onClick={()=>act(o.id,'prepare')}>Prepare</button>}<button className="table-action" disabled={api.locked} onClick={()=>act(o.id,'fulfill')}>{o.erp_prepared_at?'Mark collected':'Prepare & fulfill'}</button>{!o.erp_prepared_at&&!o.erp_sale_id&&<button className="table-action" disabled={api.locked} onClick={()=>act(o.id,'cancel')}>Cancel</button>}</div>}</td></tr>)}</tbody></table></div>{!d.orders.length&&<div className="empty-inline">No shared pickup orders yet. Create an order to start the material plan.</div>}</section></>;
+}
+
+export function SharedMrpScreen({flash,onPurchase,onTransfers,onProduction,onOrders,onSuppliers}:{flash:(message:string)=>void;onPurchase:()=>void;onTransfers:()=>void;onProduction?:()=>void;onOrders?:()=>void;onSuppliers?:()=>void}) {
+ const api=useSharedPlan(),data=api.data;
+ const computed=useMemo(()=>{if(!data)return null;try{return{plan:calculateMrp(data),error:''};}catch(error){return{plan:null,error:error instanceof Error?error.message:'The material plan needs review.'};}},[data]);
+ if(!data)return <LoadState api={api}/>;
+ if(!computed?.plan)return <section className="panel mrpw-loading" role="alert"><AlertTriangle size={30}/><h2>The plan needs a data review</h2><p>{computed?.error}</p><Status api={api}/></section>;
+ const create=async(selected:PlanRow[])=>api.write(async()=>{
+  // Re-read eligibility from the current snapshot; an old selection must not
+  // recreate a draft or purchase a component that no longer has a shortage.
+  const keys=selected.map(rowKey),latest=calculateMrp(data).rows.filter(row=>keys.includes(rowKey(row)));
+  if(latest.length!==keys.length)throw Error('The selected plan changed. Refresh and review the components again.');
+  const payload=buildMrpDrafts(data,latest);
+  await sendPlanningRequest(data.userId,'mrp-purchase','erp_mrp_purchase_drafts',payload,(name,args)=>supabase.rpc(name,args));
+  flash('Shared PO drafts created. Review and issue them in Purchase Orders.');
+ });
+ const schedule=async(id:string,due:string)=>api.write(async()=>{const result=await supabase.rpc('erp_schedule_production',{p_order:id,p_due:due});if(result.error)throw Error(result.error.message);flash('Production completion date updated.');});
+ const retry=()=>void api.write(async()=>{await retryPlanningRequest(data.userId,'mrp-purchase','erp_mrp_purchase_drafts',(name,args)=>supabase.rpc(name,args));flash('Pending PO save confirmed. Review Purchase Orders.');});
+ return <MrpWorkspace data={data} plan={computed.plan} loading={api.loading} busy={api.busy} locked={api.locked} error={api.error} updatedAt={api.updatedAt} pendingPurchase={hasPendingPlanningRequest(data.userId,'mrp-purchase')} onRefresh={()=>void api.load()} onPurchase={onPurchase} onTransfers={onTransfers} onProduction={onProduction} onOrders={onOrders} onSuppliers={onSuppliers} onRetryPurchase={retry} onCreateDrafts={create} onSchedule={schedule}/>;
+}

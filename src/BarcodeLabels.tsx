@@ -7,7 +7,7 @@ import {code128Svg} from './barcode';
 import {barcodeLabelSheet} from './barcodeLabels';
 function downloadFile(contents:string,name:string,type:string){const url=URL.createObjectURL(new Blob([contents],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
 export function BarcodeLabelsScreen({state,flash,catalog}:{state:AppState;flash:(message:string)=>void;catalog?:Item[]}){
- const incomingItems=(catalog??items).filter(i=>!i.recipe);
+ const incomingItems=(catalog??items).filter(i=>!i.recipe||i.price>0);
  const [query,setQuery]=useState(''),[supplier,setSupplier]=useState(''),[category,setCategory]=useState(''),[poId,setPoId]=useState(''),[chosen,setChosen]=useState<string[]>([]),[copies,setCopies]=useState(1),[preview,setPreview]=useState(false);
  const suppliers=getSuppliers(state),openOrders=state.purchaseOrders.filter(isOpenPO),po=openOrders.find(p=>p.id===poId);
  const visible=incomingItems.filter(i=>(!supplier||supplierForItem(state,i)?.id===supplier)&&(!category||i.category===category)&&(!poId||po?.lines.some(l=>l.sku===i.sku))&&`${i.name} ${i.sku} ${i.barcode}`.toLowerCase().includes(query.toLowerCase()));

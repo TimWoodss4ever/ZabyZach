@@ -21,8 +21,10 @@ export function readPurchasingSnapshot(value:unknown):PurchasingSnapshot{
  for(const name of ['suppliers','items','locations','orders','lines','receipts','receiptLines','invoices','payments','reviews','inventoryReviews','audit'] as const)if(!Array.isArray(data[name]))throw Error('Incomplete purchasing response: '+name);
  return data;
 }
-export const poLines=(d:PurchasingSnapshot,id:string)=>d.lines.filter(l=>l.purchase_order_id===id);
-export function invoicePaidShared(d:PurchasingSnapshot,i:SharedInvoice){const paid=d.payments.filter(p=>p.invoice_id===i.id).reduce((n,p)=>n+Number(p.amount),0);return i.paid_at?Number(i.amount):paid;}
+const lineIndexes=new WeakMap<SharedLine[],{length:number;groups:Map<string,SharedLine[]>}>();
+export function poLines(d:PurchasingSnapshot,id:string){let cached=lineIndexes.get(d.lines);if(!cached||cached.length!==d.lines.length){const groups=new Map<string,SharedLine[]>();for(const line of d.lines){const rows=groups.get(line.purchase_order_id)??[];rows.push(line);groups.set(line.purchase_order_id,rows);}cached={length:d.lines.length,groups};lineIndexes.set(d.lines,cached);}return cached.groups.get(id)??[];}
+const paymentIndexes=new WeakMap<SharedPayment[],{length:number;totals:Map<string,number>}>();
+export function invoicePaidShared(d:PurchasingSnapshot,i:SharedInvoice){if(i.paid_at)return Number(i.amount);let cached=paymentIndexes.get(d.payments);if(!cached||cached.length!==d.payments.length){const totals=new Map<string,number>();for(const p of d.payments)totals.set(p.invoice_id,(totals.get(p.invoice_id)??0)+Number(p.amount));cached={length:d.payments.length,totals};paymentIndexes.set(d.payments,cached);}return cached.totals.get(i.id)??0;}
 export const invoiceOwedShared=(d:PurchasingSnapshot,i:SharedInvoice)=>Math.max(0,Math.round((Number(i.amount)-invoicePaidShared(d,i))*100)/100);
 export const dateOnly=(v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:businessDate(new Date(v));
 const difference=(a:string,b:string)=>(Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/86400000;
@@ -55,4 +57,14 @@ export function searchSharedOrders(d:PurchasingSnapshot,query:string){
  const matched=d.items.filter(i=>i.sku.toLowerCase()===q||i.barcode.toLowerCase()===q),skus=new Set(matched.map(i=>i.sku));
  const orders=d.orders.filter(p=>(p.po_no+' '+(d.suppliers.find(s=>s.id===p.supplier_id)?.name??'')).toLowerCase().includes(q)||poLines(d,p.id).some(l=>skus.has(l.item_sku)||(d.items.find(i=>i.sku===l.item_sku)?.name.toLowerCase().includes(q))));
  return{orders,items:matched};
+}
+
+// mailto opens a draft only; the printable PO must be attached by the sender.
+export function purchaseOrderEmail(d:PurchasingSnapshot,po:SharedPO){
+ const supplier=d.suppliers.find(s=>s.id===po.supplier_id);
+ const recipient=(supplier?.email??'').replace(/[\r\n]/g,'').trim();
+ const destination=d.locations.find(l=>l.id===po.ship_to_location_id)?.name??'';
+ const lines=poLines(d,po.id).map(l=>`${l.quantity_purchase} × ${d.items.find(i=>i.sku===l.item_sku)?.name??l.item_sku} (${l.item_sku})`);
+ const body=`Hello ${supplier?.contact_name||supplier?.name||'Orders team'},\n\nPlease find purchase order ${po.po_no} attached.\nRequested delivery: ${dateOnly(po.expected_at)}\nDeliver to: ${destination}\n\n${lines.join('\n')}\n\nThank you,\nZa by Zack`;
+ return `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent('Za by Zack purchase order '+po.po_no)}&body=${encodeURIComponent(body)}`;
 }
