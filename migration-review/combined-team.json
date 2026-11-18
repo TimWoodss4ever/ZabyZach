@@ -9,9 +9,10 @@
     "supabase/migrations/202611170003_pos_loyalty.sql": "6e569e2e26fb27a5ab15b4f6167e638928591a7e68df3a390704144c90cbbc82",
     "tests/sql/pos-loyalty.sql": "8a3415a4f62dc680fb3c04cfe6eb5302332380a3ae2a4b5d9bd1abf4ece784d0",
     "tests/pos-checkout.mjs": "6173cb5241a3a08a33d231d4ae5a4d1cd61cb2ce6cf57c2f5417e6aebff079b7",
-    "tests/browser/navigation-workspace.mjs": "efbc5eefebcc9c774fa6726857821c278ae0070f2f17562e6d96345303115c6a",
+    "tests/browser/navigation-workspace.mjs": "0eab3470ace1d7c5ed4c22e9e289dbe5f71d3bacc5a5a4485058c63fba48ae89",
     "src/MrpWorkspace.tsx": "8029535042be56fce3d4b8ce2f0a1e854416bdcd8142e66afd24229182fe824b",
     "src/BarcodeLabels.tsx": "e8d5ba84a447946650f81439747da36c149c109a285de9c3dc4588fd39c59a09"
   },
-  "sales_tax_preservation_review": "PizzaGuide.tsx and BarcodeLabels.tsx hashes refreshed to their exact, unchanged bytes in supplied main caeb0940f9ec8f03dc3010742158560ea1a26957. Prior hashes were stale. No source changes in these files; all other protected hashes and checks retained. POS component hash also refreshed to the identical supplied-main App.tsx component; App.tsx is not changed or included."
+  "sales_tax_preservation_review": "PizzaGuide.tsx and BarcodeLabels.tsx hashes refreshed to their exact, unchanged bytes in supplied main caeb0940f9ec8f03dc3010742158560ea1a26957. Prior hashes were stale. No source changes in these files; all other protected hashes and checks retained. POS component hash also refreshed to the identical supplied-main App.tsx component; App.tsx is not changed or included.",
+  "navigation_greeting_review": "Test-only correction: the existing manager@example.test fixture renders Good morning, Manager. All three desktop/return/mobile heading waits now assert that exact personalized greeting. Navigation/purchasing assertions, fixtures and dashboard implementation unchanged. Updated only this test hash; all other preservation checks remain enabled."
 }

@@ -15,7 +15,8 @@ try{
  await page.addInitScript(()=>localStorage.clear());
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto('http://127.0.0.1:4178/app.html');
- await page.getByRole('heading',{name:'Good morning, Zack'}).waitFor();
+ // The fixture signs in manager@example.test; the dashboard personalizes its greeting.
+ await page.getByRole('heading',{name:'Good morning, Manager',exact:true}).waitFor();
 
  const nav=page.locator('.sidebar nav');
  const fit=await nav.evaluate(element=>({scroll:element.scrollHeight,client:element.clientHeight,links:[...element.querySelectorAll('.nav-link')].map(link=>{const box=link.getBoundingClientRect();return{top:box.top,bottom:box.bottom};})}));
@@ -55,7 +56,7 @@ try{
  let writes=await page.evaluate(()=>window.qaCalls.filter(call=>call.name==='erp_purchasing_write'));
  assert.deepEqual(writes.at(-1).args.p_payload,{revision:1,orderCost:25,holdingRate:.125,safetyDays:2,reviewDays:7});
  await page.getByRole('button',{name:'Go to dashboard'}).click();
- await page.getByRole('heading',{name:'Good morning, Zack'}).waitFor();
+ await page.getByRole('heading',{name:'Good morning, Manager',exact:true}).waitFor();
 
  await clickNav('Inventory Review');
  await page.getByRole('heading',{name:'Shared inventory review'}).waitFor();
@@ -96,7 +97,7 @@ try{
  touch.on('pageerror',error=>errors.push(error.message));
  await touch.addInitScript(()=>localStorage.clear());
  await touch.goto('http://127.0.0.1:4178/app.html');
- await touch.getByRole('heading',{name:'Good morning, Zack'}).waitFor();
+ await touch.getByRole('heading',{name:'Good morning, Manager',exact:true}).waitFor();
  await touch.getByRole('button',{name:'Open navigation menu'}).tap();
  await touch.getByRole('button',{name:'Close navigation menu'}).waitFor();
  await touch.getByRole('button',{name:'POS',exact:true}).tap();
