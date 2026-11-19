@@ -117,3 +117,6 @@ set role authenticated;
 select public.ci_assert((public.erp_purchasing_snapshot()->>'userId')='00000000-0000-0000-0000-000000000001','authenticated role RPC call');
 reset role;
 select 'PASS: additive migration preservation, original functions, role checks, atomic partial/final receiving, inventory conversion/cost, tax/terms invoices, idempotency, payments, source corrections/rollback, reviews, options and shared snapshots.' result;
+
+-- Rolled-back barcode receiving and timestamp checks.
+\i tests/sql/po-scan-receiving.sql

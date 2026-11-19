@@ -351,8 +351,8 @@ export function ConnectedProductionPage({flash}:{flash:(message:string)=>void}){
 
 
 // The new printable catalog uses the team's real item/supplier/PO records.
-export function ConnectedBarcodeLabels({state,flash}:{state:AppState;flash:(message:string)=>void}){
- const [result,setResult]=useState<{catalog:Item[];state:AppState}|null>(null),[error,setError]=useState('');
+export function ConnectedBarcodeLabels({state,flash,onReceive}:{state:AppState;flash:(message:string)=>void;onReceive?:(code:string)=>void}){
+ const [result,setResult]=useState<{catalog:Item[];state:AppState;orderNumbers:Record<string,string>}|null>(null),[error,setError]=useState('');
  const load=useCallback(async()=>{setError('');try{
   const response=await supabase.rpc('erp_barcode_catalog');if(response.error)throw Error(response.error.message);const raw=response.data;
   const recipes:Record<string,Record<string,number>>={};for(const b of raw.bom??[])(recipes[b.parent_sku]??={})[b.component_sku]=Number(b.quantity);
@@ -362,10 +362,10 @@ export function ConnectedBarcodeLabels({state,flash}:{state:AppState;flash:(mess
   const itemSupplierIds=Object.fromEntries((assignments.data??[]).filter((i:any)=>i.supplier_id).map((i:any)=>[i.sku,i.supplier_id]));
   const enabled=new Set((assignments.data??[]).filter((i:any)=>i.active!==false).map((i:any)=>i.sku));
   const purchaseOrders:PurchaseOrder[]=(orders.data??[]).map((p:any)=>({id:p.id,supplierId:p.supplier_id,supplier:records.find((s:any)=>s.id===p.supplier_id)?.name??'',date:p.ordered_at.slice(0,10),expected:p.expected_at.slice(0,10),received:p.received_at?.slice(0,10),status:p.status,location:inventory.locations.find(l=>l.id===p.ship_to_location_id)?.name as Location,terms:records.find((s:any)=>s.id===p.supplier_id)?.terms??30,lines:(lines.data??[]).filter((l:any)=>l.purchase_order_id===p.id).map((l:any)=>({id:l.id,sku:l.item_sku,qty:Number(l.quantity_purchase),received:Number(l.quantity_received_purchase),unitPrice:Number(l.unit_price_purchase)}))}));
-  setResult({catalog:inventory.items.filter(i=>enabled.has(i.sku)),state:{...state,supplierRecords:records,itemSupplierIds,purchaseOrders}});
+  setResult({orderNumbers:Object.fromEntries((orders.data??[]).map((p:any)=>[p.id,p.po_no??p.id])),catalog:inventory.items.filter(i=>enabled.has(i.sku)),state:{...state,supplierRecords:records,itemSupplierIds,purchaseOrders}});
  }catch(e){setError(e instanceof Error?e.message:'Unable to load barcode catalog.');}},[state]);
  useEffect(()=>{void load();},[load]);
  if(error)return <section className="panel"><p role="alert" className="login-error">{error}</p><button className="button secondary" onClick={()=>void load()}>Retry</button></section>;
  if(!result)return <section className="panel"><div className="empty-inline">Loading incoming item barcodes…</div></section>;
- return <BarcodeLabelsScreen state={result.state} catalog={result.catalog} flash={flash}/>;
+ return <BarcodeLabelsScreen state={result.state} catalog={result.catalog} orderNumbers={result.orderNumbers} flash={flash} onReceive={onReceive}/>;
 }

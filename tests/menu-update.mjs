@@ -11,7 +11,7 @@ function decode(svg){const bars=[...svg.matchAll(/<rect x="(\d+)" y="0" width="(
 const menu=items.filter(i=>i.price>0);assert.ok(menu.some(i=>i.sku==='2007'));assert.equal(menu.filter(i=>i.category==='Pizza').length,6);
 for(const i of menu){assert.equal(decode(code128Svg(i.barcode)),i.barcode);assert.ok(barcodeLabelSheet([i],1).includes(i.barcode));}
 assert.equal(new Set(items.map(i=>i.barcode)).size,items.length);
-const source=await readFile('src/BarcodeLabels.tsx','utf8');assert.ok(source.includes('!i.recipe||i.price>0'));assert.ok(source.includes('incomingItems.filter(i=>chosen.includes(i.sku))'));
+const source=await readFile('src/BarcodeLabels.tsx','utf8');assert.ok(source.includes('const incomingItems=catalog??items'));assert.ok(source.includes('incomingItems.filter(i=>chosen.includes(i.sku))'));
 // URI values remain encoded even when names/notes contain special characters.
 const po={id:'po',po_no:'PO-123 & 456',supplier_id:'supplier',ship_to_location_id:'store',expected_at:'2026-11-20T19:00:00Z'};
 const d={suppliers:[{id:'supplier',name:'A & B',contact_name:'Orders team',email:'orders@example.com'}],locations:[{id:'store',name:'Campus'}],items:[{sku:'1005',name:'Pepperoni'}],lines:[{purchase_order_id:'po',item_sku:'1005',quantity_purchase:2}],options:{order_cost:25,holding_rate:.25,safety_days:2,review_days:7},orders:[],stock:{},dailyUsage:{'1005':30}};
