@@ -15,7 +15,7 @@ export async function retryPlanningRequest(userId:string,scope:string,name:strin
 }
 export function sharedPickupConfirmation(payload:Record<string,unknown>,result:Record<string,unknown>):SalesOrder{
  if(typeof result.id!=='string'||typeof result.total!=='number'||typeof payload.name!=='string'||typeof payload.location!=='string'||typeof payload.pickup!=='string'||!Array.isArray(payload.lines))throw Error('Order confirmation was incomplete. Check shared Sales Orders before placing another order.');
- return{id:result.id,customer:payload.name,orderName:payload.name,customerPhone:String(payload.phone??''),location:payload.location as Location,pickup:payload.pickup.slice(0,10),pickupTime:payload.pickup.slice(11,16),status:'Order Placed',lines:payload.lines as {sku:string;qty:number}[],discountPct:Number(payload.discountPct??0),discountAmount:Number(payload.discountAmount??0),notes:'Shared online pickup order',payment:{status:'Simulated paid',amount:result.total,reference:'SIM-'+result.id,paidAt:new Date().toISOString()}};
+ return{id:result.id,orderNumber:Number(result.orderNo),saleId:typeof result.sale_id==='string'?result.sale_id:undefined,customer:payload.name,orderName:payload.name,customerPhone:String(payload.phone??''),location:payload.location as Location,pickup:payload.pickup.slice(0,10),pickupTime:payload.pickup.slice(11,16),status:'Order Placed',lines:payload.lines as {sku:string;qty:number}[],discountPct:Number(payload.discountPct??0),discountAmount:Number(payload.discountAmount??0),notes:'Shared online pickup order',payment:{status:'Simulated paid',amount:result.total,reference:'Order '+result.orderNo,paidAt:new Date().toISOString()}};
 }
 // A lost response must retry the SAME request ID and payload, including after a
 // refresh. Both server endpoints are idempotent. Never silently replace a save.
@@ -28,6 +28,6 @@ export async function sendPlanningRequest(userId:string,scope:string,name:string
  if(result.error){if(/^(?:22|23|42|P0001)/.test(result.error.code??''))localStorage.removeItem(key);throw Error(result.error.message);}
  if(!result.data||typeof result.data!=='object')throw Error('Save confirmation was incomplete. Retry the same order details.');
  const value=result.data as Record<string,unknown>;
- if((name==='erp_create_pickup_order'||name==='erp_checkout_order')?(typeof value.id!=='string'||typeof value.total!=='number'||!Number.isFinite(value.total)):!Array.isArray(value.ids))throw Error('Save confirmation was incomplete. Retry the same order details.');
+ if((name==='erp_create_pickup_order'||name==='erp_checkout_order')?(typeof value.id!=='string'||typeof value.orderNo!=='number'||!Number.isInteger(value.orderNo)||typeof value.total!=='number'||!Number.isFinite(value.total)):!Array.isArray(value.ids))throw Error('Save confirmation was incomplete. Retry the same order details.');
  localStorage.removeItem(key);return result.data as Record<string,unknown>;
 }

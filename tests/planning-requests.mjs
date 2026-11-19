@@ -7,7 +7,7 @@ await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_orde
 assert.equal(memory.size,1);
 await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_order',{...payload,name:'Other'},failed),/earlier save/);
 assert.equal(calls.length,1);
-const success=async(name,args)=>{calls.push({name,args});return {data:{id:'order',total:12},error:null};};
+const success=async(name,args)=>{calls.push({name,args});return {data:{id:'order',orderNo:21,total:12,sale_id:'sale-1'},error:null};};
 await sendPlanningRequest('user','pickup','erp_create_pickup_order',payload,success);
 assert.deepEqual(calls[0],calls[1],'retry keeps original request and payload');assert.equal(memory.size,0);
 await assert.rejects(sendPlanningRequest('user','pickup','erp_create_pickup_order',payload,async()=>({data:null,error:{message:'Invalid order',code:'P0001'}})),/Invalid order/);assert.equal(memory.size,0,'confirmed database rejection rolls back');
@@ -16,6 +16,6 @@ await sendPlanningRequest('other-user','pickup','erp_create_pickup_order',payloa
 console.log('PASS: durable request IDs, payload consistency, lost-response retry, definitive rollback, uncertain confirmation and user isolation.');
 
 await retryPlanningRequest('user','pickup','erp_create_pickup_order',success);assert.equal(memory.size,0,'saved payload can be recovered after form/cart state is lost');
-const confirmation=sharedPickupConfirmation({name:'Pickup',phone:'8015550199',location:'Provo Campus Store',pickup:'2026-11-18T17:00:00 America/Denver',lines:[{sku:'pizza',qty:2}]},{id:'order',total:20});
-assert.equal(confirmation.pickup,'2026-11-18');assert.equal(confirmation.pickupTime,'17:00');assert.equal(confirmation.payment.status,'Simulated paid');assert.equal(confirmation.saleId,undefined);
-console.log('PASS: recovery from saved payload without a surviving form, and shared confirmation with no premature sale/inventory linkage.');
+const confirmation=sharedPickupConfirmation({name:'Pickup',phone:'8015550199',location:'Provo Campus Store',pickup:'2026-11-18T17:00:00 America/Denver',lines:[{sku:'pizza',qty:2}]},{id:'order',orderNo:33,total:20,sale_id:'sale-2'});
+assert.equal(confirmation.orderNumber,33);assert.equal(confirmation.pickup,'2026-11-18');assert.equal(confirmation.pickupTime,'17:00');assert.equal(confirmation.payment.status,'Simulated paid');assert.equal(confirmation.saleId,'sale-2');
+console.log('PASS: recovery from saved payload without a surviving form, and short shared order numbers with the linked sale recorded at placement.');

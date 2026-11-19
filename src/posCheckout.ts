@@ -2,8 +2,8 @@ import type {Location} from './domain.ts';
 import {normalizeCustomerPhone} from './domain.ts';
 
 export type PosCustomer={id:string;name:string;phone:string;enrolled:boolean;points:number};
-export type PosTicket={location:Location;lines:{sku:string;qty:number}[];discount:number;phone:string;name:string;redeem:boolean};
-export type PosResult={sale_id:string;receipt_no:string;subtotal:number;discount:number;tax:number;total:number;cogs:number;rewards_earned:number;rewards_redeemed:number;rewards_balance:number|null};
+export type PosTicket={location:Location;lines:{sku:string;qty:number}[];discount:number;phone:string;name:string;redeem:boolean;paymentMethod:'Cash'|'Card (simulated)'};
+export type PosResult={sale_id:string;receipt_no:string;subtotal:number;discount:number;tax:number;total:number;cogs:number;rewards_earned:number;rewards_redeemed:number;rewards_balance:number|null;payment_method?:string};
 type Pending=PosTicket&{request:string;locationId:string};
 const key='zbz-shared-pos-pending-v1';
 export function validPosResult(value:unknown):value is PosResult{
@@ -25,7 +25,7 @@ export function createPosCheckout(api:any,storage:Storage){
  };
  const send=async(pending:Pending):Promise<PosResult>=>{
   let response;
-  try{response=await api.rpc('erp_pos_sale',{p_request:pending.request,p_location:pending.locationId,p_lines:pending.lines,p_discount_percent:pending.discount,p_phone:pending.phone||null,p_name:pending.name||null,p_redeem:pending.redeem});}
+  try{response=await api.rpc('erp_pos_sale',{p_request:pending.request,p_location:pending.locationId,p_lines:pending.lines,p_discount_percent:pending.discount,p_phone:pending.phone||null,p_name:pending.name||null,p_redeem:pending.redeem,p_payment_method:pending.paymentMethod});}
   catch{throw Error('Connection lost. Recover checkout confirmation to check the same sale safely.');}
   const {data,error}=response;
   if(error){

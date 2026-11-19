@@ -11,7 +11,7 @@ for(const [name,text]of Object.entries(chunks)){
  assert.ok((name==='authentication'||name.startsWith('latest')?source:connected).includes(text),'Original source changed: '+name);
 }
 assert.ok(app.includes('const ReturnsPageView=memo(SupabaseReturnsPage);'));
-assert.ok(app.includes("postPosSale({location,lines,discount,phone:rewardsPhone,name:pickupName,redeem:redeemReward})"));
+assert.ok(app.includes("postPosSale({location,lines,discount,phone:rewardsPhone,name:pickupName,redeem:redeemReward,paymentMethod})"));
 assert.ok((await readFile('supabase/migrations/202611170003_pos_loyalty.sql','utf8')).includes('public.record_sale(p_location,p_lines,v_percent,v_id)'));
 for(const rpc of ['process_return','process_exchange'])assert.ok(app.includes("supabase.rpc('"+rpc+"'"),'New team RPC missing: '+rpc);
 for(const rpc of ['create_production_order','issue_production_order','complete_production_order'])assert.ok(connected.includes("supabase.rpc('"+rpc+"'"),'Existing RPC connection missing: '+rpc);

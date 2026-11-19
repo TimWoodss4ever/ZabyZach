@@ -1,7 +1,7 @@
 // Pure dated MRP calculation. Quantities are always in inventory base units.
 export type PlanItem={sku:string;name:string;category:string;base_unit:string;purchase_unit:string;conversion_factor:number;lead_days:number;supplier_id:string|null;active:boolean;selling_price:number;unit_cost:number};
 export type BomLine={parent_sku:string;component_sku:string;quantity:number};
-export type PlanOrder={id:string;location_id:string;pickup_at:string;status:string;erp_name:string|null;erp_phone:string|null;erp_prepared_at:string|null;erp_sale_id:string|null;discount_pct:number;discount_amount:number};
+export type PlanOrder={id:string;erp_order_number:number;location_id:string;pickup_at:string;status:string;erp_name:string|null;erp_phone:string|null;erp_prepared_at:string|null;erp_sale_id:string|null;discount_pct:number;discount_amount:number};
 export type PlanLine={order_id:string;item_sku:string;quantity:number;unit_price:number};
 export type PlanSnapshot={version:1;today:string;userId:string;items:PlanItem[];bom:BomLine[];locations:{id:string;name:string;can_sell:boolean}[];purchaseDrafts?:{location_id:string;item_sku:string}[];suppliers:{id:string;name:string;quoted_lead_days:number;erp_active:boolean}[];orders:PlanOrder[];lines:PlanLine[];stock:{item_sku:string;location_id:string;quantity:number}[];receipts:{id:string;item_sku:string;location_id:string;due:string;quantity:number;kind:'Purchase'|'Production'}[];production:{id:string;order_no:string;parent_sku:string;location_id:string;quantity_started:number;status:string;erp_due_date:string|null}[]};
 export type PlanDemand={sku:string;location:string;date:string;qty:number;reference:string;orderIds?:string[]};
@@ -35,8 +35,8 @@ export function calculateMrp(d:PlanSnapshot){
  const add=(r:PlanDemand)=>{if(r.qty>0)demand.set(key(r.sku,r.location),[...(demand.get(key(r.sku,r.location))??[]),r]);};
  for(const so of d.orders.filter(o=>o.status==='Order Placed'&&!o.erp_prepared_at&&!o.erp_sale_id)){
   const due=localDate(so.pickup_at);if(due>=end)continue;
-  if(due<d.today)warn({kind:'order',location:so.location_id,reference:so.id,message:'Overdue pickup '+so.id.slice(0,8)+' is included in Week 1.'});
-  for(const l of d.lines.filter(l=>l.order_id===so.id)){if(!catalog.has(l.item_sku)||!positive(l.quantity))throw Error('Invalid sales-order line: '+so.id);add({sku:l.item_sku,location:so.location_id,date:due,qty:Number(l.quantity),reference:'Order '+so.id.slice(0,8),orderIds:[so.id]});}
+  if(due<d.today)warn({kind:'order',location:so.location_id,reference:so.id,message:'Overdue pickup Order '+so.erp_order_number+' is included in Week 1.'});
+  for(const l of d.lines.filter(l=>l.order_id===so.id)){if(!catalog.has(l.item_sku)||!positive(l.quantity))throw Error('Invalid sales-order line: '+so.id);add({sku:l.item_sku,location:so.location_id,date:due,qty:Number(l.quantity),reference:'Order '+so.erp_order_number,orderIds:[so.id]});}
  }
  const receipts=d.receipts.filter(r=>{if(!positive(r.quantity)||!catalog.has(r.item_sku)||!d.locations.some(l=>l.id===r.location_id))throw Error('Invalid scheduled receipt: '+r.id);if(localDate(r.due)<d.today){warn({kind:r.kind==='Production'?'production':'receipt',location:r.location_id,reference:r.id,message:'Overdue '+r.kind.toLowerCase()+' receipt '+r.id.slice(0,8)+' is excluded until its date is updated or it is received.'});return false;}return true;});
  for(const p of d.production.filter(p=>['Planned','In Progress'].includes(p.status))){

@@ -98,12 +98,14 @@ select public.ci_assert((select subtotal=6 and cogs=2 from public.sales where id
 select public.erp_checkout_order('f3000000-0000-0000-0000-000000000002',(select payload from completion_checkout_payload));
 select public.ci_assert((select count(*)=1 from public.sales s where id=(select (data->>'sale_id')::uuid from completion_checkout)) and (select sum(quantity)=8 from public.inventory_transactions where item_sku='FINAL-DRINK'),'checkout retry posted twice');
 select set_config('request.jwt.claim.sub',(select user_id::text from public.profiles where role='Manager' limit 1),false);
--- A cached old staff page must also be unable to repost or cancel a paid sale.
-do $$begin begin perform public.erp_pickup_action('f3000000-0000-0000-0000-000000000002','cancel');raise exception 'Old endpoint cancelled posted checkout';exception when raise_exception then if sqlerrm='Old endpoint cancelled posted checkout' then raise;end if;end;end $$;
+-- A cached old staff page can advance physical progress but cannot cancel a fulfilled sale.
 select public.erp_pickup_action('f3000000-0000-0000-0000-000000000002','prepare');
 select public.erp_pickup_progress('f3000000-0000-0000-0000-000000000002','prepare');
 select public.erp_pickup_progress('f3000000-0000-0000-0000-000000000002','fulfill');
 select public.erp_pickup_progress('f3000000-0000-0000-0000-000000000002','fulfill');
+do $$begin begin perform public.erp_pickup_action('f3000000-0000-0000-0000-000000000002','cancel');raise exception 'Fulfilled order was cancelled';exception when raise_exception then if sqlerrm='Fulfilled order was cancelled' then raise;end if;end;end $$;
+select public.erp_pickup_progress('f3000000-0000-0000-0000-000000000002','close');
+select public.ci_assert((select status='Closed' from public.sales_orders where id='f3000000-0000-0000-0000-000000000002'),'fulfilled order did not close');
 select public.ci_assert((select sum(quantity)=8 from public.inventory_transactions where item_sku='FINAL-DRINK'),'physical collection deducted inventory again');
 select public.ci_assert((select (public.erp_dashboard_summary((select name from completion_location))->>'todaySales')::numeric-(data->>'todaySales')::numeric=6 from completion_dashboard_before),'shared dashboard did not update after phone checkout');
 select public.ci_assert((select (public.erp_dashboard_summary((select name from completion_location))->>'weekProfit')::numeric-(data->>'weekProfit')::numeric=4 from completion_dashboard_before),'dashboard profit does not reflect server costs');
@@ -112,9 +114,9 @@ select public.ci_assert((select (public.erp_dashboard_summary((select name from 
 \echo 'Completion: verify compatibility with the latest shared POS rewards wrapper'
 create temporary table completion_staff_checkout as select public.erp_pos_sale(
  'f3000000-0000-0000-0000-000000000003',(select id from completion_location),
- '[{"sku":"FINAL-DRINK","qty":1}]'::jsonb,0,'8015550188','Combined checkout customer',false) AS data;
-select public.ci_assert((select (data->>'subtotal')::numeric=3 and (data->>'cogs')::numeric=1 and (data->>'rewards_earned')::integer=3 from completion_staff_checkout),'combined POS checkout lost revenue, costs or rewards');
-select public.erp_pos_sale('f3000000-0000-0000-0000-000000000003',(select id from completion_location),'[{"sku":"FINAL-DRINK","qty":1}]'::jsonb,0,'8015550188','Combined checkout customer',false);
+ '[{"sku":"FINAL-DRINK","qty":1}]'::jsonb,0,'8015550188','Combined checkout customer',false,'Card (simulated)') AS data;
+select public.ci_assert((select (data->>'subtotal')::numeric=3 and (data->>'cogs')::numeric=1 and (data->>'rewards_earned')::integer=3 and data->>'payment_method'='Card (simulated)' and data->>'receipt_no' like 'Order %' from completion_staff_checkout),'combined POS checkout lost revenue, costs or rewards');
+select public.erp_pos_sale('f3000000-0000-0000-0000-000000000003',(select id from completion_location),'[{"sku":"FINAL-DRINK","qty":1}]'::jsonb,0,'8015550188','Combined checkout customer',false,'Card (simulated)');
 select public.ci_assert((select sum(quantity)=7 from public.inventory_transactions where item_sku='FINAL-DRINK'),'combined POS retry posted stock twice');
 -- Null identity and customer callers cannot obtain management reports or post progress.
 select set_config('request.jwt.claim.sub','f3000000-0000-0000-0000-000000000001',false);
