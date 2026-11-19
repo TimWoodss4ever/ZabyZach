@@ -1,5 +1,7 @@
 # MRP changes and review
 
+**Current rollout:** the confirmed-order regression requires the new migration `202611190001_mrp_confirmed_demand.sql`. See [MRP_FIX_ROLLOUT.md](MRP_FIX_ROLLOUT.md) for installation order, historical-order handling and verification. The older rollout notes below describe previous releases.
+
 Pickup orders and MRP now use shared Supabase records. Each location plans its own inventory and receipts. Confirmation does not consume stock. Prepare or Prepare & fulfill posts one sale and the related inventory usage; marking a prepared order collected posts neither again.
 
 ## Requirement coverage

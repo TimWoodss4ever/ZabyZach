@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 const output='test-results/pos',root=output+'/fixture';await mkdir(root,{recursive:true});
 const source=await readFile('src/App.tsx','utf8');
-const imports="import {CameraScanner} from '../../../src/CameraScanner';\n"+source.split('\n').filter(l=>l.includes("from 'react'")||l.includes("from 'lucide-react'")||l.includes("from './domain'")||l.includes("from './paymentFormatting'")).map(l=>l.replaceAll("'./","'../../../src/")).join('\n');
+const imports="import {pizzaImages} from '../../../src/pizzaImages';\nimport {CameraScanner} from '../../../src/CameraScanner';\n"+source.split('\n').filter(l=>l.includes("from 'react'")||l.includes("from 'lucide-react'")||l.includes("from './domain'")||l.includes("from './paymentFormatting'")).map(l=>l.replaceAll("'./","'../../../src/")).join('\n');
 const types=source.slice(source.indexOf('type RecordSaleResult='),source.indexOf('type ReturnSaleLine='));
 const location=source.slice(source.indexOf('function LocationSelect('),source.indexOf('function StatCard('));
 const pos=source.slice(source.indexOf('function POS('),source.indexOf('function Orders('));
@@ -20,7 +20,7 @@ const api={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{id:'tes
  (window as any).checkoutPayload=args;return {data:{sale_id:'test-sale',receipt_no:'TEST-001',subtotal:15,discount:5,tax:.725,total:10.725,cogs:4,rewards_earned:10,rewards_redeemed:100,rewards_balance:30}};
 }};
 const {loadPosCustomer,postPosSale,readPendingPosSale,recoverPosSale}=createPosCheckout(api,sessionStorage);
-function Preview(){const [location,setLocation]=useState<Location>('Provo Campus Store'),[message,setMessage]=useState('');const state={sales:[],settings:{tax:.0725}} as unknown as AppState;return <div className="app-shell"><aside className="sidebar collapsed"><div className="brand">Z</div></aside><main className="main-area"><header className="topbar">Za by Zack / POS</header><div className="page-wrap"><div className="page-top"><div><h1>POS</h1><p>Ring up an order, apply a discount, and keep inventory in sync.</p></div></div><POS state={state} location={location} setLocation={setLocation} onCommit={()=>{throw Error('Unexpected browser write')}} flash={setMessage}/><div role="status">{message}</div></div></main></div>};createRoot(document.getElementById('root')!).render(<Preview/>);`;
+function Preview(){const [location,setLocation]=useState<Location>('Provo Campus Store'),[message,setMessage]=useState('');const state={sales:[],settings:{tax:.0725}} as unknown as AppState;return <div className="app-shell"><aside className="sidebar collapsed"><div className="brand">Z</div></aside><main className="main-area"><header className="topbar">Za by Zack / POS</header><div className="page-wrap"><div className="page-top"><div><div className="eyebrow">Za by Zach · POS</div><h1>POS</h1><p>Ring up an order, apply a discount, and keep inventory in sync.</p></div></div><POS state={state} location={location} setLocation={setLocation} onCommit={()=>{throw Error('Unexpected browser write')}} flash={setMessage}/><div role="status">{message}</div></div></main></div>};createRoot(document.getElementById('root')!).render(<Preview/>);`;
 await writeFile(root+'/main.tsx',imports+'\n'+types+'\n'+location+'\n'+pos+'\n'+mock);
 await writeFile(root+'/index.html','<div id="root"></div><script type="module" src="/main.tsx"></script>');
 await writeFile(root+'/vite.config.ts',`import {defineConfig} from 'vite';import react from '@vitejs/plugin-react';export default defineConfig({plugins:[react()],server:{host:'127.0.0.1',port:4179,strictPort:true,fs:{allow:[process.cwd()]}}});`);
@@ -42,6 +42,9 @@ try{
  await page.screenshot({path:output+'/pos-rewards.png',fullPage:true});await page.getByRole('button',{name:'Complete sale',exact:true}).click();await page.getByText('TEST-001').first().waitFor();assert.match(await page.locator('.receipt-rewards').innerText(),/Earned 10 points · Balance 30/);assert.equal(await page.evaluate(()=>window.checkoutPayload.p_redeem),true);
  await page.getByRole('button',{name:'Close receipt'}).click();await page.setViewportSize({width:390,height:844});await page.screenshot({path:output+'/pos-mobile.png',fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile horizontal overflow');
  assert.deepEqual(errors,[]);console.log('PASS: actual POS browser at 1440/1280/1024 and mobile; menu/order scroll independently, checkout stays visible, shared lookup autofills, redemption and points receipt work.');
+}catch(error){
+ await writeFile(output+'/diagnostic.json',JSON.stringify({error:String(error),pageError:errors.join(' | '),server:logs.slice(-4000)},null,2));
+ throw error;
 }finally{await browser?.close();server.kill();}
 
 // Run native IndexedDB migration/reload checks with the browser tools already

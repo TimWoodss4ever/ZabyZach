@@ -29,9 +29,9 @@ begin
  payload:=jsonb_build_object('name','MRP pickup','phone','8015550100','location',(select name from public.locations where id=loc),'pickup',now()+interval '2 days','lines','[{"sku":"MRP-P","qty":2}]'::jsonb);
  answer:=public.erp_create_pickup_order(request,payload);again:=public.erp_create_pickup_order(request,payload);
  perform public.ci_assert(answer=again,'create retry differs');
- perform public.ci_assert((select count(*)>ledger_count from public.inventory_transactions),'placing order did not record ingredient usage');
- perform public.ci_assert((select count(*)=sales_count+1 from public.sales),'placing order did not post its sale');
- perform public.ci_assert((answer->>'orderNo')::integer>0 and (answer->>'sale_id') is not null,'short order number or sale link missing');
+ perform public.ci_assert((select count(*)=ledger_count from public.inventory_transactions),'confirmation changed inventory');
+ perform public.ci_assert((select count(*)=sales_count from public.sales),'confirmation posted its sale too early');
+ perform public.ci_assert((answer->>'orderNo')::integer>0 and (answer->>'sale_id') is null,'short order number missing or sale posted too early');
  select count(*) into ledger_count from public.inventory_transactions;
  perform public.ci_assert((select count(*)=1 from public.sales_order_lines where order_id=request),'duplicate request duplicated lines');
  rejected:=false;begin perform public.erp_create_pickup_order(request,payload||'{"name":"different"}');exception when others then rejected:=true;end;
@@ -65,16 +65,16 @@ begin
  perform public.ci_assert(rejected,'shortage accepted');
  perform public.ci_assert((select count(*)=ledger_count from public.inventory_transactions),'shortage failed to roll back inventory');
  perform public.ci_assert((select count(*)=sales_count from public.sales),'shortage failed to roll back sale');
- -- Customer and staff orders share the same numbered ledger; an unprepared cancel reverses the immediate posting.
+ -- New customer orders remain unposted; cancelling them never changes stock.
  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',true);
  select coalesce(sum(quantity),0) into customer_stock from public.inventory_transactions where item_sku='MRP-C' and location_id=loc;
  request:=gen_random_uuid();answer:=public.erp_create_pickup_order(request,payload);perform public.ci_assert((answer->>'simulatedPaid')::boolean,'online simulation marker');
- perform public.ci_assert((answer->>'orderNo')::integer>0 and (answer->>'sale_id') is not null,'customer order number/sale missing');
+ perform public.ci_assert((answer->>'orderNo')::integer>0 and (answer->>'sale_id') is null,'customer confirmation posted a sale or omitted its number');
  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',true);
  perform public.erp_pickup_action(request,'cancel');
  perform public.ci_assert((select status='Cancelled' from public.sales_orders where id=request),'unprepared cancellation status');
  perform public.ci_assert((select sum(quantity)=customer_stock from public.inventory_transactions where item_sku='MRP-C' and location_id=loc),'cancel failed to restore ingredient stock');
- perform public.ci_assert((select status='Cancelled' from public.sales where id=(answer->>'sale_id')::uuid),'cancelled sale still reports as completed');
+ perform public.ci_assert((select erp_sale_id is null from public.sales_orders where id=request),'unprepared cancellation created a sale');
  prod:=public.create_production_order('MRP-D',loc,4);
  perform public.erp_schedule_production(prod,(now() at time zone 'America/Denver')::date+1);
  perform public.ci_assert((select erp_due_date is not null from public.production_orders where id=prod),'production schedule not saved');

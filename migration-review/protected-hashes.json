@@ -14,7 +14,7 @@
   "supabase/migrations/202611150001_returns_exchanges.sql": "b1ae41037df123b3b5fa0651a24833314dbc30c07e40dd9a3557ad1a3eb2502a",
   "supabase/migrations/202611110001_sales_order_time_discounts.sql": "b24f45ee68f9428e11991b5cf485fef9cbed8994f3a7d356b6c2f2590ff277ef",
   "supabase/migrations/202611140001_production_backend.sql": "a1eddc0e1c920a65042f4afa2f87e1059070040b4acbaae24c365b1e135d7a1a",
-  "src/InventoryWorkspaceData.ts": "3b02ffb93155db3a2744fbb75c49c50e0fa647562ef59eb44e03a3bb644e9b37",
+  "src/InventoryWorkspaceData.ts": "20c031d06e78beb530226aa18d0ef407e88fc087567ab10b16680ae6960f5780",
   "src/inventoryWorkspaceLogic.ts": "e78f6f39c7827ce7dfd1319c0c00194ebfbabac426d909263a65c9e12a5efb1b",
   "src/InventoryWorkspace.tsx": "5e84af05a511797f3f26d208a841beaf020afd40c9798d14142532d173ee93a4",
   "supabase/migrations/202611170002_inventory_usage_performance.sql": "c10d523d68a30acef62ec1e5060bf3b9e179ab2bcc0c30025f847e6537d56fbe",

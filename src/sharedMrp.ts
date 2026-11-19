@@ -7,7 +7,7 @@ export type PlanSnapshot={version:1;today:string;userId:string;items:PlanItem[];
 export type PlanDemand={sku:string;location:string;date:string;qty:number;reference:string;orderIds?:string[]};
 export type PlanAction={date:string;orderBy:string;net:number;quantity:number;packs:number;late:boolean};
 export type PlanStep={date:string;gross:number;receipts:number;available:number;net:number;planned:number;projected:number};
-export type PlanAlert={kind:'order'|'receipt'|'production'|'stock'|'supplier';location:string;reference:string;message:string};
+export type PlanAlert={kind:'order'|'receipt'|'production'|'stock'|'supplier'|'legacy';location:string;reference:string;message:string};
 export type PlanRow={item:PlanItem;location:string;made:boolean;lead:number;onHand:number;onOrder:number;gross:number[];net:number[];receipts:number[];projected:number[];actions:PlanAction[];sources:PlanDemand[];transfer:{location:string;quantity:number}[];timeline:PlanStep[]};
 export const shiftDate=(date:string,days:number)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10);};
 export const localDate=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value)?value:new Intl.DateTimeFormat('en-CA',{timeZone:'America/Denver',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
@@ -21,7 +21,8 @@ export function readPlanSnapshot(value:unknown):PlanSnapshot{
 }
 export function calculateMrp(d:PlanSnapshot){
  const end=shiftDate(d.today,28),catalog=new Map(d.items.map(i=>[i.sku,i])),recipes=new Map<string,BomLine[]>(),warnings:string[]=[],alerts:PlanAlert[]=[];
- const warn=(alert:PlanAlert)=>{alerts.push(alert);warnings.push(alert.message);};
+ const alertKeys=new Set<string>();
+ const warn=(alert:PlanAlert)=>{const key=JSON.stringify([alert.kind,alert.location,alert.reference,alert.message]);if(!alertKeys.has(key)){alertKeys.add(key);alerts.push(alert);warnings.push(alert.message);}};
  const positive=(q:unknown)=>Number.isFinite(Number(q))&&Number(q)>0;
  for(const i of d.items){if(!Number.isFinite(Number(i.lead_days))||Number(i.lead_days)<0)throw Error('Invalid component lead time: '+i.sku);if(!positive(i.conversion_factor))throw Error('Invalid purchase conversion: '+i.sku);}
  for(const s of d.stock)if(!Number.isFinite(Number(s.quantity))||!catalog.has(s.item_sku)||!d.locations.some(l=>l.id===s.location_id))throw Error('Invalid stock balance: '+s.item_sku);
@@ -33,9 +34,12 @@ export function calculateMrp(d:PlanSnapshot){
  for(const i of d.items)visit(i.sku);order.reverse();
  const demand=new Map<string,PlanDemand[]>(),key=(sku:string,loc:string)=>loc+'|'+sku;
  const add=(r:PlanDemand)=>{if(r.qty>0)demand.set(key(r.sku,r.location),[...(demand.get(key(r.sku,r.location))??[]),r]);};
- for(const so of d.orders.filter(o=>o.status==='Order Placed'&&!o.erp_prepared_at&&!o.erp_sale_id)){
+ for(const so of d.orders.filter(o=>o.status==='Order Placed'&&!o.erp_prepared_at)){
   const due=localDate(so.pickup_at);if(due>=end)continue;
-  if(due<d.today)warn({kind:'order',location:so.location_id,reference:so.id,message:'Overdue pickup Order '+so.erp_order_number+' is included in Week 1.'});
+  if(due<d.today)warn({kind:'order',location:so.location_id,reference:so.id,message:'Overdue pickup Order '+so.erp_order_number+(so.erp_sale_id?' needs its preparation or collection status reviewed.':' is included in Week 1.')});
+  // Existing orders already issued ingredients under the earlier checkout flow.
+  // Surface them explicitly without purchasing those same ingredients again.
+  if(so.erp_sale_id){warn({kind:'legacy',location:so.location_id,reference:so.id,message:'Order '+so.erp_order_number+' already posted its sale and ingredient usage under the earlier checkout flow. It is excluded from new material demand; preparing it will not deduct stock again.'});continue;}
   for(const l of d.lines.filter(l=>l.order_id===so.id)){if(!catalog.has(l.item_sku)||!positive(l.quantity))throw Error('Invalid sales-order line: '+so.id);add({sku:l.item_sku,location:so.location_id,date:due,qty:Number(l.quantity),reference:'Order '+so.erp_order_number,orderIds:[so.id]});}
  }
  const receipts=d.receipts.filter(r=>{if(!positive(r.quantity)||!catalog.has(r.item_sku)||!d.locations.some(l=>l.id===r.location_id))throw Error('Invalid scheduled receipt: '+r.id);if(localDate(r.due)<d.today){warn({kind:r.kind==='Production'?'production':'receipt',location:r.location_id,reference:r.id,message:'Overdue '+r.kind.toLowerCase()+' receipt '+r.id.slice(0,8)+' is excluded until its date is updated or it is received.'});return false;}return true;});
