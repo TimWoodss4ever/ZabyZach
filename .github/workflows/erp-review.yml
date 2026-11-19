@@ -184,7 +184,8 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {readFileSync} from 'node:fs';
-          let report={error:'Browser job failed before the interaction test completed.'};try{report=JSON.parse(readFileSync('test-results/mrp/diagnostic.json','utf8'));}catch{}
+          let report={error:'Browser job failed before the interaction test completed.'};
+          for(const file of ['test-results/mrp/diagnostic.json','test-results/pos/diagnostic.json']){try{report=JSON.parse(readFileSync(file,'utf8'));break;}catch{}}
           for(const key of ['error','pageError','server']){
             if(!report[key])continue;
             const description=report[key].replace(/\x1b\[[0-9;]*m/g,'').replace(/\s+/g,' ').slice(0,140);
