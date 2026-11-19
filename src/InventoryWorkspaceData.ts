@@ -66,8 +66,8 @@ export function useInventoryWorkspace(userId:string){
  const refreshRef=useRef<()=>void>(()=>{});
  useEffect(()=>{
   let active=true,running=false,queued=false;setData(null);setError('');setUpdatedAt(null);
-  const load=async()=>{if(running){queued=true;return;}running=true;
-   do{queued=false;if(active)setLoading(true);try{const next=await readInventoryWorkspace(userId);if(active){setData(next);setUpdatedAt(new Date());setError('');}
+  const load=async(silent=false)=>{if(running){queued=true;return;}running=true;
+   do{queued=false;if(active&&!silent)setLoading(true);try{const next=await readInventoryWorkspace(userId);if(active){setData(current=>current&&current.usage?{...next,usage:current.usage,usageError:null,usageLoading:false}:next);setUpdatedAt(new Date());setError('');}
      if(active)setLoading(false);
      const usage=await readInventoryWorkspaceUsage(next.snapshot.today);if(active)setData(current=>current?{...current,...usage}:current);}
     catch(e){if(active)setError(e instanceof Error?e.message:'Unable to refresh shared inventory.');}
@@ -75,7 +75,7 @@ export function useInventoryWorkspace(userId:string){
    running=false;if(active)setLoading(false);
   };
   const refresh=()=>{if(document.visibilityState!=='hidden')void load();};refreshRef.current=refresh;
-  void load();const timer=window.setInterval(()=>{if(!running)refresh();},15000);
+  void load();const timer=window.setInterval(()=>{if(!running&&document.visibilityState!=='hidden')void load(true);},15000);
   window.addEventListener('erp-inventory-updated',refresh);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
   return()=>{active=false;window.clearInterval(timer);window.removeEventListener('erp-inventory-updated',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);refreshRef.current=()=>{};};
  },[userId]);
