@@ -77,8 +77,11 @@ create temporary table completion_payment_digest as select md5(string_agg(to_jso
 \ir ../../supabase/migrations/202611170004_erp_completion.sql
 select public.ci_assert((select digest=(select md5(string_agg(to_jsonb(p)::text,'' order by id))from public.purchase_orders p)from completion_purchase_digest),'reinstall changed or duplicated purchase orders');
 select public.ci_assert((select digest=(select md5(string_agg(to_jsonb(p)::text,'' order by id))from public.erp_supplier_payments p)from completion_payment_digest),'reinstall reset payment history');
-\echo 'Completion: verify phone checkout, stock, collection and shared financial totals'
--- Completed phone checkout posts revenue, costs and stock once; collection never reposts.
+-- Apply final order migrations in production order after completion installation.
+\ir ../../supabase/migrations/202611180001_sales_orders_pos.sql
+\ir ../../supabase/migrations/202611190001_mrp_confirmed_demand.sql
+\echo 'Completion: verify phone demand, prepare-time posting, collection and shared financial totals'
+-- Phone confirmation creates demand; preparation posts revenue/cost/stock once.
 insert into auth.users(id) values('f3000000-0000-0000-0000-000000000001')on conflict do nothing;
 insert into public.profiles(user_id,role)values('f3000000-0000-0000-0000-000000000001','Customer')on conflict(user_id)do nothing;
 insert into public.items(sku,name,category,barcode,base_unit,purchase_unit,conversion_factor,unit_cost,selling_price,lead_days)
@@ -92,14 +95,15 @@ create temporary table completion_checkout_payload as select jsonb_build_object(
  'lines',jsonb_build_array(jsonb_build_object('sku','FINAL-DRINK','qty',2,'price',0))) AS payload from completion_location;
 select set_config('request.jwt.claim.sub','f3000000-0000-0000-0000-000000000001',false);
 create temporary table completion_checkout as select public.erp_checkout_order('f3000000-0000-0000-0000-000000000002',(select payload from completion_checkout_payload)) AS data;
-select public.ci_assert((select (data->>'posted')::boolean and (data->>'sale_id')is not null from completion_checkout),'phone checkout did not post sale');
-select public.ci_assert((select sum(quantity)=8 from public.inventory_transactions where item_sku='FINAL-DRINK'),'phone checkout did not deduct stock exactly once');
-select public.ci_assert((select subtotal=6 and cogs=2 from public.sales where id=(select (data->>'sale_id')::uuid from completion_checkout)),'phone checkout trusted client price or omitted COGS');
+select public.ci_assert((select not (data->>'posted')::boolean and (data->>'sale_id')is null from completion_checkout),'phone confirmation posted before preparation');
+select public.ci_assert((select sum(quantity)=10 from public.inventory_transactions where item_sku='FINAL-DRINK'),'phone confirmation changed stock');
+select public.ci_assert(not exists(select 1 from public.sales_orders where id='f3000000-0000-0000-0000-000000000002' and erp_sale_id is not null),'phone confirmation posted a sale');
 select public.erp_checkout_order('f3000000-0000-0000-0000-000000000002',(select payload from completion_checkout_payload));
-select public.ci_assert((select count(*)=1 from public.sales s where id=(select (data->>'sale_id')::uuid from completion_checkout)) and (select sum(quantity)=8 from public.inventory_transactions where item_sku='FINAL-DRINK'),'checkout retry posted twice');
+select public.ci_assert((select count(*)=1 from public.sales_orders where id='f3000000-0000-0000-0000-000000000002') and (select sum(quantity)=10 from public.inventory_transactions where item_sku='FINAL-DRINK'),'confirmation retry duplicated demand or posted stock');
 select set_config('request.jwt.claim.sub',(select user_id::text from public.profiles where role='Manager' limit 1),false);
 -- A cached old staff page can advance physical progress but cannot cancel a fulfilled sale.
 select public.erp_pickup_action('f3000000-0000-0000-0000-000000000002','prepare');
+select public.ci_assert((select subtotal=6 and cogs=2 and payment_method='Card (simulated)' from public.sales where id=(select erp_sale_id from public.sales_orders where id='f3000000-0000-0000-0000-000000000002')),'preparation omitted server price, COGS or simulated tender');
 select public.erp_pickup_progress('f3000000-0000-0000-0000-000000000002','prepare');
 select public.erp_pickup_progress('f3000000-0000-0000-0000-000000000002','fulfill');
 select public.erp_pickup_progress('f3000000-0000-0000-0000-000000000002','fulfill');

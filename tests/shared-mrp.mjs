@@ -31,3 +31,16 @@ d.bom.push({parent_sku:'flour',component_sku:'pizza',quantity:1});assert.throws(
 d=base();d.items[0].lead_days=-1;assert.throws(()=>calculateMrp(d),/lead/);assert.throws(()=>readPlanSnapshot({}),/migration/);
 assert.equal(shiftDate('2026-12-31',1),'2027-01-01');assert.equal(localDate('2026-11-17T01:00:00Z'),'2026-11-16');
 console.log('PASS: location-specific BOM explosion, prepared and open dough supply, exact dates, late receipts, pack carryover, four-week boundary, order statuses, overdue demand, transfer surplus, shared subassemblies, invalid BOMs, Mountain dates.');
+
+// Legacy posted orders remain visible as exceptions without purchasing their
+// already consumed ingredients again; overdue pickups cannot silently disappear.
+d=base();order(d,'legacy','2026-11-15',5,{erp_order_number:12,erp_sale_id:'old-sale'});
+assert.equal(row(d,'cheese').gross.reduce((a,b)=>a+b,0),0);
+assert.ok(calculateMrp(d).alerts.some(a=>a.kind==='legacy'&&a.reference==='legacy'));
+assert.ok(calculateMrp(d).alerts.some(a=>a.kind==='order'&&a.reference==='legacy'));
+d.receipts.push(...['cheese','flour'].map(item_sku=>({id:'one-late-po',item_sku,location_id:'A',due:'2026-11-15',quantity:10,kind:'Purchase'})));
+assert.equal(calculateMrp(d).alerts.filter(a=>a.kind==='receipt').length,1,'one alert per overdue PO, not one per component line');
+// Simulated payment does not exclude an unprepared order that has no stock sale.
+d=base();order(d,'simulated-paid','2026-11-20',5,{erp_simulated_paid:true,erp_sale_id:null});
+assert.equal(row(d,'cheese').gross[0],10);
+console.log('PASS: simulated-paid demand, legacy once-only consumption exceptions, overdue legacy pickup warnings and deduplicated multi-line PO alerts.');
