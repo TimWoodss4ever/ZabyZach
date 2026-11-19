@@ -4,7 +4,7 @@
   "files": {
     "src/posCheckout.ts": "58b5be15b08cde39ad83d89b1370caa02e012cb088db439914dd0f6c6847ceef",
     "src/posCheckoutData.ts": "863cb023160c62747af06e7d3d16bd167a43028ba243ccf4b54f49dfb6deed84",
-    "src/style.css": "b976f34c61aebf695df02b9c7ddc7800145d4c8a24f65613845a9bdaf36c87a0",
+    "src/style.css": "1104a65e0439dabadf9168d064194c63e38dcf34c7781ab54159452855684966",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
     "supabase/migrations/202611170003_pos_loyalty.sql": "6e569e2e26fb27a5ab15b4f6167e638928591a7e68df3a390704144c90cbbc82",
     "tests/sql/pos-loyalty.sql": "8a3415a4f62dc680fb3c04cfe6eb5302332380a3ae2a4b5d9bd1abf4ece784d0",
@@ -15,5 +15,5 @@
   },
   "sales_tax_preservation_review": "PizzaGuide.tsx and BarcodeLabels.tsx hashes refreshed to their exact, unchanged bytes in supplied main caeb0940f9ec8f03dc3010742158560ea1a26957. Prior hashes were stale. No source changes in these files; all other protected hashes and checks retained. POS component hash also refreshed to the identical supplied-main App.tsx component; App.tsx is not changed or included.",
   "navigation_greeting_review": "Test-only correction: the existing manager@example.test fixture renders Good morning, Manager. All three desktop/return/mobile heading waits now assert that exact personalized greeting. Navigation/purchasing assertions, fixtures and dashboard implementation unchanged. Updated only this test hash; all other preservation checks remain enabled.",
-  "mrp_demand_fix_review": "Based on current main 19f7e8410edc1d75aea10ac0cd8cb818d6e6d76b. Refreshed stale hashes only for unchanged main posCheckout.ts, style.css, tests/pos-checkout.mjs and the unchanged POS component. MrpWorkspace.tsx intentionally adds legacy-stock notices and alert links; its reviewed hash reflects this fix. All preservation assertions remain enabled."
+  "mrp_demand_fix_review": "Based on current main 19f7e8410edc1d75aea10ac0cd8cb818d6e6d76b. Refreshed stale hashes only for unchanged main posCheckout.ts, style.css, tests/pos-checkout.mjs and the unchanged POS component. MrpWorkspace.tsx intentionally adds legacy-stock notices and alert links; its reviewed hash reflects this fix. All preservation assertions remain enabled. Native browser CI exposed existing desktop checkout overflow after the tender controls were added. The scoped desktop page/compact-height CSS now sizes from the actual heading; the POS component remains unchanged. The POS fixture imports the current product images and mirrors the page eyebrow."
 }

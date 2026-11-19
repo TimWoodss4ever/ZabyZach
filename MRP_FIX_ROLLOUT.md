@@ -3,7 +3,9 @@
 Future staff and customer orders now become dated MRP demand at confirmation.
 Confirmation succeeds without current ingredients; preparation checks and issues
 the stock and records the sale/COGS in one transaction. Immediate POS sales retain
-their current behavior. Simulated customer payment remains separate from the
+their current behavior. Native browser verification also exposed a desktop POS
+height regression after tender controls were added; a scoped CSS correction keeps
+checkout within the viewport while the menu and order items scroll separately. Simulated customer payment remains separate from the
 inventory and revenue posting.
 
 ## Install on the existing project
