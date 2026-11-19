@@ -131,9 +131,15 @@ jobs:
           node --input-type=module <<'JS'
           import {readFileSync} from 'node:fs';
           let log='';try{log=readFileSync('/tmp/erp-postgres.log','utf8');}catch{}
-          const detail=log.split('\n').findLast(line=>/ERROR:|FATAL:/.test(line))??'Database check failed; see the workflow log.';
+          const detail=log.split('\n').findLast(line=>/AssertionError|TEST FAILED|ERROR:|FATAL:|Error:/.test(line))??'Database check failed; see the workflow log.';
           const response=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+'/statuses/'+process.env.GITHUB_SHA,{method:'POST',headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'},body:JSON.stringify({state:'failure',context:'Database diagnostic',description:detail.slice(0,140),target_url:'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID})});
           if(!response.ok)throw Error('Unable to publish database diagnostic: '+response.status);
+          const tail=log.slice(-1800).replace(/\x1b\[[0-9;]*m/g,'').replace(/\s+/g,' ');
+          for(let offset=0;offset<tail.length;offset+=140){
+            const detailResponse=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+'/statuses/'+process.env.GITHUB_SHA,{method:'POST',headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'},body:JSON.stringify({state:'failure',context:'Database log '+String(offset/140+1).padStart(2,'0'),description:tail.slice(offset,offset+140),target_url:'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID})});
+            if(!detailResponse.ok)throw Error('Unable to publish database detail: '+detailResponse.status);
+          }
+
           JS
 
   mrp-browser:
