@@ -4,7 +4,7 @@
   "files": {
     "src/posCheckout.ts": "58b5be15b08cde39ad83d89b1370caa02e012cb088db439914dd0f6c6847ceef",
     "src/posCheckoutData.ts": "863cb023160c62747af06e7d3d16bd167a43028ba243ccf4b54f49dfb6deed84",
-    "src/style.css": "b3d62d466941996da2227c0706f007b6adca1be67e59bfaaddf272f62197fdbc",
+    "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
     "supabase/migrations/202611170003_pos_loyalty.sql": "6e569e2e26fb27a5ab15b4f6167e638928591a7e68df3a390704144c90cbbc82",
     "tests/sql/pos-loyalty.sql": "8a3415a4f62dc680fb3c04cfe6eb5302332380a3ae2a4b5d9bd1abf4ece784d0",
@@ -18,5 +18,14 @@
   "mrp_demand_fix_review": "Based on current main 19f7e8410edc1d75aea10ac0cd8cb818d6e6d76b. Refreshed stale hashes only for unchanged main posCheckout.ts, style.css, tests/pos-checkout.mjs and the unchanged POS component. MrpWorkspace.tsx intentionally adds legacy-stock notices and alert links; its reviewed hash reflects this fix. All preservation assertions remain enabled. Native browser CI exposed existing desktop checkout overflow after the tender controls were added. The scoped desktop page/compact-height CSS now sizes from the actual heading; the POS component remains unchanged. The POS fixture imports the current product images and mirrors the page eyebrow.",
   "purchasing_rebase_review": "Latest uploaded main(14) production code and test repairs retained. Only BarcodeLabels.tsx hash changes for the requested redesign; POS, confirmed-demand MRP and global CSS retain the uploaded fingerprints.",
   "mrp_hardening_review": "Current main 122a1c8 preserved. MRP intentionally adds daily/weekly periods, original order numbers, lead-aware source counts, dated draft previews and no-demand guidance; updated only its protected hash. POS/rewards component, shared POS transport, dependencies, historical migrations and unrelated protected files are unchanged. Integrated PR21 purchasing/barcode/name-search changes and stock visibility guard from main 0e0e8e7; preserved all existing migrations.",
-  "pos_viewport_review": "Reviewed scoped POS viewport, checkout grid and empty-state CSS changes against main 3233296; other styles and POS component preserved, browser coverage checks ancestor clipping."
+  "pos_viewport_review": "Reviewed scoped POS viewport, checkout grid and empty-state CSS changes against main 3233296; other styles and POS component preserved, browser coverage checks ancestor clipping.",
+  "accepted_current_main_baseline": {
+    "accepted_baseline": "User requested accepting the supplied current main files instead of the older fingerprints. This deliberately establishes a new preservation baseline; it does not verify or retrospectively approve the missing historical diffs. Existing tests, coverage and all other protected hashes remain unchanged.",
+    "source_main_archive": "bb9716bb4149cab40107123807acea9fa61517b5",
+    "review_branch_archive": "fd6a2e7103ef6c1ffcb74b48fdbdaa9c8c789707",
+    "files": {
+      "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
+      "src/SharedPlanningScreens.tsx": "5c1e5a047bcb233c1d8f10e8e46894231a4c2e7aca7d9bc8e1130361530df1f5"
+    }
+  }
 }

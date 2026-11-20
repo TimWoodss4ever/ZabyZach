@@ -11,7 +11,7 @@
     "src/PurchasingScreens.tsx": "ba5c2e113c638fde160e209869bb3d4b2e4e143527f290bd8e5c982673991a83",
     "src/SharedDashboard.tsx": "e9161be633e5d04b59476b4477559035d27f6cb3f830f8babf36c2bdf8ba222e",
     "src/SharedPlanningData.ts": "9cdf08e329dc6b7d05f6fb13fcbbab8110eb5eccab27bde884309b608bf9ba95",
-    "src/SharedPlanningScreens.tsx": "4ef3888742b4fe1b5c984d9103ba4efa4a017671242a69296b9bb353f187b422",
+    "src/SharedPlanningScreens.tsx": "5c1e5a047bcb233c1d8f10e8e46894231a4c2e7aca7d9bc8e1130361530df1f5",
     "src/SharedReporting.tsx": "3ccd96cce0be336dab7d3599e342150d82e9923ecb76e0ed49f2003f7e90b2c7",
     "src/assets/avatar.png": "69d26e78244a096fa65f4074e21483b45c667ca0a88a2f564e19dba7956f78e2",
     "src/assets/pizzas/bbq-chicken.jpg": "2fb7697610412cde0cf9b6f5ee120ad3bc2f65a16ca44f54fd5ad22a416b71cc",
@@ -50,7 +50,7 @@
     "src/reporting.ts": "3c1811cee4c27dab67c12d470ea46e9b71bd4eb19ad32cfd2d46f7ad8f94639a",
     "src/scanCode128.ts": "b52197185a819d9874280a23d122482f0350f1afb39c9751430a65c31c34fc85",
     "src/sharedMrp.ts": "59bfa0f14015313c7ef5641d30108fd32c9fcd54efab79ec195569edef0f5896",
-    "src/style.css": "b3d62d466941996da2227c0706f007b6adca1be67e59bfaaddf272f62197fdbc",
+    "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
     "src/supabase.ts": "b5c8c6433e6d25f27b02c0781d5622ecc1d387c177cadf3065a8c20f7627ca41",
     "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
     "src/workspaceDatabase.ts": "988d8194f20783a3197434faf93cb99cdba3e9c17646d36d0bb2989d6d4e50ee",
@@ -75,5 +75,14 @@
   },
   "connectedPrefix": "aa3fccdffaa1fd92bec03a384effa12c42970ee11486b567eb7cb46f44eb31d4",
   "mrp_hardening_review": "MRP files and production-creation prefix intentionally updated for reviewed quote/recovery, dated planning and scheduled-production changes. Current PR21 receiving, labels, name search, unrelated inventory/returns loaders and historical migrations remain protected.",
-  "pos_viewport_review": "Reviewed scoped POS viewport, checkout grid and empty-state CSS changes against main 3233296; other styles and POS component preserved, browser coverage checks ancestor clipping."
+  "pos_viewport_review": "Reviewed scoped POS viewport, checkout grid and empty-state CSS changes against main 3233296; other styles and POS component preserved, browser coverage checks ancestor clipping.",
+  "accepted_current_main_baseline": {
+    "accepted_baseline": "User requested accepting the supplied current main files instead of the older fingerprints. This deliberately establishes a new preservation baseline; it does not verify or retrospectively approve the missing historical diffs. Existing tests, coverage and all other protected hashes remain unchanged.",
+    "source_main_archive": "bb9716bb4149cab40107123807acea9fa61517b5",
+    "review_branch_archive": "fd6a2e7103ef6c1ffcb74b48fdbdaa9c8c789707",
+    "files": {
+      "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
+      "src/SharedPlanningScreens.tsx": "5c1e5a047bcb233c1d8f10e8e46894231a4c2e7aca7d9bc8e1130361530df1f5"
+    }
+  }
 }
