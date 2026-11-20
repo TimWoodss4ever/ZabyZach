@@ -1,3 +1,5 @@
+export {purchasePackPrice} from './replenishmentPolicy.ts';
+import {replenishmentPolicy,matchingDrafts} from './replenishmentPolicy.ts';
 import {matchesItemQuery} from './itemSearch.ts';
 import {parsePurchasingQuery,purchaseOrderBarcode} from './purchaseOrderScanning.ts';
 import type {AppState,Location,PurchaseOrder} from './domain.ts';
@@ -45,14 +47,9 @@ export function purchasingMetrics(d:PurchasingSnapshot,supplierId:string){
 }
 export function purchasingRule(d:PurchasingSnapshot,item:SharedItem){
  const supplier=d.suppliers.find(s=>s.id===item.supplier_id),daily=Number(d.dailyUsage[item.sku]??0),onHand=Number(d.stock[item.sku]??0),factor=Number(item.conversion_factor),cost=Number(item.unit_cost),o=d.options;
- const lead=supplier?.quoted_lead_days??0,rop=daily*(lead+o.safety_days),rawEOQ=cost>0?Math.sqrt(2*daily*365*o.order_cost/(cost*o.holding_rate)):0;
- const eoq=item.shelf_life_days?Math.min(rawEOQ,daily*item.shelf_life_days):rawEOQ;
  const open=new Set(d.orders.filter(p=>['Order Sent','Partially Received'].includes(p.status)).map(p=>p.id));
  const onOrder=d.lines.filter(l=>l.item_sku===item.sku&&open.has(l.purchase_order_id)).reduce((n,l)=>n+Math.max(0,Number(l.quantity_purchase)-Number(l.quantity_received_purchase))*factor,0);
- const position=onHand+onOrder,target=daily*(lead+o.safety_days+o.review_days),need=Math.max(0,target-position);
- const desired=need>0?Math.max(need,eoq):0,limited=item.shelf_life_days?Math.min(desired,Math.max(0,daily*item.shelf_life_days-position)):desired;
- const packs=limited>0?Math.ceil(limited/factor):0;
- return{supplier,daily,onHand,onOrder,position,rop,rawEOQ,eoq,target,packs,belowROP:position<rop,packExceedsShelf:!!item.shelf_life_days&&packs*factor+position>daily*item.shelf_life_days};
+ return{supplier,...replenishmentPolicy({daily,onHand,onOrder,factor,cost,lead:supplier?.quoted_lead_days??0,shelfLife:item.shelf_life_days,options:o})};
 }
 export function searchSharedOrders(d:PurchasingSnapshot,query:string){
  const parsed=parsePurchasingQuery(query),q=parsed.query.toLowerCase();if(!q)return{orders:d.orders,items:[] as SharedItem[]};
@@ -69,4 +66,9 @@ export function purchaseOrderEmail(d:PurchasingSnapshot,po:SharedPO){
  const lines=poLines(d,po.id).map(l=>`${l.quantity_purchase} × ${d.items.find(i=>i.sku===l.item_sku)?.name??l.item_sku} (${l.item_sku})`);
  const body=`Hello ${supplier?.contact_name||supplier?.name||'Orders team'},\n\nPlease find purchase order ${po.po_no} attached.\nRequested delivery: ${dateOnly(po.expected_at)}\nDeliver to: ${destination}\n\n${lines.join('\n')}\n\nThank you,\nZa by Zach`;
  return `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent('Za by Zach purchase order '+po.po_no)}&body=${encodeURIComponent(body)}`;
+}
+
+export function purchasingDrafts(d:PurchasingSnapshot,location:string,sku:string){
+ const refs=d.orders.filter(p=>p.status==='Draft').flatMap(p=>poLines(d,p.id).map(l=>({id:p.id,po_no:p.po_no,location_id:p.ship_to_location_id,item_sku:l.item_sku})));
+ return matchingDrafts(refs,location,sku);
 }

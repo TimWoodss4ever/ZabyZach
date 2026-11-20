@@ -27,7 +27,14 @@ try {
  await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog').count(),0);
  assert.equal(await page.getByRole('button',{name:'View plan for Pizza sauce',exact:true}).evaluate(el=>document.activeElement===el),true,'dialog restores focus');
  await page.getByRole('button',{name:/Review PO drafts/}).click();dialog=page.getByRole('dialog');await dialog.waitFor();assert.match(await dialog.innerText(),/Review ingredient PO drafts/);
- await page.getByRole('button',{name:'Create 2 supplier drafts',exact:true}).click();
+ assert.equal(await page.getByRole('radio',{name:/Cover confirmed demand/}).isChecked(),true);
+ const minimumCost=await page.locator('.mrpw-review-total>b').innerText();
+ await page.getByRole('radio',{name:/Include routine replenishment/}).check();
+ assert.notEqual(await page.locator('.mrpw-review-total>b').innerText(),minimumCost,'routine choice must change purchase quantity/cost with this history');
+ assert.match(await dialog.innerText(),/Raw EOQ/);assert.match(await dialog.innerText(),/2000|2,000/);
+ await page.screenshot({path:output+'/eoq-purchase-review.png',fullPage:true});
+ await page.getByRole('button',{name:/^Create \d+ supplier drafts?$/}).click();
+ assert.match(await page.evaluate(()=>window.qaPurchase.orders[0].notes),/routine replenishment/);
  await page.waitForFunction(()=>window.qaLog.some(value=>Array.isArray(value)&&value.includes('1002')));
  assert.equal(await page.getByRole('dialog').count(),0);assert.equal(await sauce.isDisabled(),true,'existing draft cannot be selected twice');
  await page.getByRole('tab',{name:'Recipes & BOMs',exact:true}).click();

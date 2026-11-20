@@ -3,6 +3,7 @@ import {CalendarClock,AlertTriangle} from 'lucide-react';
 import {MrpWorkspace} from './MrpWorkspace';
 import {useSharedPlan} from './SharedPlanningData';
 import {buildMrpDrafts,rowKey} from './mrpWorkspaceLogic';
+import type {PurchaseMode} from './mrpWorkspaceLogic';
 import {supabase} from './supabase';
 import {calculateMrp,localDate,shiftDate} from './sharedMrp';
 import type {PlanRow} from './sharedMrp';
@@ -61,12 +62,12 @@ export function SharedMrpScreen({flash,onPurchase,onTransfers,onProduction,onOrd
  const computed=useMemo(()=>{if(!data)return null;try{return{plan:calculateMrp(data),error:''};}catch(error){return{plan:null,error:error instanceof Error?error.message:'The material plan needs review.'};}},[data]);
  if(!data)return <LoadState api={api}/>;
  if(!computed?.plan)return <section className="panel mrpw-loading" role="alert"><AlertTriangle size={30}/><h2>The plan needs a data review</h2><p>{computed?.error}</p><Status api={api}/></section>;
- const create=async(selected:PlanRow[])=>api.write(async()=>{
+ const create=async(selected:PlanRow[],mode:PurchaseMode)=>api.write(async()=>{
   // Re-read eligibility from the current snapshot; an old selection must not
   // recreate a draft or purchase a component that no longer has a shortage.
   const keys=selected.map(rowKey),latest=calculateMrp(data).rows.filter(row=>keys.includes(rowKey(row)));
   if(latest.length!==keys.length)throw Error('The selected plan changed. Refresh and review the components again.');
-  const payload=buildMrpDrafts(data,latest);
+  const payload=buildMrpDrafts(data,latest,mode);
   await sendPlanningRequest(data.userId,'mrp-purchase','erp_mrp_purchase_drafts',payload,(name,args)=>supabase.rpc(name,args));
   flash('Shared PO drafts created. Review and issue them in Purchase Orders.');
  });

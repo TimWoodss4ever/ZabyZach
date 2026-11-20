@@ -19,11 +19,11 @@ const planning=await compile('src/SharedPlanningScreens.tsx',{'./supabase':{supa
 const props={flash(){},onPurchase(){},onTransfers(){},onOrders(){},onProduction(){},onSuppliers(){}};
 const render=(values={},changes={})=>{seeds=values;cursor=0;return renderToStaticMarkup(React.createElement(planning.SharedMrpScreen,{...props,...changes}));};
 let html=render();for(const text of ['Store A','Mozzarella','WEEK 1','WEEK 4','Review PO drafts','Confirmed orders','Components to buy','Select Mozzarella for PO draft','aria-label="Search MRP components"'])assert.ok(html.includes(text),'missing MRP context: '+text);assert.ok(!html.includes('PER PARENT UNIT'));assert.ok(!html.includes('Review the exceptions'));
-html=render({8:'days'});assert.ok(html.includes('Daily component requirements'));assert.ok(html.includes('Next week'));assert.ok(!html.includes('WEEK 4'));html=render({8:'days',9:3});assert.ok(html.includes('Week 4'));
+html=render({9:'days'});assert.ok(html.includes('Daily component requirements'));assert.ok(html.includes('Next week'));assert.ok(!html.includes('WEEK 4'));html=render({9:'days',10:3});assert.ok(html.includes('Week 4'));
 html=render({0:'Recipes & BOMs'});for(const text of ['PER PARENT UNIT','Cheese pizza','Mozzarella','QTY PER PARENT UNIT','LEAD TIME','calendar days'])assert.ok(html.includes(text));assert.ok(!html.includes('WEEK 1'));
 html=render({0:'Planning alerts'});assert.ok(html.includes('No planning alerts here'));assert.ok(!html.includes('Component requirements'));
 html=render({5:'cheese'});for(const text of ['role="dialog"','Dated requirement calculation','16','80','Order by Nov 15','SHORTAGE','REQUIRED','1 bag = 80 oz'])assert.ok(html.includes(text),'missing detail: '+text);
-html=render({4:['A|cheese'],7:true});for(const text of ['Review ingredient PO drafts','1 × bag','$17.60','Create 1 supplier draft'])assert.ok(html.includes(text),'missing PO review: '+text);
+html=render({4:['A|cheese'],7:true});assert.ok(html.includes('Cover confirmed demand'));assert.ok(html.includes('Include routine replenishment'));assert.ok(html.includes('unavailable until the purchasing policy update'));for(const text of ['Review ingredient PO drafts','1 × bag','$17.60','Create 1 supplier draft'])assert.ok(html.includes(text),'missing PO review: '+text);
 d.purchaseDrafts=[{location_id:'A',item_sku:'cheese'}];html=render({4:['A|cheese'],7:true});assert.ok(html.includes('no eligible selections'));assert.ok(html.includes('Draft to review'));delete d.purchaseDrafts;
 html=render({1:'B'});assert.ok(html.includes('No confirmed demand at this location'));assert.ok(!html.includes('Select Mozzarella for PO draft'));
 html=render({2:'unmatched'});assert.ok(html.includes('No matching components'));

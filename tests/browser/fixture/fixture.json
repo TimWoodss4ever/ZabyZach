@@ -1,1 +1,1126 @@
-{"version":1,"today":"2026-11-16","userId":"fixture","items":[{"sku":"1001","name":"Bread flour","category":"Ingredient","base_unit":"oz","purchase_unit":"50 lb sack","conversion_factor":800,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.04},{"sku":"1002","name":"Pizza sauce","category":"Ingredient","base_unit":"oz","purchase_unit":"#10 can","conversion_factor":106,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.06},{"sku":"1003","name":"Shredded mozzarella","category":"Ingredient","base_unit":"oz","purchase_unit":"5 lb bag","conversion_factor":80,"lead_days":3,"supplier_id":"Wasatch Dairy Co.","active":true,"selling_price":0,"unit_cost":0.22},{"sku":"1004","name":"Grated parmesan","category":"Ingredient","base_unit":"oz","purchase_unit":"1 lb bag","conversion_factor":16,"lead_days":3,"supplier_id":"Wasatch Dairy Co.","active":true,"selling_price":0,"unit_cost":0.4},{"sku":"1005","name":"Pepperoni","category":"Ingredient","base_unit":"oz","purchase_unit":"5 lb box","conversion_factor":80,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":0,"unit_cost":0.3},{"sku":"1006","name":"Italian sausage crumbles","category":"Ingredient","base_unit":"oz","purchase_unit":"5 lb bag","conversion_factor":80,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":0,"unit_cost":0.28},{"sku":"1007","name":"Diced ham","category":"Ingredient","base_unit":"oz","purchase_unit":"5 lb bag","conversion_factor":80,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":0,"unit_cost":0.26},{"sku":"1008","name":"Bacon crumbles","category":"Ingredient","base_unit":"oz","purchase_unit":"2 lb bag","conversion_factor":32,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":0,"unit_cost":0.35},{"sku":"1009","name":"Grilled chicken strips","category":"Ingredient","base_unit":"oz","purchase_unit":"5 lb bag","conversion_factor":80,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":0,"unit_cost":0.32},{"sku":"1010","name":"Pineapple tidbits","category":"Ingredient","base_unit":"oz","purchase_unit":"#10 can","conversion_factor":106,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.12},{"sku":"1011","name":"Sliced mushrooms","category":"Ingredient","base_unit":"oz","purchase_unit":"3 lb bag","conversion_factor":48,"lead_days":2,"supplier_id":"Mountain Produce","active":true,"selling_price":0,"unit_cost":0.15},{"sku":"1012","name":"Sliced black olives","category":"Ingredient","base_unit":"oz","purchase_unit":"#10 can","conversion_factor":106,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.14},{"sku":"1013","name":"Diced green peppers","category":"Ingredient","base_unit":"oz","purchase_unit":"3 lb bag","conversion_factor":48,"lead_days":2,"supplier_id":"Mountain Produce","active":true,"selling_price":0,"unit_cost":0.1},{"sku":"1014","name":"Diced red onions","category":"Ingredient","base_unit":"oz","purchase_unit":"3 lb bag","conversion_factor":48,"lead_days":2,"supplier_id":"Mountain Produce","active":true,"selling_price":0,"unit_cost":0.08},{"sku":"1015","name":"BBQ sauce","category":"Ingredient","base_unit":"oz","purchase_unit":"gallon","conversion_factor":128,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.07},{"sku":"1016","name":"Garlic butter","category":"Ingredient","base_unit":"oz","purchase_unit":"2 lb tub","conversion_factor":32,"lead_days":3,"supplier_id":"Wasatch Dairy Co.","active":true,"selling_price":0,"unit_cost":0.12},{"sku":"1017","name":"Ranch dipping cup","category":"Sides","base_unit":"each","purchase_unit":"case of 100","conversion_factor":100,"lead_days":4,"supplier_id":"Cascade Beverage & Sides","active":true,"selling_price":0.75,"unit_cost":0.18},{"sku":"1018","name":"Coca-Cola Original Taste (12 oz can)","category":"Beverage","base_unit":"each","purchase_unit":"case of 24","conversion_factor":24,"lead_days":4,"supplier_id":"Cascade Beverage & Sides","active":true,"selling_price":1.5,"unit_cost":0.35},{"sku":"1019","name":"Large pizza box","category":"Packaging","base_unit":"each","purchase_unit":"bundle of 50","conversion_factor":50,"lead_days":10,"supplier_id":"Beehive Packaging","active":true,"selling_price":0,"unit_cost":0.4},{"sku":"1020","name":"Breadstick bag","category":"Packaging","base_unit":"each","purchase_unit":"pack of 250","conversion_factor":250,"lead_days":10,"supplier_id":"Beehive Packaging","active":true,"selling_price":0,"unit_cost":0.1},{"sku":"1021","name":"Instant yeast","category":"Ingredient","base_unit":"oz","purchase_unit":"2 lb bag","conversion_factor":32,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.2},{"sku":"1022","name":"Olive oil","category":"Ingredient","base_unit":"oz","purchase_unit":"1 gallon jug","conversion_factor":128,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.08},{"sku":"1023","name":"Fine salt","category":"Ingredient","base_unit":"oz","purchase_unit":"50 lb sack","conversion_factor":800,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.01},{"sku":"1024","name":"Filtered water","category":"Ingredient","base_unit":"oz","purchase_unit":"1 gallon equivalent","conversion_factor":128,"lead_days":1,"supplier_id":"Provo Water Utility","active":true,"selling_price":0,"unit_cost":0.001},{"sku":"1030","name":"House-made dough ball (16 oz)","category":"Ingredient","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":0,"supplier_id":null,"active":true,"selling_price":0,"unit_cost":0},{"sku":"1031","name":"Zack\u2019s house sauce","category":"Ingredient","base_unit":"oz","purchase_unit":"1 gallon jug","conversion_factor":128,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.08},{"sku":"1032","name":"Alfredo sauce","category":"Ingredient","base_unit":"oz","purchase_unit":"1 gallon jug","conversion_factor":128,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.12},{"sku":"1033","name":"Buffalo sauce","category":"Ingredient","base_unit":"oz","purchase_unit":"1 gallon jug","conversion_factor":128,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.07},{"sku":"1034","name":"Basil pesto sauce","category":"Ingredient","base_unit":"oz","purchase_unit":"1 gallon jug","conversion_factor":128,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":0,"unit_cost":0.18},{"sku":"1040","name":"2 oz portion cup & lid","category":"Packaging","base_unit":"each","purchase_unit":"case of 250","conversion_factor":250,"lead_days":10,"supplier_id":"Beehive Packaging","active":true,"selling_price":0,"unit_cost":0.04},{"sku":"1041","name":"House sauce dipping cup","category":"Sides","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":0,"supplier_id":null,"active":true,"selling_price":0.75,"unit_cost":0},{"sku":"1042","name":"BBQ dipping cup","category":"Sides","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":0,"supplier_id":null,"active":true,"selling_price":0.75,"unit_cost":0},{"sku":"1043","name":"Buffalo dipping cup","category":"Sides","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":0,"supplier_id":null,"active":true,"selling_price":0.75,"unit_cost":0},{"sku":"1051","name":"Diet Coke (12 oz can)","category":"Beverage","base_unit":"each","purchase_unit":"case of 24","conversion_factor":24,"lead_days":4,"supplier_id":"Cascade Beverage & Sides","active":true,"selling_price":1.5,"unit_cost":0.35},{"sku":"1052","name":"Coca-Cola Zero Sugar (12 oz can)","category":"Beverage","base_unit":"each","purchase_unit":"case of 24","conversion_factor":24,"lead_days":4,"supplier_id":"Cascade Beverage & Sides","active":true,"selling_price":1.5,"unit_cost":0.35},{"sku":"1053","name":"Coca-Cola Cherry (12 oz can)","category":"Beverage","base_unit":"each","purchase_unit":"case of 24","conversion_factor":24,"lead_days":4,"supplier_id":"Cascade Beverage & Sides","active":true,"selling_price":1.5,"unit_cost":0.35},{"sku":"1054","name":"Sprite (12 oz can)","category":"Beverage","base_unit":"each","purchase_unit":"case of 24","conversion_factor":24,"lead_days":4,"supplier_id":"Cascade Beverage & Sides","active":true,"selling_price":1.5,"unit_cost":0.35},{"sku":"1055","name":"Fanta Orange (12 oz can)","category":"Beverage","base_unit":"each","purchase_unit":"case of 24","conversion_factor":24,"lead_days":4,"supplier_id":"Cascade Beverage & Sides","active":true,"selling_price":1.5,"unit_cost":0.35},{"sku":"2001","name":"Large Cheese Pizza","category":"Pizza","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":7,"supplier_id":"Summit Dry Goods","active":true,"selling_price":11.99,"unit_cost":0},{"sku":"2002","name":"Large Pepperoni Pizza","category":"Pizza","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":13.99,"unit_cost":0},{"sku":"2003","name":"Large Hawaiian Pizza","category":"Pizza","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":14.99,"unit_cost":0},{"sku":"2004","name":"Large Supreme Pizza","category":"Pizza","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":2,"supplier_id":"Mountain Produce","active":true,"selling_price":16.99,"unit_cost":0},{"sku":"2005","name":"Large Veggie Pizza","category":"Pizza","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":2,"supplier_id":"Mountain Produce","active":true,"selling_price":14.99,"unit_cost":0},{"sku":"2006","name":"Large BBQ Chicken Pizza","category":"Pizza","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":5,"supplier_id":"Valley Meats","active":true,"selling_price":15.99,"unit_cost":0},{"sku":"2007","name":"Breadsticks (8 pc)","category":"Sides","base_unit":"each","purchase_unit":"each","conversion_factor":1,"lead_days":3,"supplier_id":"Wasatch Dairy Co.","active":true,"selling_price":5.99,"unit_cost":0}],"bom":[{"parent_sku":"1030","component_sku":"1001","quantity":9.6},{"parent_sku":"1030","component_sku":"1021","quantity":0.2},{"parent_sku":"1030","component_sku":"1022","quantity":0.25},{"parent_sku":"1030","component_sku":"1023","quantity":0.15},{"parent_sku":"1030","component_sku":"1024","quantity":5.8},{"parent_sku":"1041","component_sku":"1031","quantity":2},{"parent_sku":"1041","component_sku":"1040","quantity":1},{"parent_sku":"1042","component_sku":"1015","quantity":2},{"parent_sku":"1042","component_sku":"1040","quantity":1},{"parent_sku":"1043","component_sku":"1033","quantity":2},{"parent_sku":"1043","component_sku":"1040","quantity":1},{"parent_sku":"2001","component_sku":"1002","quantity":6},{"parent_sku":"2001","component_sku":"1003","quantity":10},{"parent_sku":"2001","component_sku":"1004","quantity":0.5},{"parent_sku":"2001","component_sku":"1019","quantity":1},{"parent_sku":"2001","component_sku":"1030","quantity":1},{"parent_sku":"2002","component_sku":"1002","quantity":6},{"parent_sku":"2002","component_sku":"1003","quantity":8},{"parent_sku":"2002","component_sku":"1005","quantity":3},{"parent_sku":"2002","component_sku":"1019","quantity":1},{"parent_sku":"2002","component_sku":"1030","quantity":1},{"parent_sku":"2003","component_sku":"1002","quantity":6},{"parent_sku":"2003","component_sku":"1003","quantity":8},{"parent_sku":"2003","component_sku":"1007","quantity":3},{"parent_sku":"2003","component_sku":"1010","quantity":3},{"parent_sku":"2003","component_sku":"1019","quantity":1},{"parent_sku":"2003","component_sku":"1030","quantity":1},{"parent_sku":"2004","component_sku":"1002","quantity":6},{"parent_sku":"2004","component_sku":"1003","quantity":8},{"parent_sku":"2004","component_sku":"1005","quantity":2},{"parent_sku":"2004","component_sku":"1006","quantity":2},{"parent_sku":"2004","component_sku":"1011","quantity":1.5},{"parent_sku":"2004","component_sku":"1012","quantity":1},{"parent_sku":"2004","component_sku":"1013","quantity":1.5},{"parent_sku":"2004","component_sku":"1014","quantity":1},{"parent_sku":"2004","component_sku":"1019","quantity":1},{"parent_sku":"2004","component_sku":"1030","quantity":1},{"parent_sku":"2005","component_sku":"1002","quantity":6},{"parent_sku":"2005","component_sku":"1003","quantity":8},{"parent_sku":"2005","component_sku":"1011","quantity":2},{"parent_sku":"2005","component_sku":"1012","quantity":1.5},{"parent_sku":"2005","component_sku":"1013","quantity":2},{"parent_sku":"2005","component_sku":"1014","quantity":1.5},{"parent_sku":"2005","component_sku":"1019","quantity":1},{"parent_sku":"2005","component_sku":"1030","quantity":1},{"parent_sku":"2006","component_sku":"1003","quantity":8},{"parent_sku":"2006","component_sku":"1008","quantity":1},{"parent_sku":"2006","component_sku":"1009","quantity":3},{"parent_sku":"2006","component_sku":"1014","quantity":1},{"parent_sku":"2006","component_sku":"1015","quantity":5},{"parent_sku":"2006","component_sku":"1019","quantity":1},{"parent_sku":"2006","component_sku":"1030","quantity":1},{"parent_sku":"2007","component_sku":"1004","quantity":0.5},{"parent_sku":"2007","component_sku":"1016","quantity":2},{"parent_sku":"2007","component_sku":"1020","quantity":1},{"parent_sku":"2007","component_sku":"1030","quantity":1}],"suppliers":[{"id":"Summit Dry Goods","name":"Summit Dry Goods","erp_active":true,"quoted_lead_days":7},{"id":"Wasatch Dairy Co.","name":"Wasatch Dairy Co.","erp_active":true,"quoted_lead_days":3},{"id":"Valley Meats","name":"Valley Meats","erp_active":true,"quoted_lead_days":5},{"id":"Mountain Produce","name":"Mountain Produce","erp_active":true,"quoted_lead_days":2},{"id":"Cascade Beverage & Sides","name":"Cascade Beverage & Sides","erp_active":true,"quoted_lead_days":4},{"id":"Beehive Packaging","name":"Beehive Packaging","erp_active":true,"quoted_lead_days":10},{"id":"Provo Water Utility","name":"Provo Water Utility","erp_active":true,"quoted_lead_days":1}],"locations":[{"id":"provo","name":"Provo Campus Store","can_sell":true},{"id":"orem","name":"Orem Store","can_sell":true},{"id":"commissary","name":"Central Commissary","can_sell":false}],"orders":[{"id":"SO-2026-4182","location_id":"provo","pickup_at":"2026-11-18T17:00:00-07:00","status":"Order Placed","erp_prepared_at":null,"erp_name":"Study group","erp_order_number":4182},{"id":"SO-2026-4190","location_id":"provo","pickup_at":"2026-11-24T17:00:00-07:00","status":"Order Placed","erp_prepared_at":null,"erp_name":"Campus event","erp_order_number":4183},{"id":"SO-2026-4198","location_id":"provo","pickup_at":"2026-12-01T17:00:00-07:00","status":"Order Placed","erp_prepared_at":null,"erp_name":"Team lunch","erp_order_number":4184},{"id":"SO-2026-4210","location_id":"provo","pickup_at":"2026-12-08T17:00:00-07:00","status":"Order Placed","erp_prepared_at":null,"erp_name":"Club social","erp_order_number":4185},{"id":"SO-2026-4230","location_id":"orem","pickup_at":"2026-11-20T17:00:00-07:00","status":"Order Placed","erp_prepared_at":null,"erp_name":"Orem pickup","erp_order_number":4186}],"lines":[{"order_id":"SO-2026-4182","item_sku":"2002","quantity":24,"unit_price":13.99},{"order_id":"SO-2026-4190","item_sku":"2004","quantity":18,"unit_price":16.99},{"order_id":"SO-2026-4198","item_sku":"2001","quantity":20,"unit_price":11.99},{"order_id":"SO-2026-4210","item_sku":"2007","quantity":16,"unit_price":5.99},{"order_id":"SO-2026-4230","item_sku":"2002","quantity":8,"unit_price":13.99}],"stock":[{"item_sku":"1001","location_id":"provo","quantity":180},{"item_sku":"1002","location_id":"provo","quantity":150},{"item_sku":"1003","location_id":"provo","quantity":160},{"item_sku":"1005","location_id":"provo","quantity":35},{"item_sku":"1019","location_id":"provo","quantity":30},{"item_sku":"1022","location_id":"provo","quantity":-2},{"item_sku":"1030","location_id":"provo","quantity":12},{"item_sku":"1001","location_id":"orem","quantity":1200},{"item_sku":"1003","location_id":"orem","quantity":200},{"item_sku":"1005","location_id":"orem","quantity":70},{"item_sku":"1030","location_id":"orem","quantity":18}],"receipts":[{"id":"PO-2026-0834","item_sku":"1003","location_id":"provo","due":"2026-11-20","quantity":240,"kind":"Purchase"},{"id":"PO-2026-0821","item_sku":"1001","location_id":"provo","due":"2026-11-15","quantity":800,"kind":"Purchase"},{"id":"PR-2026-0021","item_sku":"1030","location_id":"provo","due":"2026-11-23","quantity":30,"kind":"Production"}],"production":[{"id":"PR-2026-0021","order_no":"PR-2026-0021","parent_sku":"1030","location_id":"provo","quantity_started":30,"status":"Planned","erp_due_date":"2026-11-23"}],"purchaseDrafts":[],"revision":"fixture-revision"}
+{
+  "version": 1,
+  "today": "2026-11-16",
+  "userId": "fixture",
+  "items": [
+    {
+      "sku": "1001",
+      "name": "Bread flour",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "50 lb sack",
+      "conversion_factor": 800,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.04
+    },
+    {
+      "sku": "1002",
+      "name": "Pizza sauce",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "#10 can",
+      "conversion_factor": 106,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.06
+    },
+    {
+      "sku": "1003",
+      "name": "Shredded mozzarella",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "5 lb bag",
+      "conversion_factor": 80,
+      "lead_days": 3,
+      "supplier_id": "Wasatch Dairy Co.",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.22
+    },
+    {
+      "sku": "1004",
+      "name": "Grated parmesan",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "1 lb bag",
+      "conversion_factor": 16,
+      "lead_days": 3,
+      "supplier_id": "Wasatch Dairy Co.",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.4
+    },
+    {
+      "sku": "1005",
+      "name": "Pepperoni",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "5 lb box",
+      "conversion_factor": 80,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.3
+    },
+    {
+      "sku": "1006",
+      "name": "Italian sausage crumbles",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "5 lb bag",
+      "conversion_factor": 80,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.28
+    },
+    {
+      "sku": "1007",
+      "name": "Diced ham",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "5 lb bag",
+      "conversion_factor": 80,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.26
+    },
+    {
+      "sku": "1008",
+      "name": "Bacon crumbles",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "2 lb bag",
+      "conversion_factor": 32,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.35
+    },
+    {
+      "sku": "1009",
+      "name": "Grilled chicken strips",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "5 lb bag",
+      "conversion_factor": 80,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.32
+    },
+    {
+      "sku": "1010",
+      "name": "Pineapple tidbits",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "#10 can",
+      "conversion_factor": 106,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.12
+    },
+    {
+      "sku": "1011",
+      "name": "Sliced mushrooms",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "3 lb bag",
+      "conversion_factor": 48,
+      "lead_days": 2,
+      "supplier_id": "Mountain Produce",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.15
+    },
+    {
+      "sku": "1012",
+      "name": "Sliced black olives",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "#10 can",
+      "conversion_factor": 106,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.14
+    },
+    {
+      "sku": "1013",
+      "name": "Diced green peppers",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "3 lb bag",
+      "conversion_factor": 48,
+      "lead_days": 2,
+      "supplier_id": "Mountain Produce",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.1
+    },
+    {
+      "sku": "1014",
+      "name": "Diced red onions",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "3 lb bag",
+      "conversion_factor": 48,
+      "lead_days": 2,
+      "supplier_id": "Mountain Produce",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.08
+    },
+    {
+      "sku": "1015",
+      "name": "BBQ sauce",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "gallon",
+      "conversion_factor": 128,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.07
+    },
+    {
+      "sku": "1016",
+      "name": "Garlic butter",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "2 lb tub",
+      "conversion_factor": 32,
+      "lead_days": 3,
+      "supplier_id": "Wasatch Dairy Co.",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.12
+    },
+    {
+      "sku": "1017",
+      "name": "Ranch dipping cup",
+      "category": "Sides",
+      "base_unit": "each",
+      "purchase_unit": "case of 100",
+      "conversion_factor": 100,
+      "lead_days": 4,
+      "supplier_id": "Cascade Beverage & Sides",
+      "active": true,
+      "selling_price": 0.75,
+      "unit_cost": 0.18
+    },
+    {
+      "sku": "1018",
+      "name": "Coca-Cola Original Taste (12 oz can)",
+      "category": "Beverage",
+      "base_unit": "each",
+      "purchase_unit": "case of 24",
+      "conversion_factor": 24,
+      "lead_days": 4,
+      "supplier_id": "Cascade Beverage & Sides",
+      "active": true,
+      "selling_price": 1.5,
+      "unit_cost": 0.35
+    },
+    {
+      "sku": "1019",
+      "name": "Large pizza box",
+      "category": "Packaging",
+      "base_unit": "each",
+      "purchase_unit": "bundle of 50",
+      "conversion_factor": 50,
+      "lead_days": 10,
+      "supplier_id": "Beehive Packaging",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.4
+    },
+    {
+      "sku": "1020",
+      "name": "Breadstick bag",
+      "category": "Packaging",
+      "base_unit": "each",
+      "purchase_unit": "pack of 250",
+      "conversion_factor": 250,
+      "lead_days": 10,
+      "supplier_id": "Beehive Packaging",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.1
+    },
+    {
+      "sku": "1021",
+      "name": "Instant yeast",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "2 lb bag",
+      "conversion_factor": 32,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.2
+    },
+    {
+      "sku": "1022",
+      "name": "Olive oil",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "1 gallon jug",
+      "conversion_factor": 128,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.08
+    },
+    {
+      "sku": "1023",
+      "name": "Fine salt",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "50 lb sack",
+      "conversion_factor": 800,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.01
+    },
+    {
+      "sku": "1024",
+      "name": "Filtered water",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "1 gallon equivalent",
+      "conversion_factor": 128,
+      "lead_days": 1,
+      "supplier_id": "Provo Water Utility",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.001
+    },
+    {
+      "sku": "1030",
+      "name": "House-made dough ball (16 oz)",
+      "category": "Ingredient",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 0,
+      "supplier_id": null,
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0
+    },
+    {
+      "sku": "1031",
+      "name": "Zack\u2019s house sauce",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "1 gallon jug",
+      "conversion_factor": 128,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.08
+    },
+    {
+      "sku": "1032",
+      "name": "Alfredo sauce",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "1 gallon jug",
+      "conversion_factor": 128,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.12
+    },
+    {
+      "sku": "1033",
+      "name": "Buffalo sauce",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "1 gallon jug",
+      "conversion_factor": 128,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.07
+    },
+    {
+      "sku": "1034",
+      "name": "Basil pesto sauce",
+      "category": "Ingredient",
+      "base_unit": "oz",
+      "purchase_unit": "1 gallon jug",
+      "conversion_factor": 128,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.18
+    },
+    {
+      "sku": "1040",
+      "name": "2 oz portion cup & lid",
+      "category": "Packaging",
+      "base_unit": "each",
+      "purchase_unit": "case of 250",
+      "conversion_factor": 250,
+      "lead_days": 10,
+      "supplier_id": "Beehive Packaging",
+      "active": true,
+      "selling_price": 0,
+      "unit_cost": 0.04
+    },
+    {
+      "sku": "1041",
+      "name": "House sauce dipping cup",
+      "category": "Sides",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 0,
+      "supplier_id": null,
+      "active": true,
+      "selling_price": 0.75,
+      "unit_cost": 0
+    },
+    {
+      "sku": "1042",
+      "name": "BBQ dipping cup",
+      "category": "Sides",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 0,
+      "supplier_id": null,
+      "active": true,
+      "selling_price": 0.75,
+      "unit_cost": 0
+    },
+    {
+      "sku": "1043",
+      "name": "Buffalo dipping cup",
+      "category": "Sides",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 0,
+      "supplier_id": null,
+      "active": true,
+      "selling_price": 0.75,
+      "unit_cost": 0
+    },
+    {
+      "sku": "1051",
+      "name": "Diet Coke (12 oz can)",
+      "category": "Beverage",
+      "base_unit": "each",
+      "purchase_unit": "case of 24",
+      "conversion_factor": 24,
+      "lead_days": 4,
+      "supplier_id": "Cascade Beverage & Sides",
+      "active": true,
+      "selling_price": 1.5,
+      "unit_cost": 0.35
+    },
+    {
+      "sku": "1052",
+      "name": "Coca-Cola Zero Sugar (12 oz can)",
+      "category": "Beverage",
+      "base_unit": "each",
+      "purchase_unit": "case of 24",
+      "conversion_factor": 24,
+      "lead_days": 4,
+      "supplier_id": "Cascade Beverage & Sides",
+      "active": true,
+      "selling_price": 1.5,
+      "unit_cost": 0.35
+    },
+    {
+      "sku": "1053",
+      "name": "Coca-Cola Cherry (12 oz can)",
+      "category": "Beverage",
+      "base_unit": "each",
+      "purchase_unit": "case of 24",
+      "conversion_factor": 24,
+      "lead_days": 4,
+      "supplier_id": "Cascade Beverage & Sides",
+      "active": true,
+      "selling_price": 1.5,
+      "unit_cost": 0.35
+    },
+    {
+      "sku": "1054",
+      "name": "Sprite (12 oz can)",
+      "category": "Beverage",
+      "base_unit": "each",
+      "purchase_unit": "case of 24",
+      "conversion_factor": 24,
+      "lead_days": 4,
+      "supplier_id": "Cascade Beverage & Sides",
+      "active": true,
+      "selling_price": 1.5,
+      "unit_cost": 0.35
+    },
+    {
+      "sku": "1055",
+      "name": "Fanta Orange (12 oz can)",
+      "category": "Beverage",
+      "base_unit": "each",
+      "purchase_unit": "case of 24",
+      "conversion_factor": 24,
+      "lead_days": 4,
+      "supplier_id": "Cascade Beverage & Sides",
+      "active": true,
+      "selling_price": 1.5,
+      "unit_cost": 0.35
+    },
+    {
+      "sku": "2001",
+      "name": "Large Cheese Pizza",
+      "category": "Pizza",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 7,
+      "supplier_id": "Summit Dry Goods",
+      "active": true,
+      "selling_price": 11.99,
+      "unit_cost": 0
+    },
+    {
+      "sku": "2002",
+      "name": "Large Pepperoni Pizza",
+      "category": "Pizza",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 13.99,
+      "unit_cost": 0
+    },
+    {
+      "sku": "2003",
+      "name": "Large Hawaiian Pizza",
+      "category": "Pizza",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 14.99,
+      "unit_cost": 0
+    },
+    {
+      "sku": "2004",
+      "name": "Large Supreme Pizza",
+      "category": "Pizza",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 2,
+      "supplier_id": "Mountain Produce",
+      "active": true,
+      "selling_price": 16.99,
+      "unit_cost": 0
+    },
+    {
+      "sku": "2005",
+      "name": "Large Veggie Pizza",
+      "category": "Pizza",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 2,
+      "supplier_id": "Mountain Produce",
+      "active": true,
+      "selling_price": 14.99,
+      "unit_cost": 0
+    },
+    {
+      "sku": "2006",
+      "name": "Large BBQ Chicken Pizza",
+      "category": "Pizza",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 5,
+      "supplier_id": "Valley Meats",
+      "active": true,
+      "selling_price": 15.99,
+      "unit_cost": 0
+    },
+    {
+      "sku": "2007",
+      "name": "Breadsticks (8 pc)",
+      "category": "Sides",
+      "base_unit": "each",
+      "purchase_unit": "each",
+      "conversion_factor": 1,
+      "lead_days": 3,
+      "supplier_id": "Wasatch Dairy Co.",
+      "active": true,
+      "selling_price": 5.99,
+      "unit_cost": 0
+    }
+  ],
+  "bom": [
+    {
+      "parent_sku": "1030",
+      "component_sku": "1001",
+      "quantity": 9.6
+    },
+    {
+      "parent_sku": "1030",
+      "component_sku": "1021",
+      "quantity": 0.2
+    },
+    {
+      "parent_sku": "1030",
+      "component_sku": "1022",
+      "quantity": 0.25
+    },
+    {
+      "parent_sku": "1030",
+      "component_sku": "1023",
+      "quantity": 0.15
+    },
+    {
+      "parent_sku": "1030",
+      "component_sku": "1024",
+      "quantity": 5.8
+    },
+    {
+      "parent_sku": "1041",
+      "component_sku": "1031",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "1041",
+      "component_sku": "1040",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "1042",
+      "component_sku": "1015",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "1042",
+      "component_sku": "1040",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "1043",
+      "component_sku": "1033",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "1043",
+      "component_sku": "1040",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2001",
+      "component_sku": "1002",
+      "quantity": 6
+    },
+    {
+      "parent_sku": "2001",
+      "component_sku": "1003",
+      "quantity": 10
+    },
+    {
+      "parent_sku": "2001",
+      "component_sku": "1004",
+      "quantity": 0.5
+    },
+    {
+      "parent_sku": "2001",
+      "component_sku": "1019",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2001",
+      "component_sku": "1030",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2002",
+      "component_sku": "1002",
+      "quantity": 6
+    },
+    {
+      "parent_sku": "2002",
+      "component_sku": "1003",
+      "quantity": 8
+    },
+    {
+      "parent_sku": "2002",
+      "component_sku": "1005",
+      "quantity": 3
+    },
+    {
+      "parent_sku": "2002",
+      "component_sku": "1019",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2002",
+      "component_sku": "1030",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2003",
+      "component_sku": "1002",
+      "quantity": 6
+    },
+    {
+      "parent_sku": "2003",
+      "component_sku": "1003",
+      "quantity": 8
+    },
+    {
+      "parent_sku": "2003",
+      "component_sku": "1007",
+      "quantity": 3
+    },
+    {
+      "parent_sku": "2003",
+      "component_sku": "1010",
+      "quantity": 3
+    },
+    {
+      "parent_sku": "2003",
+      "component_sku": "1019",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2003",
+      "component_sku": "1030",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1002",
+      "quantity": 6
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1003",
+      "quantity": 8
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1005",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1006",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1011",
+      "quantity": 1.5
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1012",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1013",
+      "quantity": 1.5
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1014",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1019",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2004",
+      "component_sku": "1030",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1002",
+      "quantity": 6
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1003",
+      "quantity": 8
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1011",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1012",
+      "quantity": 1.5
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1013",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1014",
+      "quantity": 1.5
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1019",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2005",
+      "component_sku": "1030",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2006",
+      "component_sku": "1003",
+      "quantity": 8
+    },
+    {
+      "parent_sku": "2006",
+      "component_sku": "1008",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2006",
+      "component_sku": "1009",
+      "quantity": 3
+    },
+    {
+      "parent_sku": "2006",
+      "component_sku": "1014",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2006",
+      "component_sku": "1015",
+      "quantity": 5
+    },
+    {
+      "parent_sku": "2006",
+      "component_sku": "1019",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2006",
+      "component_sku": "1030",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2007",
+      "component_sku": "1004",
+      "quantity": 0.5
+    },
+    {
+      "parent_sku": "2007",
+      "component_sku": "1016",
+      "quantity": 2
+    },
+    {
+      "parent_sku": "2007",
+      "component_sku": "1020",
+      "quantity": 1
+    },
+    {
+      "parent_sku": "2007",
+      "component_sku": "1030",
+      "quantity": 1
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "Summit Dry Goods",
+      "name": "Summit Dry Goods",
+      "erp_active": true,
+      "quoted_lead_days": 7
+    },
+    {
+      "id": "Wasatch Dairy Co.",
+      "name": "Wasatch Dairy Co.",
+      "erp_active": true,
+      "quoted_lead_days": 3
+    },
+    {
+      "id": "Valley Meats",
+      "name": "Valley Meats",
+      "erp_active": true,
+      "quoted_lead_days": 5
+    },
+    {
+      "id": "Mountain Produce",
+      "name": "Mountain Produce",
+      "erp_active": true,
+      "quoted_lead_days": 2
+    },
+    {
+      "id": "Cascade Beverage & Sides",
+      "name": "Cascade Beverage & Sides",
+      "erp_active": true,
+      "quoted_lead_days": 4
+    },
+    {
+      "id": "Beehive Packaging",
+      "name": "Beehive Packaging",
+      "erp_active": true,
+      "quoted_lead_days": 10
+    },
+    {
+      "id": "Provo Water Utility",
+      "name": "Provo Water Utility",
+      "erp_active": true,
+      "quoted_lead_days": 1
+    }
+  ],
+  "locations": [
+    {
+      "id": "provo",
+      "name": "Provo Campus Store",
+      "can_sell": true
+    },
+    {
+      "id": "orem",
+      "name": "Orem Store",
+      "can_sell": true
+    },
+    {
+      "id": "commissary",
+      "name": "Central Commissary",
+      "can_sell": false
+    }
+  ],
+  "orders": [
+    {
+      "id": "SO-2026-4182",
+      "location_id": "provo",
+      "pickup_at": "2026-11-18T17:00:00-07:00",
+      "status": "Order Placed",
+      "erp_prepared_at": null,
+      "erp_name": "Study group",
+      "erp_order_number": 4182
+    },
+    {
+      "id": "SO-2026-4190",
+      "location_id": "provo",
+      "pickup_at": "2026-11-24T17:00:00-07:00",
+      "status": "Order Placed",
+      "erp_prepared_at": null,
+      "erp_name": "Campus event",
+      "erp_order_number": 4183
+    },
+    {
+      "id": "SO-2026-4198",
+      "location_id": "provo",
+      "pickup_at": "2026-12-01T17:00:00-07:00",
+      "status": "Order Placed",
+      "erp_prepared_at": null,
+      "erp_name": "Team lunch",
+      "erp_order_number": 4184
+    },
+    {
+      "id": "SO-2026-4210",
+      "location_id": "provo",
+      "pickup_at": "2026-12-08T17:00:00-07:00",
+      "status": "Order Placed",
+      "erp_prepared_at": null,
+      "erp_name": "Club social",
+      "erp_order_number": 4185
+    },
+    {
+      "id": "SO-2026-4230",
+      "location_id": "orem",
+      "pickup_at": "2026-11-20T17:00:00-07:00",
+      "status": "Order Placed",
+      "erp_prepared_at": null,
+      "erp_name": "Orem pickup",
+      "erp_order_number": 4186
+    }
+  ],
+  "lines": [
+    {
+      "order_id": "SO-2026-4182",
+      "item_sku": "2002",
+      "quantity": 24,
+      "unit_price": 13.99
+    },
+    {
+      "order_id": "SO-2026-4190",
+      "item_sku": "2004",
+      "quantity": 18,
+      "unit_price": 16.99
+    },
+    {
+      "order_id": "SO-2026-4198",
+      "item_sku": "2001",
+      "quantity": 20,
+      "unit_price": 11.99
+    },
+    {
+      "order_id": "SO-2026-4210",
+      "item_sku": "2007",
+      "quantity": 16,
+      "unit_price": 5.99
+    },
+    {
+      "order_id": "SO-2026-4230",
+      "item_sku": "2002",
+      "quantity": 8,
+      "unit_price": 13.99
+    }
+  ],
+  "stock": [
+    {
+      "item_sku": "1001",
+      "location_id": "provo",
+      "quantity": 180
+    },
+    {
+      "item_sku": "1002",
+      "location_id": "provo",
+      "quantity": 150
+    },
+    {
+      "item_sku": "1003",
+      "location_id": "provo",
+      "quantity": 160
+    },
+    {
+      "item_sku": "1005",
+      "location_id": "provo",
+      "quantity": 35
+    },
+    {
+      "item_sku": "1019",
+      "location_id": "provo",
+      "quantity": 30
+    },
+    {
+      "item_sku": "1022",
+      "location_id": "provo",
+      "quantity": -2
+    },
+    {
+      "item_sku": "1030",
+      "location_id": "provo",
+      "quantity": 12
+    },
+    {
+      "item_sku": "1001",
+      "location_id": "orem",
+      "quantity": 1200
+    },
+    {
+      "item_sku": "1003",
+      "location_id": "orem",
+      "quantity": 200
+    },
+    {
+      "item_sku": "1005",
+      "location_id": "orem",
+      "quantity": 70
+    },
+    {
+      "item_sku": "1030",
+      "location_id": "orem",
+      "quantity": 18
+    }
+  ],
+  "receipts": [
+    {
+      "id": "PO-2026-0834",
+      "item_sku": "1003",
+      "location_id": "provo",
+      "due": "2026-11-20",
+      "quantity": 240,
+      "kind": "Purchase"
+    },
+    {
+      "id": "PO-2026-0821",
+      "item_sku": "1001",
+      "location_id": "provo",
+      "due": "2026-11-15",
+      "quantity": 800,
+      "kind": "Purchase"
+    },
+    {
+      "id": "PR-2026-0021",
+      "item_sku": "1030",
+      "location_id": "provo",
+      "due": "2026-11-23",
+      "quantity": 30,
+      "kind": "Production"
+    }
+  ],
+  "production": [
+    {
+      "id": "PR-2026-0021",
+      "order_no": "PR-2026-0021",
+      "parent_sku": "1030",
+      "location_id": "provo",
+      "quantity_started": 30,
+      "status": "Planned",
+      "erp_due_date": "2026-11-23"
+    }
+  ],
+  "purchaseDrafts": [],
+  "revision": "fixture-revision",
+  "purchasePolicy": {
+    "version": 1,
+    "options": {
+      "order_cost": 25,
+      "holding_rate": 0.25,
+      "safety_days": 2,
+      "review_days": 7
+    },
+    "usage": [
+      {
+        "item_sku": "1002",
+        "location_id": "provo",
+        "daily": 2000
+      }
+    ]
+  }
+}
