@@ -88,15 +88,41 @@ begin
  select * into cfg from public.erp_customer_availability_options where singleton;
  if not found then raise exception 'Customer availability settings are missing'; end if;
 
- -- A confirmed online checkout has already posted its sale and component
- -- consumption to inventory_transactions. Do not subtract pickup orders again.
- -- Future ledger entries and open purchase orders are excluded from current stock.
+ -- New online orders remain unposted until preparation. Reserve open order
+ -- quantities here so the customer view reflects stock already committed to
+ -- orders. Use finished product stock first, then reserve recipe components
+ -- for the remaining make-to-order quantity. Future ledger entries and open
+ -- purchase orders are excluded from current stock.
  with
- raw_stock as (
+ ledger_stock as (
   select t.item_sku,greatest(0,coalesce(sum(t.quantity),0)) on_hand
   from public.inventory_transactions t
   where t.location_id=loc.id and t.occurred_at<=statement_timestamp()
   group by t.item_sku
+ ),
+ pending_order_demand as (
+  select l.item_sku,sum(l.quantity)::numeric demand
+  from public.sales_orders o join public.sales_order_lines l on l.order_id=o.id
+  where o.location_id=loc.id and o.status='Order Placed' and o.erp_sale_id is null
+  group by l.item_sku
+ ),
+ direct_reservations as (
+  select d.item_sku,least(d.demand,coalesce(s.on_hand,0)) reserved
+  from pending_order_demand d left join ledger_stock s on s.item_sku=d.item_sku
+ ),
+ component_reservations as (
+  select b.component_sku item_sku,
+   sum(greatest(d.demand-coalesce(s.on_hand,0),0)*b.quantity) reserved
+  from pending_order_demand d
+  join public.bom_lines b on b.parent_sku=d.item_sku
+  left join ledger_stock s on s.item_sku=d.item_sku
+  group by b.component_sku
+ ),
+ raw_stock as (
+  select s.item_sku,greatest(0,s.on_hand-coalesce(d.reserved,0)-coalesce(c.reserved,0)) on_hand
+  from ledger_stock s
+  left join direct_reservations d on d.item_sku=s.item_sku
+  left join component_reservations c on c.item_sku=s.item_sku
  ),
  ingredient_usage as (
   select u.item_sku,u.daily from public.erp_history_usage(today-179,today,loc.id) u
