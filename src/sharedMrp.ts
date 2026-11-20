@@ -3,7 +3,7 @@ export type PlanItem={sku:string;name:string;category:string;base_unit:string;pu
 export type BomLine={parent_sku:string;component_sku:string;quantity:number};
 export type PlanOrder={id:string;erp_order_number:number;location_id:string;pickup_at:string;status:string;erp_name:string|null;erp_phone:string|null;erp_prepared_at:string|null;erp_sale_id:string|null;discount_pct:number;discount_amount:number};
 export type PlanLine={order_id:string;item_sku:string;quantity:number;unit_price:number};
-export type PlanSnapshot={version:1;today:string;userId:string;items:PlanItem[];bom:BomLine[];locations:{id:string;name:string;can_sell:boolean}[];purchaseDrafts?:{location_id:string;item_sku:string}[];suppliers:{id:string;name:string;quoted_lead_days:number;erp_active:boolean}[];orders:PlanOrder[];lines:PlanLine[];stock:{item_sku:string;location_id:string;quantity:number}[];receipts:{id:string;item_sku:string;location_id:string;due:string;quantity:number;kind:'Purchase'|'Production'}[];production:{id:string;order_no:string;parent_sku:string;location_id:string;quantity_started:number;status:string;erp_due_date:string|null}[]};
+export type PlanSnapshot={version:1;today:string;userId:string;revision?:string;orderWorkflow?:number;items:PlanItem[];bom:BomLine[];locations:{id:string;name:string;can_sell:boolean}[];purchaseDrafts?:{location_id:string;item_sku:string}[];suppliers:{id:string;name:string;quoted_lead_days:number;erp_active:boolean}[];orders:PlanOrder[];lines:PlanLine[];stock:{item_sku:string;location_id:string;quantity:number}[];receipts:{id:string;item_sku:string;location_id:string;due:string;quantity:number;kind:'Purchase'|'Production'}[];production:{id:string;order_no:string;parent_sku:string;location_id:string;quantity_started:number;status:string;erp_due_date:string|null}[]};
 export type PlanDemand={sku:string;location:string;date:string;qty:number;reference:string;orderIds?:string[]};
 export type PlanAction={date:string;orderBy:string;net:number;quantity:number;packs:number;late:boolean};
 export type PlanStep={date:string;gross:number;receipts:number;available:number;net:number;planned:number;projected:number};
@@ -32,10 +32,18 @@ export function calculateMrp(d:PlanSnapshot){
  const visited=new Set<string>(),visiting=new Set<string>(),order:string[]=[];
  const visit=(sku:string)=>{if(visiting.has(sku))throw Error('BOM cycle at '+sku);if(visited.has(sku))return;visiting.add(sku);for(const b of recipes.get(sku)??[])visit(b.component_sku);visiting.delete(sku);visited.add(sku);order.push(sku);};
  for(const i of d.items)visit(i.sku);order.reverse();
+ // Include later parent pickups whose preparation creates requirements inside
+ // the display window. Only the visible 28 days are returned to the UI.
+ const makeLead=new Map<string,number>();
+ const lookahead=(sku:string):number=>{if(makeLead.has(sku))return makeLead.get(sku)!;const children=recipes.get(sku)??[];const days=children.length?planLead(d,catalog.get(sku)!)+Math.max(0,...children.map(b=>lookahead(b.component_sku))):0;makeLead.set(sku,days);return days;};
+ const preparationLead=Math.max(0,...d.items.map(i=>lookahead(i.sku)));
+ if(!Number.isFinite(preparationLead)||preparationLead<0||preparationLead>3650)throw Error('Review the production lead times before planning.');
+ const calculationEnd=shiftDate(end,preparationLead);
+
  const demand=new Map<string,PlanDemand[]>(),key=(sku:string,loc:string)=>loc+'|'+sku;
  const add=(r:PlanDemand)=>{if(r.qty>0)demand.set(key(r.sku,r.location),[...(demand.get(key(r.sku,r.location))??[]),r]);};
  for(const so of d.orders.filter(o=>o.status==='Order Placed'&&!o.erp_prepared_at)){
-  const due=localDate(so.pickup_at);if(due>=end)continue;
+  const due=localDate(so.pickup_at);if(due>=calculationEnd)continue;
   if(due<d.today)warn({kind:'order',location:so.location_id,reference:so.id,message:'Overdue pickup Order '+so.erp_order_number+(so.erp_sale_id?' needs its preparation or collection status reviewed.':' is included in Week 1.')});
   // Existing orders already issued ingredients under the earlier checkout flow.
   // Surface them explicitly without purchasing those same ingredients again.
@@ -49,7 +57,7 @@ export function calculateMrp(d:PlanSnapshot){
   // In-progress ingredients have already been issued. Planned orders commit
   // ingredients whether or not their completion date is reliable.
   const release=p.erp_due_date?shiftDate(p.erp_due_date,-planLead(d,catalog.get(p.parent_sku)!)):d.today;
-  if(p.status==='Planned'&&release<end)for(const b of recipes.get(p.parent_sku)??[])add({sku:b.component_sku,location:p.location_id,date:release,qty:Number(p.quantity_started)*Number(b.quantity),reference:p.order_no});
+  if(p.status==='Planned'&&release<calculationEnd)for(const b of recipes.get(p.parent_sku)??[])add({sku:b.component_sku,location:p.location_id,date:release,qty:Number(p.quantity_started)*Number(b.quantity),reference:p.order_no});
  }
  const rows:PlanRow[]=[];
  for(const sku of order)for(const location of d.locations){
@@ -57,22 +65,22 @@ export function calculateMrp(d:PlanSnapshot){
   const lead=planLead(d,item);
   if(!Number.isFinite(lead)||lead<0)throw Error('Invalid lead time for '+item.name);
   const sources=(demand.get(key(sku,location.id))??[]).sort((a,b)=>a.date.localeCompare(b.date));
-  const incoming=receipts.filter(r=>r.item_sku===sku&&r.location_id===location.id&&localDate(r.due)<end);
+  const incoming=receipts.filter(r=>r.item_sku===sku&&r.location_id===location.id&&localDate(r.due)<calculationEnd);
   const onHand=d.stock.filter(s=>s.item_sku===sku&&s.location_id===location.id).reduce((n,s)=>n+Number(s.quantity),0);
-  const row:PlanRow={item,location:location.id,made,lead,onHand,onOrder:incoming.reduce((n,r)=>n+Number(r.quantity),0),gross:[0,0,0,0],net:[0,0,0,0],receipts:[0,0,0,0],projected:[0,0,0,0],actions:[],sources,transfer:[],timeline:[]};
+  const row:PlanRow={item,location:location.id,made,lead,onHand,onOrder:incoming.filter(r=>localDate(r.due)<end).reduce((n,r)=>n+Number(r.quantity),0),gross:[0,0,0,0],net:[0,0,0,0],receipts:[0,0,0,0],projected:[0,0,0,0],actions:[],sources:sources.filter(s=>s.date<end),transfer:[],timeline:[]};
   if(onHand<0)warn({kind:'stock',location:location.id,reference:sku,message:item.name+' has a negative ledger balance. Verify the physical count before purchasing.'});
   const week=(date:string)=>Math.max(0,Math.floor((Date.parse(date+'T12:00:00Z')-Date.parse(d.today+'T12:00:00Z'))/604800000));
   const dates=[...new Set([...sources.map(s=>s.date),...incoming.map(r=>localDate(r.due)),...Array.from({length:4},(_,n)=>shiftDate(d.today,n*7+6))])].sort();
   let balance=onHand;
-  for(const date of dates){const w=week(date);if(w>3)continue;
-   const arrival=incoming.filter(r=>localDate(r.due)===date).reduce((n,r)=>n+Number(r.quantity),0);balance+=arrival;row.receipts[w]+=arrival;const available=balance;
-   const due=sources.filter(s=>s.date===date).reduce((n,s)=>n+s.qty,0);row.gross[w]+=due;
+  for(const date of dates){const w=week(date),visible=w<4;if(!visible&&!made)continue;
+   const arrival=incoming.filter(r=>localDate(r.due)===date).reduce((n,r)=>n+Number(r.quantity),0);balance+=arrival;if(visible)row.receipts[w]+=arrival;const available=balance;
+   const due=sources.filter(s=>s.date===date).reduce((n,s)=>n+s.qty,0);if(visible)row.gross[w]+=due;
    if(due>0){const net=Math.max(0,due-balance);if(net>1e-8){
     const packs=made?Math.ceil(net):Math.ceil((net-1e-8)/Number(item.conversion_factor)),quantity=made?packs:packs*Number(item.conversion_factor),orderBy=shiftDate(date,-lead);
-    row.actions.push({date,orderBy,net,quantity,packs,late:orderBy<d.today});row.net[w]+=net;balance+=quantity;
+    if(visible){row.actions.push({date,orderBy,net,quantity,packs,late:orderBy<d.today});row.net[w]+=net;}balance+=quantity;
     if(made)for(const b of recipes.get(sku)!)add({sku:b.component_sku,location:location.id,date:orderBy,qty:quantity*Number(b.quantity),reference:'Make '+quantity+' × '+item.name+' for '+date,orderIds:[...new Set(sources.filter(s=>s.date===date).flatMap(s=>s.orderIds??[]))]});
-   }balance-=due;}row.projected[w]=balance;
-   if(due>0||arrival>0)row.timeline.push({date,gross:due,receipts:arrival,available,net:due>0?Math.max(0,due-available):0,planned:row.actions.find(a=>a.date===date)?.quantity??0,projected:balance});
+   }balance-=due;}if(visible)row.projected[w]=balance;
+   if(visible&&(due>0||arrival>0))row.timeline.push({date,gross:due,receipts:arrival,available,net:due>0?Math.max(0,due-available):0,planned:row.actions.find(a=>a.date===date)?.quantity??0,projected:balance});
   }
   if(!made&&row.actions.length&&(!supplier?.erp_active||!item.active))warn({kind:'supplier',location:location.id,reference:sku,message:!item.active?item.name+' is inactive. Review the item before ordering.':'Assign an active supplier to '+item.name+' before creating a PO draft.'});
   if(row.sources.length||row.onHand||row.onOrder||!made)rows.push(row);

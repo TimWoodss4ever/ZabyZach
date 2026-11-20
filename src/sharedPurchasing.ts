@@ -6,7 +6,7 @@ import {supplierMetrics} from './purchasing.ts';
 
 export type SharedSupplier={id:string;name:string;contact_name:string|null;email:string|null;phone:string|null;address:string|null;quoted_lead_days:number;payment_terms_days:number;erp_active:boolean;erp_notes:string;erp_revision:number};
 export type SharedItem={sku:string;name:string;barcode:string;category:string;base_unit:string;purchase_unit:string;conversion_factor:number;unit_cost:number;shelf_life_days:number|null;supplier_id:string|null;active:boolean;made:boolean};
-export type SharedPO={id:string;po_no:string;supplier_id:string;ship_to_location_id:string;ordered_at:string;expected_at:string;received_at:string|null;status:string;erp_notes:string;erp_revision:number;erp_quoted_lead_days:number|null;erp_payment_terms_days:number|null;erp_legacy_received_at:string|null};
+export type SharedPO={id:string;po_no:string;supplier_id:string;ship_to_location_id:string;ordered_at:string;expected_at:string;received_at:string|null;status:string;erp_notes:string;erp_revision:number;erp_quoted_lead_days:number|null;erp_payment_terms_days:number|null;erp_legacy_received_at:string|null;erp_mrp_required_on?:string|null;erp_mrp_order_by?:string|null};
 export type SharedLine={id:string;purchase_order_id:string;item_sku:string;quantity_purchase:number;quantity_received_purchase:number;unit_price_purchase:number};
 export type SharedReceipt={id:string;purchase_order_id:string;received_on:string;location_id:string;final_delivery:boolean;tax_amount:number;created_at:string};
 export type SharedReceiptLine={id:string;receipt_id:string;purchase_order_line_id:string;quantity_purchase:number;unit_price_purchase:number};

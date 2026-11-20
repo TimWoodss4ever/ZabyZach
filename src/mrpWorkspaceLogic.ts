@@ -1,3 +1,4 @@
+import {calculateMrp} from './sharedMrp.ts';
 import type {PlanRow, PlanSnapshot} from './sharedMrp.ts';
 
 export const totalRequirement = (row: PlanRow) => row.gross.reduce((sum, qty) => sum + qty, 0);
@@ -26,20 +27,25 @@ export function materialStatus(data: PlanSnapshot, row: PlanRow) {
 }
 
 export function buildMrpDrafts(data: PlanSnapshot, rows: PlanRow[]) {
-  const groups = new Map<string, {supplierId: string; locationId: string; date: string; send: false; notes: string; lines: {sku: string; qty: number; price: number}[]}>();
+  const groups = new Map<string, {supplierId: string; locationId: string; date: string; requiredOn:string; orderBy:string; send: false; notes: string; lines: {sku: string; qty: number; price: number}[]}>();
   const seen = new Set<string>();
+  const current = new Map(calculateMrp(data).rows.map(row => [rowKey(row), row]));
   if (!rows.length) throw Error('Select at least one purchased component with an uncovered requirement.');
-  for (const row of rows) {
+  for (const selected of rows) {
+    const row = current.get(rowKey(selected));
+    if (!row || JSON.stringify(row.actions) !== JSON.stringify(selected.actions)) throw Error('The selected plan changed. Refresh and review the current requirements.');
     const blocker = purchaseBlocker(data, row);
     if (blocker) throw Error(row.item.name + ': ' + blocker + '. Refresh the plan before continuing.');
     if (seen.has(rowKey(row))) throw Error('A component was selected more than once.');
     seen.add(rowKey(row));
     if (!Number.isFinite(Number(row.item.unit_cost)) || Number(row.item.unit_cost) < 0) throw Error('Review the cost of ' + row.item.name + ' before creating its draft.');
     const supplierId = row.item.supplier_id!;
-    const key = row.location + '|' + supplierId;
-    const group = groups.get(key) ?? {supplierId, locationId: row.location, date: data.today, send: false as const, notes: 'MRP confirmed requirements · ' + data.today, lines: []};
-    group.lines.push({sku: row.item.sku, qty: suggestedPacks(row), price: Math.round(Number(row.item.unit_cost) * Number(row.item.conversion_factor) * 100) / 100});
-    groups.set(key, group);
+    for (const action of row.actions) {
+      const key = row.location + '|' + supplierId + '|' + action.date + '|' + action.orderBy;
+      const group = groups.get(key) ?? {supplierId, locationId: row.location, date: data.today, requiredOn:action.date, orderBy:action.orderBy, send: false as const, notes: 'MRP confirmed requirements · ' + data.today + ' · Need by ' + action.date + ' · Order by ' + action.orderBy, lines: []};
+      group.lines.push({sku: row.item.sku, qty: action.packs, price: Math.round(Number(row.item.unit_cost) * Number(row.item.conversion_factor) * 100) / 100});
+      groups.set(key, group);
+    }
   }
-  return {orders: [...groups.values()]};
+  return {revision:data.revision, orders: [...groups.values()]};
 }

@@ -65,7 +65,7 @@ jobs:
             fi
             # Verify the older preservation suites before applying the final
             # numbered-order and deferred-consumption rollout in completion.sql.
-            if [ "$(basename "$migration")" = 202611180001_sales_orders_pos.sql ] || [ "$(basename "$migration")" = 202611190001_mrp_confirmed_demand.sql ]; then
+            if [ "$(basename "$migration")" = 202611180001_sales_orders_pos.sql ] || [ "$(basename "$migration")" = 202611190001_mrp_confirmed_demand.sql ] || [ "$(basename "$migration")" = 202611190002_mrp_planning_hardening.sql ]; then
               continue
             fi
             # Reporting tests capture existing rows/functions before applying it.
@@ -123,6 +123,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/shared-mrp.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/mrp-confirmed-demand.sql
           node tests/sql/mrp-concurrency.mjs
+          psql -v ON_ERROR_STOP=1 -f tests/sql/mrp-hardening.sql
+          node tests/sql/mrp-hardening-concurrency.mjs
       - name: Publish database diagnostic on failure
         if: failure()
         env:
