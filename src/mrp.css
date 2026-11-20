@@ -243,3 +243,5 @@
   /* The sticky component name remains the accessible detail control on phones. */
   .mrpw-table tr > th:last-child, .mrpw-table tr > td:last-child { display: none; }
 }
+
+.mrpw-period-controls{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 18px;flex-wrap:wrap}.mrpw-period-controls>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.mrpw-period-controls span{font-size:14px;color:#45647b}.mrpw-period-controls button[aria-pressed="true"]{background:#092e53;color:white}.mrpw-period-controls .button{min-height:36px;font-size:14px}@media(max-width:620px){.mrpw-period-controls{padding:12px}.mrpw-period-controls>div{width:100%}}

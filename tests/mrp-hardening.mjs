@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {calculateMrp,shiftDate} from '../src/sharedMrp.ts';
+import {buildMrpDrafts} from '../src/mrpWorkspaceLogic.ts';
+import {sharedPickupConfirmation,sendPlanningRequest} from '../src/planningRequests.ts';
+const item=(sku,extra={})=>({sku,name:sku,category:'Ingredient',base_unit:'each',purchase_unit:'case',conversion_factor:10,lead_days:3,supplier_id:'s',active:true,selling_price:0,unit_cost:1,...extra});
+const base=()=>({version:1,revision:'revision-1',today:'2026-11-19',userId:'test',items:[item('pizza',{selling_price:10}),item('dough',{lead_days:2}),item('flour')],bom:[{parent_sku:'pizza',component_sku:'dough',quantity:1},{parent_sku:'dough',component_sku:'flour',quantity:2}],locations:[{id:'A',name:'A',can_sell:true}],suppliers:[{id:'s',name:'S',quoted_lead_days:3,erp_active:true}],orders:[],lines:[],stock:[],receipts:[],production:[]});
+const order=(d,id,day,qty=5)=>{d.orders.push({id,erp_order_number:42,location_id:'A',pickup_at:shiftDate(d.today,day),status:'Order Placed',erp_prepared_at:null,erp_sale_id:null});d.lines.push({order_id:id,item_sku:'pizza',quantity:qty});};
+let d=base();order(d,'outside',28);let plan=calculateMrp(d);let flour=plan.rows.find(r=>r.item.sku==='flour');
+assert.deepEqual(flour.gross,[0,0,0,10]);assert.equal(flour.actions[0].date,'2026-12-15');assert.equal(flour.actions[0].orderBy,'2026-12-12');assert.deepEqual(flour.sources[0].orderIds,['outside']);
+assert.ok(plan.rows.every(r=>r.gross.length===4&&r.timeline.every(t=>t.date<plan.end)),'lookahead leaked extra display weeks');
+// A later prepared-parent receipt covers the later pickup; no unnecessary raw demand.
+d.receipts.push({id:'parent-supply',item_sku:'pizza',location_id:'A',due:'2026-12-17',quantity:5,kind:'Production'});assert.equal(calculateMrp(d).rows.find(r=>r.item.sku==='flour').gross.reduce((a,b)=>a+b,0),0);
+d=base();d.bom=[{parent_sku:'pizza',component_sku:'flour',quantity:1}];order(d,'early',3,10);order(d,'later',24,10);flour=calculateMrp(d).rows.find(r=>r.item.sku==='flour');
+const payload=buildMrpDrafts(d,[flour]);assert.equal(payload.revision,'revision-1');assert.equal(payload.orders.length,2);assert.deepEqual(payload.orders.map(o=>[o.requiredOn,o.orderBy,o.lines[0].qty]),[['2026-11-22','2026-11-19',1],['2026-12-13','2026-12-10',1]]);assert.ok(payload.orders.every(o=>o.send===false));
+d.orders.forEach(o=>o.status='Cancelled');assert.throws(()=>buildMrpDrafts(d,[flour]),/plan changed/);
+const request={name:'Test',location:'A',pickup:'2026-12-01T17:00:00 America/Denver',lines:[{sku:'pizza',qty:1}]};
+const response={id:'order',orderNo:42,total:10.73,status:'Order Placed',subtotal:10,discount:0,tax:.73,lines:[{sku:'pizza',qty:1,price:10}]};
+let confirmation=sharedPickupConfirmation(request,response);assert.equal(confirmation.quotedLines[0].price,10);assert.equal(confirmation.quotedTax,.73);assert.equal(confirmation.payment.amount,10.73);
+assert.throws(()=>sharedPickupConfirmation(request,{...response,status:'Cancelled'}),/cancelled.*not been reopened/);
+for(const status of ['Fulfilled','Closed'])assert.equal(sharedPickupConfirmation(request,{...response,status}).status,status);
+assert.throws(()=>sharedPickupConfirmation(request,{...response,status:'Invalid'}),/status/);
+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
+let call;const production={sku:'dough',locationId:'A',quantity:10,due:'2026-12-01'};
+await sendPlanningRequest('u','production-create','erp_create_scheduled_production',production,async(name,args)=>{call={name,args};return{data:{id:'production'},error:null};});
+assert.equal(call.args.p_action,undefined);assert.deepEqual(call.args.p_payload,production);assert.equal(memory.size,0);
+console.log('PASS: lead-aware parent lookahead with bounded display, dated pack drafts, stale-selection rejection, frozen-price client confirmation, cancelled/fulfilled/closed recovery and durable scheduled-production payloads. No demo or production records.');
