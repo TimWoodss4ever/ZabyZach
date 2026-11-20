@@ -3,7 +3,7 @@ const snapshot={
  suppliers:[{id:'supplier',name:'Test supplier',contact_name:null,email:null,phone:null,address:null,quoted_lead_days:2,payment_terms_days:30,erp_active:true,erp_notes:'',erp_revision:1}],
  items:[{sku:'test-item',name:'Synthetic flour',barcode:'000000000001',category:'Ingredient',base_unit:'oz',purchase_unit:'case of 100',conversion_factor:100,unit_cost:.4,shelf_life_days:null,supplier_id:'supplier',active:true,made:false}],
  locations:[{id:'store',name:'Test store'}],orders:[],lines:[],receipts:[],receiptLines:[],invoices:[],payments:[],reviews:[],inventoryReviews:[],audit:[],
- options:{order_cost:25,holding_rate:.25,safety_days:2,review_days:7,revision:1},stock:{'test-item':0},dailyUsage:{'test-item':10}
+ options:{order_cost:25,holding_rate:.25,safety_days:2,review_days:7,revision:1},availabilityOptions:{revision:1,minimum_recipe_servings:1,minimum_standalone_units:1},stock:{'test-item':0},dailyUsage:{'test-item':10}
 };
 const session={user:{id:'fixture-manager',email:'manager@example.test'}};
 
@@ -29,6 +29,12 @@ export function createClient(){
    const calls=(window as typeof window&{qaCalls?:unknown[]}).qaCalls??=((window as typeof window&{qaCalls?:unknown[]}).qaCalls=[]);
    calls.push({name,args});
    if(name==='erp_dashboard_summary')return{data:{today:snapshot.today,daily:[{day:snapshot.today,net:0}],todaySales:0,weekSales:0,weekProfit:0,awaiting:0,ready:0,owed:0,costWarnings:0},error:null};
+   if(name==='erp_customer_availability_options_read')return{data:structuredClone(snapshot.availabilityOptions),error:null};
+   if(name==='erp_customer_availability_options_save'){
+    if(Number(args.p_revision)!==snapshot.availabilityOptions.revision)return{data:null,error:{message:'Customer availability settings changed; refresh and try again'}};
+    snapshot.availabilityOptions={revision:snapshot.availabilityOptions.revision+1,minimum_recipe_servings:Number(args.p_minimum_recipe_servings),minimum_standalone_units:Number(args.p_minimum_standalone_units)};
+    return{data:structuredClone(snapshot.availabilityOptions),error:null};
+   }
    if(name==='erp_purchasing_snapshot_current'){
     const revision=String(calls.filter((c:any)=>c.name==='erp_purchasing_write').length);
     return{data:args.p_revision===revision?{unchanged:true,serverRevision:revision}:{...structuredClone(snapshot),serverRevision:revision},error:null};

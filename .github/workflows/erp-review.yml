@@ -30,7 +30,9 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build
       - name: Run workflow and preservation checks
-        run: node tests/run-all.mjs
+        run: |
+          node tests/run-all.mjs
+          node tests/customer-availability.mjs
 
   postgres:
     runs-on: ubuntu-latest
@@ -60,12 +62,12 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
           for migration in supabase/migrations/*.sql; do
             # New history wrappers depend on the reporting/inventory suites below.
-            if [ "$(basename "$migration")" = 202611170001_menu_history_contacts.sql ] || [ "$(basename "$migration")" = 202611170002_inventory_usage_performance.sql ] || [ "$(basename "$migration")" = 202611170004_erp_completion.sql ]; then
+            if [ "$(basename "$migration")" = 202611170001_menu_history_contacts.sql ] || [ "$(basename "$migration")" = 202611170002_inventory_usage_performance.sql ] || [ "$(basename "$migration")" = 202611170004_erp_completion.sql ] || [ "$(basename "$migration")" = 202611180001_sales_orders_pos.sql ] || [ "$(basename "$migration")" = 202611210001_customer_availability.sql ]; then
               continue
             fi
             # Verify the older preservation suites before applying the final
             # numbered-order and deferred-consumption rollout in completion.sql.
-            if [ "$(basename "$migration")" = 202611180001_sales_orders_pos.sql ] || [ "$(basename "$migration")" = 202611190001_mrp_confirmed_demand.sql ] || [ "$(basename "$migration")" = 202611190002_mrp_planning_hardening.sql ]; then
+            if [ "$(basename "$migration")" = 202611180001_sales_orders_pos.sql ] || [ "$(basename "$migration")" = 202611190001_mrp_confirmed_demand.sql ] || [ "$(basename "$migration")" = 202611190002_mrp_planning_hardening.sql ] || [ "$(basename "$migration")" = 202611210001_customer_availability.sql ]; then
               continue
             fi
             # Reporting tests capture existing rows/functions before applying it.
@@ -125,6 +127,10 @@ jobs:
           node tests/sql/mrp-concurrency.mjs
           psql -v ON_ERROR_STOP=1 -f tests/sql/mrp-hardening.sql
           node tests/sql/mrp-hardening-concurrency.mjs
+          # Completion installs the stock guard and availability migrations.
+          psql -v ON_ERROR_STOP=1 -f tests/sql/customer-availability.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611210001_customer_availability.sql
+          psql -v ON_ERROR_STOP=1 -c "select public.ci_assert((select count(*)=1 from public.erp_customer_availability_options),'availability migration rerun duplicated options'); select public.ci_assert(not has_function_privilege('anon','public.erp_customer_availability(text)','execute'),'availability RPC exposed to anon after rerun');"
       - name: Publish database diagnostic on failure
         if: failure()
         env:

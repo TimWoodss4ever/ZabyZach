@@ -80,6 +80,9 @@ select public.ci_assert((select digest=(select md5(string_agg(to_jsonb(p)::text,
 -- Apply final order migrations in production order after completion installation.
 \ir ../../supabase/migrations/202611180001_sales_orders_pos.sql
 \ir ../../supabase/migrations/202611190001_mrp_confirmed_demand.sql
+\ir ../../supabase/migrations/202611190002_mrp_planning_hardening.sql
+\ir ../../supabase/migrations/202611200001_stock_visibility_guard.sql
+\ir ../../supabase/migrations/202611210001_customer_availability.sql
 \echo 'Completion: verify phone demand, prepare-time posting, collection and shared financial totals'
 -- Phone confirmation creates demand; preparation posts revenue/cost/stock once.
 insert into auth.users(id) values('f3000000-0000-0000-0000-000000000001')on conflict do nothing;
