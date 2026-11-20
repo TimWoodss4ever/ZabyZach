@@ -4,7 +4,7 @@
   "files": {
     "src/posCheckout.ts": "58b5be15b08cde39ad83d89b1370caa02e012cb088db439914dd0f6c6847ceef",
     "src/posCheckoutData.ts": "863cb023160c62747af06e7d3d16bd167a43028ba243ccf4b54f49dfb6deed84",
-    "src/style.css": "1104a65e0439dabadf9168d064194c63e38dcf34c7781ab54159452855684966",
+    "src/style.css": "b3d62d466941996da2227c0706f007b6adca1be67e59bfaaddf272f62197fdbc",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
     "supabase/migrations/202611170003_pos_loyalty.sql": "6e569e2e26fb27a5ab15b4f6167e638928591a7e68df3a390704144c90cbbc82",
     "tests/sql/pos-loyalty.sql": "8a3415a4f62dc680fb3c04cfe6eb5302332380a3ae2a4b5d9bd1abf4ece784d0",
@@ -17,5 +17,6 @@
   "navigation_greeting_review": "Test-only correction: the existing manager@example.test fixture renders Good morning, Manager. All three desktop/return/mobile heading waits now assert that exact personalized greeting. Navigation/purchasing assertions, fixtures and dashboard implementation unchanged. Updated only this test hash; all other preservation checks remain enabled.",
   "mrp_demand_fix_review": "Based on current main 19f7e8410edc1d75aea10ac0cd8cb818d6e6d76b. Refreshed stale hashes only for unchanged main posCheckout.ts, style.css, tests/pos-checkout.mjs and the unchanged POS component. MrpWorkspace.tsx intentionally adds legacy-stock notices and alert links; its reviewed hash reflects this fix. All preservation assertions remain enabled. Native browser CI exposed existing desktop checkout overflow after the tender controls were added. The scoped desktop page/compact-height CSS now sizes from the actual heading; the POS component remains unchanged. The POS fixture imports the current product images and mirrors the page eyebrow.",
   "purchasing_rebase_review": "Latest uploaded main(14) production code and test repairs retained. Only BarcodeLabels.tsx hash changes for the requested redesign; POS, confirmed-demand MRP and global CSS retain the uploaded fingerprints.",
-  "mrp_hardening_review": "Current main 122a1c8 preserved. MRP intentionally adds daily/weekly periods, original order numbers, lead-aware source counts, dated draft previews and no-demand guidance; updated only its protected hash. POS/rewards component, shared POS transport, dependencies, historical migrations and unrelated protected files are unchanged. Integrated PR21 purchasing/barcode/name-search changes and stock visibility guard from main 0e0e8e7; preserved all existing migrations."
+  "mrp_hardening_review": "Current main 122a1c8 preserved. MRP intentionally adds daily/weekly periods, original order numbers, lead-aware source counts, dated draft previews and no-demand guidance; updated only its protected hash. POS/rewards component, shared POS transport, dependencies, historical migrations and unrelated protected files are unchanged. Integrated PR21 purchasing/barcode/name-search changes and stock visibility guard from main 0e0e8e7; preserved all existing migrations.",
+  "pos_viewport_review": "Reviewed scoped POS viewport, checkout grid and empty-state CSS changes against main 3233296; other styles and POS component preserved, browser coverage checks ancestor clipping."
 }

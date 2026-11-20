@@ -46,8 +46,8 @@ try{
  for(const [width,height] of [[1440,900],[1280,720],[1280,682],[1024,620]]){
   await page.setViewportSize({width,height});await page.waitForTimeout(150);
   await assertCheckout(`empty ${width}x${height}`);
-  const empty=await page.locator('.cart-empty').evaluate(el=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return r.top>=p.top-1&&r.bottom<=p.bottom+1;});
-  assert.ok(empty,'empty-order message clipped');
+  const empty=await page.locator('.cart-empty').evaluate(el=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return {top:r.top,bottom:r.bottom,parentTop:p.top,parentBottom:p.bottom};});
+  assert.ok(empty.top>=empty.parentTop-1&&empty.bottom<=empty.parentBottom+1,`empty-order message clipped at ${width}x${height}: ${JSON.stringify(empty)}`);
   await page.screenshot({path:`${output}/pos-empty-${width}-${height}.png`,fullPage:true});
  }
  for(let n=0;n<15;n++)await page.locator('.product-tile').nth(n).click();

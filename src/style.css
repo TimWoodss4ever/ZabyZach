@@ -97,7 +97,8 @@
 .pos-checkout-footer>.totals,.pos-checkout-footer>.checkout-btn,.pos-checkout-footer>.payment-note,.pos-checkout-footer>.pos-pending{grid-column:1 / -1}
 .pos-layout .pos-tender{padding:9px 16px 9px 0;align-content:start}
 .pos-layout .pos-tender small{display:none}
-.pos-layout .cart-empty{height:auto;min-height:100%;padding:12px 4px;text-align:center}
+.pos-layout .cart-lines:has(>.cart-empty){display:flex;align-items:center;justify-content:center;min-height:100px}
+.pos-layout .cart-empty{height:auto;min-height:0;padding:8px 4px;text-align:center}
 .pos-layout .cart-empty>div{font-size:20px}
 .pos-layout .pos-customer-details summary span{display:inline;margin-left:8px}
 .pos-layout .cart-options{padding:9px 16px}
