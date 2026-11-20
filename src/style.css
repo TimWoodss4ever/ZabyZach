@@ -83,17 +83,24 @@
 .pos-layout .pos-menu{display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .pos-layout .pos-toolbar,.pos-layout .menu-heading,.pos-layout .pos-browse{flex-shrink:0}
 .pos-layout .pos-menu-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:16px;scrollbar-gutter:stable}
-.pos-layout .cart-panel{position:static;display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;overflow:hidden}
+.pos-layout .cart-panel{position:static;display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;overflow:hidden;padding:0}
 .pos-layout .cart-head{padding:15px 16px;flex:none}
 .pos-layout .cart-lines{flex:1;min-height:60px;max-height:none;overflow:auto;overscroll-behavior:contain;padding:0 14px;scrollbar-gutter:stable}
 .pos-layout .cart-line{padding:12px 0}
-.pos-layout .pos-customer-details{flex:none;max-height:38%;overflow:auto;border-block:1px solid var(--line);background:#fafcfe}
+.pos-layout .pos-customer-details{flex:0 1 auto;max-height:min(38%,calc(100% - 310px));overflow:auto;border-block:1px solid var(--line);background:#fafcfe}
 .pos-customer-details summary{padding:12px 16px;cursor:pointer;font-size:12px;font-weight:700;color:var(--navy)}
 .pos-customer-details summary span{display:block;margin:5px 0 0 13px;font-size:11px;font-weight:400;color:#62748a}
 .pos-layout .pos-pickup-details{padding:12px 16px;display:grid;grid-template-columns:1fr;gap:6px}
 .pos-layout .pos-pickup-details input{font-size:13px;min-height:36px}
 .pos-layout .pos-rewards-panel{margin:0 12px 12px}
-.pos-layout .pos-checkout-footer{flex:none;border-top:1px solid var(--line);background:white;padding-bottom:8px}
+.pos-layout .pos-checkout-footer{flex:none;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-top:1px solid var(--line);background:white;padding:8px 0}
+.pos-checkout-footer>.totals,.pos-checkout-footer>.checkout-btn,.pos-checkout-footer>.payment-note,.pos-checkout-footer>.pos-pending{grid-column:1 / -1}
+.pos-layout .pos-tender{padding:9px 16px 9px 0;align-content:start}
+.pos-layout .pos-tender small{display:none}
+.pos-layout .cart-lines:has(>.cart-empty){display:flex;align-items:center;justify-content:center;min-height:100px}
+.pos-layout .cart-empty{height:auto;min-height:0;padding:8px 4px;text-align:center}
+.pos-layout .cart-empty>div{font-size:20px}
+.pos-layout .pos-customer-details summary span{display:inline;margin-left:8px}
 .pos-layout .cart-options{padding:9px 16px}
 .pos-layout .totals{padding:8px 16px}
 .pos-layout .totals>div{margin-bottom:6px}
@@ -173,14 +180,19 @@
 
 /* Size desktop checkout from the actual page heading, including tender controls. */
 @media(min-width:901px){
- .page-wrap:has(>.pos-layout){height:calc(100dvh - 66px);display:flex;flex-direction:column}
+ .page-wrap:has(>.pos-layout){height:calc(100dvh - 66px);display:flex;flex-direction:column;padding-bottom:20px}
  .page-wrap:has(>.pos-layout)>.page-top{flex:0 0 auto}
- .page-wrap>.pos-layout{flex:1 1 0;height:auto;min-height:0}
+ .page-wrap>.pos-layout{flex:1 1 0;height:auto;min-height:0;grid-template-rows:minmax(0,1fr)}
 }
 @media(min-width:901px) and (max-height:800px){
+ .page-wrap:has(>.pos-layout){padding-top:16px}
+ .page-wrap:has(>.pos-layout)>.page-top{margin-bottom:12px}
  .pos-layout .cart-head{padding:8px 16px}
  .pos-customer-details summary{padding:8px 16px}
  .pos-layout .cart-options{padding:5px 16px}
  .pos-layout .pos-tender{padding-top:6px;gap:3px}
  .pos-layout .payment-note{display:none}
 }
+
+/* At heavy zoom, retain full controls through page scrolling instead of clipping. */
+@media(min-width:901px) and (max-height:580px){.page-wrap:has(>.pos-layout){height:auto;min-height:calc(100dvh - 66px)}.page-wrap>.pos-layout{flex:none;height:480px}}

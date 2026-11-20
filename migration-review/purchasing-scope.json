@@ -50,7 +50,7 @@
     "src/reporting.ts": "3c1811cee4c27dab67c12d470ea46e9b71bd4eb19ad32cfd2d46f7ad8f94639a",
     "src/scanCode128.ts": "b52197185a819d9874280a23d122482f0350f1afb39c9751430a65c31c34fc85",
     "src/sharedMrp.ts": "59bfa0f14015313c7ef5641d30108fd32c9fcd54efab79ec195569edef0f5896",
-    "src/style.css": "1104a65e0439dabadf9168d064194c63e38dcf34c7781ab54159452855684966",
+    "src/style.css": "b3d62d466941996da2227c0706f007b6adca1be67e59bfaaddf272f62197fdbc",
     "src/supabase.ts": "b5c8c6433e6d25f27b02c0781d5622ecc1d387c177cadf3065a8c20f7627ca41",
     "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
     "src/workspaceDatabase.ts": "988d8194f20783a3197434faf93cb99cdba3e9c17646d36d0bb2989d6d4e50ee",
@@ -74,5 +74,6 @@
     "supabase/migrations/202611190001_mrp_confirmed_demand.sql": "0541e748c8a4c36dcffbfe74184a72c950931e499c7fcde0ac16d4230aa8462e"
   },
   "connectedPrefix": "aa3fccdffaa1fd92bec03a384effa12c42970ee11486b567eb7cb46f44eb31d4",
-  "mrp_hardening_review": "MRP files and production-creation prefix intentionally updated for reviewed quote/recovery, dated planning and scheduled-production changes. Current PR21 receiving, labels, name search, unrelated inventory/returns loaders and historical migrations remain protected."
+  "mrp_hardening_review": "MRP files and production-creation prefix intentionally updated for reviewed quote/recovery, dated planning and scheduled-production changes. Current PR21 receiving, labels, name search, unrelated inventory/returns loaders and historical migrations remain protected.",
+  "pos_viewport_review": "Reviewed scoped POS viewport, checkout grid and empty-state CSS changes against main 3233296; other styles and POS component preserved, browser coverage checks ancestor clipping."
 }
