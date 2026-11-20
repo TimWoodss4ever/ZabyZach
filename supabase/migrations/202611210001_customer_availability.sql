@@ -37,8 +37,8 @@ begin
   if creator is null then raise exception 'The reviewed customer-order function is missing. Nothing was installed.'; end if;
   creator_body:=lower(regexp_replace(pg_get_functiondef(creator::oid),'[[:space:]]+',' ','g'));
   if position('public.erp_create_pickup_order' in wrapper)=0
-   or position('existing.created_by is distinct from auth.uid()' in creator_body)=0
-   or position('erp_checkout_post_sale' in creator_body)=0 then
+   or position('public.current_role() is distinct from ''customer''' in wrapper)=0
+   or position('existing.created_by is distinct from auth.uid()' in creator_body)=0 then
    raise exception 'Checkout differs from the reviewed ownership-checked definitions. Nothing was installed.';
   end if;
  end if;
