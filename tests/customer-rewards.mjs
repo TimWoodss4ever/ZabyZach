@@ -1,0 +1,84 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import ts from 'typescript';
+import * as React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {validateCustomerRewards,rewardsProgress,customerRewardsRpc} from '../src/customerRewardsData.ts';
+import {sendPlanningRequest,pendingPlanningRequest} from '../src/planningRequests.ts';
+
+const data={status:'ready',available:105,posted:205,reserved:100,activity:[{id:'sale:A',occurred_at:'2026-11-20T12:00:00Z',label:'Completed sale',reference:'Order 123',points:5,reserved_points:0}]};
+assert.equal(validateCustomerRewards(data),data);
+for(const status of ['not_enrolled','link_review'])assert.equal(validateCustomerRewards({status}).status,status);
+for(const r of [null,{status:'ready'},{...data,available:106},{...data,activity:[{...data.activity[0],points:NaN}]},{...data,reserved:-1}])assert.throws(()=>validateCustomerRewards(r),/incomplete/);
+assert.equal(validateCustomerRewards({...data,available:-10,posted:90}).available,-10,'refund debt must remain visible');
+assert.deepEqual([-10,0,50,100,205].map(rewardsProgress),[0,0,50,100,100]);
+assert.equal(customerRewardsRpc({rewardsVersion:1}),'erp_customer_rewards_checkout');
+for(const p of [null,{}, {name:'Existing pending order'}])assert.equal(customerRewardsRpc(p),'erp_checkout_order');
+
+const store=new Map();globalThis.localStorage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)};
+const payload={rewardsVersion:1,redeemRewards:true,name:'Fixture',lines:[{sku:'fixture',qty:1}]};
+let first,attempt=0;
+const invoke=async(_name,args)=>{
+ assert.equal(customerRewardsRpc(args.p_payload),'erp_customer_rewards_checkout');
+ assert.deepEqual(Object.keys(args).sort(),['p_payload','p_request']);
+ if(!attempt++){first=structuredClone(args);throw Error('Lost response');}
+ assert.deepEqual(args,first,'a retry must retain the original request ID and redemption choice');
+ return {data:{id:args.p_request,orderNo:1,total:5.36},error:null};
+};
+await assert.rejects(sendPlanningRequest('customer-A','pickup','erp_checkout_order',payload,invoke),/Lost response/);
+assert.ok(pendingPlanningRequest('customer-A','pickup'));
+assert.equal(pendingPlanningRequest('customer-B','pickup'),null,'pending requests remain account scoped');
+await assert.rejects(sendPlanningRequest('customer-A','pickup','erp_checkout_order',{...payload,redeemRewards:false},invoke),/earlier save/);
+await sendPlanningRequest('customer-A','pickup','erp_checkout_order',payload,invoke);
+assert.equal(pendingPlanningRequest('customer-A','pickup'),null);
+await assert.rejects(sendPlanningRequest('customer-A','pickup','erp_checkout_order',payload,async()=>({data:null,error:{code:'P0001',message:'Not enough available points'}})),/Not enough/);
+assert.equal(pendingPlanningRequest('customer-A','pickup'),null,'a definite rejected transaction releases the local pending request');
+
+const source=await readFile('src/CustomerRewards.tsx','utf8');
+const code=source.slice(source.indexOf('type AreaProps='));
+const compiled=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
+const components=new Function('React','rewardsProgress','exports',compiled+';return {MyRewards,RewardsRedemption};')(React,rewardsProgress,{});
+const render=r=>renderToStaticMarkup(React.createElement(components.MyRewards,{data:r,error:'',loading:false,onRefresh(){}}));
+let html=render(data);for(const text of ['105 points available','100 reserved','Order 123','5 points','100 available points'])assert.ok(html.includes(text));
+assert.match(render({status:'not_enrolled'}),/does not link rewards/);
+assert.match(render({status:'link_review'}),/No membership has been linked automatically/);
+html=renderToStaticMarkup(React.createElement(components.MyRewards,{data:null,error:'Unavailable',loading:false,onRefresh(){}}));assert.match(html,/role="alert"/);assert.doesNotMatch(html,/0 points available/);
+const redeem=(r,afterWelcome=10,selected=false,disabled=false)=>renderToStaticMarkup(React.createElement(components.RewardsRedemption,{data:r,redeem:selected,afterWelcome,disabled,onChange(){}}));
+assert.doesNotMatch(redeem(data),/input[^>]+disabled/);
+assert.match(redeem({...data,available:99,posted:199}),/input[^>]+disabled/);
+assert.match(redeem(data,4.99),/input[^>]+disabled/);
+assert.match(redeem(data,10,true,true),/fieldset disabled/,'submitting locks the redemption choice');
+assert.doesNotMatch(redeem({...data,available:99,posted:199},10,true),/input[^>]+disabled/,'changed balance still allows unchecking');
+// Execute the real hook with controlled hooks/network/timers to check account
+// switches, stale replies, hidden tabs and cleanup without a browser install.
+const values=[],effects=[],callbacks=[],refs=[];let index=0;
+let scheduled=[];const pending=[];let interval,cleared=0,removed=0;
+globalThis.window={setInterval(fn,ms){assert.equal(ms,15000);interval=fn;return 1;},clearInterval(){cleared++;}};
+globalThis.document={hidden:false,addEventListener(){},removeEventListener(){removed++;}};
+const same=(a,b)=>a&&a.length===b.length&&a.every((v,i)=>v===b[i]);
+const state=initial=>{const i=index++;if(!(i in values))values[i]=initial;return[values[i],value=>{values[i]=value;}];};
+const ref=initial=>{const i=index++;return refs[i]??(refs[i]={current:initial});};
+const callback=(fn,deps)=>{const i=index++;if(!same(callbacks[i]?.deps,deps))callbacks[i]={fn,deps};return callbacks[i].fn;};
+const effect=(fn,deps)=>{const i=index++;if(!same(effects[i]?.deps,deps)){const prior=effects[i];scheduled.push(()=>{prior?.cleanup?.();effects[i]={deps,cleanup:fn()};});}};
+const client={rpc(name){assert.equal(name,'erp_customer_rewards_snapshot');return {abortSignal(signal){return new Promise(resolve=>pending.push({signal,resolve}));}};}};
+const hookSource=source.slice(source.indexOf('export function useCustomerRewards('),source.indexOf('\ntype AreaProps='));
+const hookJs=ts.transpileModule(hookSource,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const useRewards=new Function('supabase','validateCustomerRewards','useState','useRef','useCallback','useEffect','exports',hookJs+';return useCustomerRewards;')(client,validateCustomerRewards,state,ref,callback,effect,{});
+const hook=user=>{index=0;const result=useRewards(user);const run=scheduled;scheduled=[];run.forEach(fn=>fn());return result;};
+hook('A');assert.equal(pending.length,1);
+pending[0].resolve({data,error:null});await Promise.resolve();await Promise.resolve();
+assert.equal(hook('A').data.available,105);
+assert.equal(hook('B').data,null,'the first render for B must never show A balance');
+assert.equal(pending[0].signal.aborted,true);assert.equal(pending.length,2);
+pending[1].resolve({data:{status:'not_enrolled'},error:null});await Promise.resolve();await Promise.resolve();
+assert.equal(hook('B').data.status,'not_enrolled');
+document.hidden=true;interval();assert.equal(pending.length,2,'hidden tabs do not poll');
+document.hidden=false;interval();assert.equal(pending.length,3);
+pending[2].resolve({data:null,error:{message:'Service unavailable'}});await Promise.resolve();await Promise.resolve();
+assert.equal(hook('B').data,null);assert.match(hook('B').error,/Service unavailable/);
+interval();const oldRequest=pending.at(-1);
+hook('C');const newRequest=pending.at(-1);assert.notEqual(oldRequest,newRequest);assert.equal(oldRequest.signal.aborted,true);
+oldRequest.resolve({data,error:null});await Promise.resolve();await Promise.resolve();assert.equal(hook('C').data,null,'late replies from an earlier account are ignored');
+newRequest.resolve({data:{status:'link_review'},error:null});await Promise.resolve();await Promise.resolve();assert.equal(hook('C').data.status,'link_review');
+effects.forEach(e=>e?.cleanup?.());assert.ok(cleared>=2&&removed>=2);
+console.log('PASS: rewards validation/debt/progress, legacy routing, durable account-scoped retries, rejected-request recovery, actual UI rendering/eligibility, and actual hook account-switch isolation/polling/error/cleanup. Mock transport; native SQL/concurrency tests are separate.');
