@@ -9,8 +9,8 @@
     "supabase/migrations/202611170003_pos_loyalty.sql": "6e569e2e26fb27a5ab15b4f6167e638928591a7e68df3a390704144c90cbbc82",
     "tests/sql/pos-loyalty.sql": "8a3415a4f62dc680fb3c04cfe6eb5302332380a3ae2a4b5d9bd1abf4ece784d0",
     "tests/pos-checkout.mjs": "559c7db930316e42d14128b875e54c4b9349595547eabdd655580c0117950e6d",
-    "tests/browser/navigation-workspace.mjs": "7fc80697e8f61140aa087c003e11924478f54044c2f11793c57cf325431ef6b0",
-    "src/MrpWorkspace.tsx": "2964c250c1c49f621e3182055fe652bbaa930c03c5d98fc82bde8cf10478969a",
+    "tests/browser/navigation-workspace.mjs": "9036484ff734c635844abf31a9a6c3045e0c407dac88fae4a4e479f59d0a8c9f",
+    "src/MrpWorkspace.tsx": "8e30724294c0b26dfaf2410b78c82c7215a00d4d02de83cbee0267f92cc3ca2f",
     "src/BarcodeLabels.tsx": "45ec20e716891e2fc95af92e72d9390560395d3ce8b616729a909cc5ae62de73"
   },
   "sales_tax_preservation_review": "PizzaGuide.tsx and BarcodeLabels.tsx hashes refreshed to their exact, unchanged bytes in supplied main caeb0940f9ec8f03dc3010742158560ea1a26957. Prior hashes were stale. No source changes in these files; all other protected hashes and checks retained. POS component hash also refreshed to the identical supplied-main App.tsx component; App.tsx is not changed or included.",

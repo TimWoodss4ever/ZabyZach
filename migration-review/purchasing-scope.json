@@ -6,7 +6,7 @@
     "src/InventoryAvailability.tsx": "f1fdf07cc8bc875a58e702bb201190e944275e8792202ef65d485345984aafaa",
     "src/InventoryDialog.tsx": "01bcf908c4c412bf4ab8a824917373c6704e32e1376783842449c0b14692cdcf",
     "src/InventoryWorkspaceData.ts": "20c031d06e78beb530226aa18d0ef407e88fc087567ab10b16680ae6960f5780",
-    "src/MrpWorkspace.tsx": "2964c250c1c49f621e3182055fe652bbaa930c03c5d98fc82bde8cf10478969a",
+    "src/MrpWorkspace.tsx": "8e30724294c0b26dfaf2410b78c82c7215a00d4d02de83cbee0267f92cc3ca2f",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
     "src/PurchasingScreens.tsx": "ba5c2e113c638fde160e209869bb3d4b2e4e143527f290bd8e5c982673991a83",
     "src/SharedDashboard.tsx": "e9161be633e5d04b59476b4477559035d27f6cb3f830f8babf36c2bdf8ba222e",

@@ -86,6 +86,12 @@ try{
  assert.equal(await page.evaluate(()=>window.qaSnapshot.orders.length),1,'completing review does not add another purchase order');
  assert.equal(await page.evaluate(()=>window.qaSnapshot.orders[0].status),'Draft','inventory review leaves the separate draft unissued');
  assert.equal(await page.evaluate(()=>window.qaSnapshot.stock['test-item']),0,'review and draft creation do not create inventory transactions');
+ await item.check();await page.getByRole('button',{name:/Create draft POs/}).click();
+ await page.getByRole('heading',{name:'Review existing draft quantities',exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Save draft quantities',exact:true}).count(),1);
+ assert.equal(await page.evaluate(()=>window.qaCalls.filter(call=>call.name==='erp_purchasing_write').length),3,'existing draft review must not save a duplicate');
+ await page.getByRole('button',{name:'Close',exact:true}).click();
+
  assert.equal(await page.locator('.review-recent').innerText().then(text=>text.includes('Synthetic review only')),false,'history disclosure remains collapsed until opened');
  await page.locator('.review-recent summary').click();
  await page.getByText('Synthetic review only').waitFor();

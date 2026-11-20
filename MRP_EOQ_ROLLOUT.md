@@ -6,7 +6,7 @@ This update connects the confirmed-demand MRP minimum with an optional EOQ/revie
 
 - Cover confirmed demand is the default. Gross requirements, shortages, weekly/daily views and original deadlines are unchanged.
 - Include routine replenishment compares the MRP minimum with the shared EOQ/review policy. A component is topped up once at its earliest requirement. Extra packs are credited toward later requirements so the same demand is not purchased twice.
-- The review displays gross demand, on-hand/datetimed receipts, shortage, minimum packs, raw/shelf-adjusted EOQ, local usage, the routine target, selected packs, incremental cost, original requirement/order-by dates and the resulting purchase schedule.
+- The review displays gross demand, on-hand/dated receipts, shortage, minimum packs, raw/shelf-adjusted EOQ, local usage, the routine target, selected packs, incremental cost, original requirement/order-by dates and the resulting purchase schedule.
 - EOQ uses the existing shared ordering options, supplier lead, item cost, supplier pack conversion and the existing 180-day historical usage source. MRP uses the selected location; Inventory Review retains its existing combined-business scope. Differences are explicitly labeled.
 - Shelf-life limits constrain optional routine replenishment. They never erase confirmed demand. Whole-pack rounding or confirmed requirements may exceed the historical shelf-life target and produce a warning. No local usage produces no extra replenishment. No supplier MOQ is invented.
 - All existing drafts at the same destination and SKU are checked together, including manual, Inventory Review and MRP drafts. Drafts never count as incoming supply. Intentional dated groups within one MRP request are allowed.
