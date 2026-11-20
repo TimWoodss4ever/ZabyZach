@@ -29,16 +29,39 @@ let browser;const errors=[];
 try{
  for(let n=0;n<100;n++){try{if((await fetch('http://127.0.0.1:4179')).ok)break;}catch{}if(n===99)throw Error(logs);await new Promise(r=>setTimeout(r,200));}
  browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}: {})});const page=await browser.newPage({viewport:{width:1440,height:900}});page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:4179');await page.getByRole('heading',{name:'Current order'}).waitFor();
+ // A button may be inside the viewport yet clipped by an overflow:hidden panel.
+ const assertCheckout=async(label)=>{
+  const result=await page.locator('.checkout-btn').evaluate(button=>{
+   const r=button.getBoundingClientRect();const clipped=[];
+   for(let parent=button.parentElement;parent;parent=parent.parentElement){
+    const style=getComputedStyle(parent),p=parent.getBoundingClientRect();
+    if(/hidden|auto|scroll|clip/.test(style.overflowY)&&(r.top<p.top-1||r.bottom>p.bottom+1))clipped.push(parent.className);
+   }
+   return {clipped,bottom:r.bottom,height:r.height,viewport:innerHeight};
+  });
+  assert.deepEqual(result.clipped,[],label+': checkout clipped by ancestor');
+  assert.ok(result.height>=40,label+': checkout touch target shrank');
+  assert.ok(result.bottom<=result.viewport,label+': checkout below viewport');
+ };
+ for(const [width,height] of [[1440,900],[1280,720],[1280,682],[1024,620]]){
+  await page.setViewportSize({width,height});await page.waitForTimeout(150);
+  await assertCheckout(`empty ${width}x${height}`);
+  const empty=await page.locator('.cart-empty').evaluate(el=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return r.top>=p.top-1&&r.bottom<=p.bottom+1;});
+  assert.ok(empty,'empty-order message clipped');
+  await page.screenshot({path:`${output}/pos-empty-${width}-${height}.png`,fullPage:true});
+ }
  for(let n=0;n<15;n++)await page.locator('.product-tile').nth(n).click();
  await page.locator('.pos-menu-scroll').evaluate(el=>el.scrollTop=0);
- for(const [width,height] of [[1440,900],[1280,720],[1024,768]]){
+ for(const [width,height] of [[1440,900],[1280,720],[1280,682],[1024,768],[1024,620]]){
   await page.setViewportSize({width,height});await page.waitForTimeout(200);
+  await assertCheckout(`filled ${width}x${height}`);
   const button=page.getByRole('button',{name:'Complete sale',exact:true});const before=await button.boundingBox();assert.ok(before.y+before.height<=height,`checkout below viewport ${width}x${height}: ${JSON.stringify(before)}`);
   await page.locator('.pos-menu-scroll').evaluate(el=>el.scrollTop=el.scrollHeight);const after=await button.boundingBox();assert.equal(before.y,after.y,'menu moved checkout');
   const dimensions=await page.locator('.cart-lines').evaluate(el=>({client:el.clientHeight,scroll:el.scrollHeight}));assert.ok(dimensions.scroll>dimensions.client,'order does not independently scroll');
   await page.screenshot({path:`${output}/pos-${width}.png`,fullPage:true});
  }
  await page.setViewportSize({width:1440,height:900});await page.locator('.pos-customer-details summary').click();await page.getByLabel('Rewards phone').fill('8015550123');await page.getByText('Customer found · name filled in below').waitFor();assert.equal(await page.getByLabel('Name to call').inputValue(),'Andrew');await page.getByRole('checkbox',{name:/Use 100 points/}).check();
+ await page.setViewportSize({width:1280,height:682});await assertCheckout('expanded rewards');
  await page.screenshot({path:output+'/pos-rewards.png',fullPage:true});await page.getByRole('button',{name:'Complete sale',exact:true}).click();await page.getByText('TEST-001').first().waitFor();assert.match(await page.locator('.receipt-rewards').innerText(),/Earned 10 points · Balance 30/);assert.equal(await page.evaluate(()=>window.checkoutPayload.p_redeem),true);
  await page.getByRole('button',{name:'Close receipt'}).click();await page.setViewportSize({width:390,height:844});await page.screenshot({path:output+'/pos-mobile.png',fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile horizontal overflow');
  assert.deepEqual(errors,[]);console.log('PASS: actual POS browser at 1440/1280/1024 and mobile; menu/order scroll independently, checkout stays visible, shared lookup autofills, redemption and points receipt work.');
