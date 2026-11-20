@@ -31,8 +31,26 @@ jobs:
         run: npm run build
       - name: Run workflow and preservation checks
         run: |
-          node tests/run-all.mjs
+          set -o pipefail
+          node tests/run-all.mjs 2>&1 | tee /tmp/erp-verify.log
           node tests/customer-availability.mjs
+
+      - name: Publish application verification diagnostic on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          let log='Application check failed before its log was created.';
+          try{log=readFileSync('/tmp/erp-verify.log','utf8');}catch{}
+          const start=log.search(/AssertionError|TypeError|ReferenceError|SyntaxError|Error:/);
+          const excerpt=(start>=0?log.slice(Math.max(0,start-100),start+1800):log.slice(-1800)).replace(/\x1b\[[0-9;]*m/g,'').replace(/\s+/g,' ');
+          for(let offset=0;offset<excerpt.length;offset+=140){
+            const response=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+'/statuses/'+process.env.GITHUB_SHA,{method:'POST',headers:{Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'},body:JSON.stringify({state:'failure',context:'Application diagnostic '+String(offset/140+1).padStart(2,'0'),description:excerpt.slice(offset,offset+140),target_url:'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID})});
+            if(!response.ok)throw Error('Unable to publish application diagnostic: '+response.status);
+          }
+          JS
 
   postgres:
     runs-on: ubuntu-latest
