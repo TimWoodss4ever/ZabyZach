@@ -37,7 +37,7 @@
     "src/inventoryManagement.ts": "b91a52d5abe68af3ff4bdb7863c0a832bd1fec92e4e4db3ba8951e4b6d0e35b2",
     "src/inventoryWorkspaceLogic.ts": "e78f6f39c7827ce7dfd1319c0c00194ebfbabac426d909263a65c9e12a5efb1b",
     "src/main.tsx": "f8dda9689cbadcf831084647ccb3a9ed250474ed64f3e22d3e5b986d4d7eff8b",
-    "src/mrp.css": "c659aba92df2f2a891e7551558f809fcdc7da303997747ad2a5069f4d2e90680",
+    "src/mrp.css": "e06d0fb758392f17007da9a68d64c4208255d39e14a5816341a8bed2d47d4b62",
     "src/mrpWorkspaceLogic.ts": "d15ffd34e5de7fece9698dda8a787e69841f532953a4785a540d756a21a573b7",
     "src/paymentFormatting.ts": "d00a885494ceaa928d394d71edf9a692a4a46543e6ebde3ebedb1d6fa6c09f4e",
     "src/pickup.ts": "7d9bd7130cb87bc0fc5e2dd9db15f0335a28a6e07535bfebcf304cebd009fdb5",
