@@ -1,6 +1,6 @@
 {
   "repository": "TimWoodss4ever/ZabyZach",
-  "main_commit": "95a0f8ca277895b362847abd053765fe92b18f14",
+  "main_commit": "bb9716bb4149cab40107123807acea9fa61517b5",
   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
   "review_branch": "simplify-purchasing-barcodes-v3",
   "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline.",
@@ -17,5 +17,6 @@
   "mrp_confirmed_demand_fix": "Reviewed current main 19f7e8410edc1d75aea10ac0cd8cb818d6e6d76b including latest menu assets and styles. Future confirmation now leaves stock and revenue unposted until preparation. Legacy linked sales remain unchanged; alerts explain exclusion. New migration 202611190001 required. InventoryWorkspaceData.ts protected hash refreshed to identical current-main bytes; no inventory loader, App/POS, existing migration, dependency or deploy workflow changed.",
   "purchasing_redesign": "Rebased purchasing/barcode/name-search redesign onto uploaded main(14), 122a1c8e7c8d64e9e910f1e870c35a3f47cca66d. Preserve latest MRP confirmed-demand migration, planning source and tests, prepare-time sales/stock posting, checkout-layout CSS, diagnostics workflow and existing SQL suites exactly. Scoped App wiring and label catalog connection only; new receipt timestamp safeguard is the same additive 005. No prior package test-order overrides or old immediate-customer-posting tests included.",
   "mrp_hardening_review": "Prepared on current main 122a1c8e7c8d64e9e910f1e870c35a3f47cca66d. No demo seed data. Frozen new-order totals/status recovery, revision-checked dated MRP drafts, nested lead lookahead bounded to 4 display weeks, daily/weekly views and scheduled/idempotent production creation. New 202611190002 migration required before frontend. POS component, auth, existing loaders and historical data/migrations retained. Integrated PR21 purchasing/barcode/name-search changes and stock visibility guard from main 0e0e8e7; preserved all existing migrations.",
-  "pos_viewport_review": "Reviewed main including PR22. Only POS styles and browser layout assertions change; existing source, migrations, MRP and transaction behavior are preserved."
+  "pos_viewport_review": "Reviewed main including PR22. Only POS styles and browser layout assertions change; existing source, migrations, MRP and transaction behavior are preserved.",
+  "mrp_eoq_review": "Based on current main including customer availability PR24. Add shared EOQ policy, optional MRP replenishment, cross-workflow draft review and Settings clarity. No demo data or historical rewrites."
 }

@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {calculateMrp} from '../src/sharedMrp.ts';
+import {buildMrpDrafts,mrpPurchaseChoice,purchaseBlocker} from '../src/mrpWorkspaceLogic.ts';
+import {purchasingRule,purchasingDrafts} from '../src/sharedPurchasing.ts';
+import {replenishmentPolicy} from '../src/replenishmentPolicy.ts';
+const options={order_cost:25,holding_rate:.25,safety_days:2,review_days:7};
+const item={sku:'CHEESE',name:'Cheese',category:'Ingredient',base_unit:'oz',purchase_unit:'bag',conversion_factor:64,lead_days:3,supplier_id:'supplier',active:true,selling_price:1,unit_cost:1,shelf_life_days:null};
+const d={version:1,userId:'manager',revision:'R1',today:'2026-11-20',items:[item],bom:[],locations:[{id:'A',name:'A',can_sell:true},{id:'B',name:'B',can_sell:true}],suppliers:[{id:'supplier',name:'Supplier',quoted_lead_days:3,erp_active:true}],orders:[{id:'O1',erp_order_number:1,location_id:'A',pickup_at:'2026-11-27',status:'Order Placed',erp_prepared_at:null},{id:'O2',erp_order_number:2,location_id:'A',pickup_at:'2026-12-04',status:'Order Placed',erp_prepared_at:null}],lines:[{order_id:'O1',item_sku:'CHEESE',quantity:200},{order_id:'O2',item_sku:'CHEESE',quantity:150}],stock:[{item_sku:'CHEESE',location_id:'A',quantity:80}],receipts:[{id:'P1',item_sku:'CHEESE',location_id:'A',due:'2026-11-26',quantity:50,kind:'Purchase'}],production:[],purchasePolicy:{version:1,options,usage:[{item_sku:'CHEESE',location_id:'A',daily:30},{item_sku:'CHEESE',location_id:'B',daily:999}]}};
+const row=()=>calculateMrp(d).rows.find(r=>r.item.sku==='CHEESE'&&r.location==='A');
+const baseline=structuredClone(row());
+let min=mrpPurchaseChoice(d,row()),extra=mrpPurchaseChoice(d,row(),'replenish');
+assert.equal(min.actions[0].net,70);assert.equal(min.minimumPacks,4);assert.equal(min.packs,min.minimumPacks);assert.deepEqual(min.actions,row().actions);
+assert.ok(extra.extraPacks>0);assert.equal(extra.daily,30,'another location cannot inflate EOQ');
+assert.equal(extra.packs,Math.max(extra.minimumPacks,extra.routine.packs),'EOQ top-up is applied once, with later demands credited');
+let difference=0;for(const a of baseline.actions){difference+=(extra.actions.find(b=>b.date===a.date)?.quantity??0)-a.quantity;assert.ok(difference>=0,'each original deadline remains covered');}
+assert.deepEqual(row(),baseline,'optional purchasing must not change the MRP calculation');
+const payload=buildMrpDrafts(d,[row()],'replenish');assert.equal(payload.revision,'R1');assert.equal(payload.orders.reduce((n,o)=>n+o.lines[0].qty,0),extra.packs);assert.match(payload.orders[0].notes,/routine replenishment/);assert.equal(payload.orders[0].requiredOn,baseline.actions[0].date);assert.equal(payload.orders[0].orderBy,baseline.actions[0].orderBy);
+const purchasing={items:[item],suppliers:d.suppliers,stock:{CHEESE:80},dailyUsage:{CHEESE:30},options,orders:[{id:'P1',status:'Order Sent',ship_to_location_id:'A'}],lines:[{purchase_order_id:'P1',item_sku:'CHEESE',quantity_purchase:50/64,quantity_received_purchase:0}]};
+assert.equal(purchasingRule(purchasing,item).rawEOQ,min.routine.rawEOQ);assert.equal(purchasingRule(purchasing,item).packs,min.routine.packs);
+d.items[0].shelf_life_days=1;extra=mrpPurchaseChoice(d,row(),'replenish');assert.equal(extra.extraPacks,0,'shelf cap disallows routine extras');assert.equal(extra.packs,min.packs,'shelf cap must not remove confirmed coverage');assert.equal(extra.shelfWarning,true);
+d.purchasePolicy.usage=[];assert.equal(mrpPurchaseChoice(d,row(),'replenish').extraPacks,0,'no usage means no extra purchase');
+d.purchaseDrafts=[{id:'manual',po_no:'PO-MANUAL',location_id:'B',item_sku:'CHEESE'}];assert.equal(purchaseBlocker(d,row()),null);
+d.purchaseDrafts[0].location_id='A';assert.match(purchaseBlocker(d,row()),/purchase draft/);assert.throws(()=>buildMrpDrafts(d,[row()]),/awaiting review/);
+purchasing.orders.push({id:'manual',po_no:'PO-MANUAL',status:'Draft',ship_to_location_id:'A'});purchasing.lines.push({purchase_order_id:'manual',item_sku:'CHEESE'});assert.equal(purchasingDrafts(purchasing,'A','CHEESE')[0].po_no,'PO-MANUAL');assert.equal(purchasingDrafts(purchasing,'B','CHEESE').length,0);
+delete d.purchasePolicy;d.purchaseDrafts=[];assert.equal(mrpPurchaseChoice(d,row()).routine,null);assert.throws(()=>mrpPurchaseChoice(d,row(),'replenish'),/update/);
+assert.throws(()=>replenishmentPolicy({daily:1,onHand:0,onOrder:0,factor:0,cost:1,lead:1,shelfLife:null,options}),/pack size/);
+console.log('PASS: unchanged MRP minimum, location EOQ, one replenishment top-up, later-date credit, deadline preservation, pack costs, shelf cap, no-history fallback, cross-workflow drafts and shared policy parity.');

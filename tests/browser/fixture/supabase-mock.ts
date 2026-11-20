@@ -47,6 +47,7 @@ export function createClient(){
     }else if(action==='create_orders'){
      const orders=payload.orders as Array<Record<string,unknown>>;
      snapshot.orders.push(...orders.map((order,index)=>({id:'draft-'+index,po_no:'DRAFT-'+index,supplier_id:order.supplierId,ship_to_location_id:order.locationId,ordered_at:String(order.date),expected_at:String(order.date),received_at:null,status:order.send?'Order Sent':'Draft',erp_notes:String(order.notes??''),erp_revision:1,erp_quoted_lead_days:2,erp_payment_terms_days:30,erp_legacy_received_at:null})));
+     snapshot.lines.push(...orders.flatMap((order,index)=>(order.lines as any[]).map((line,n)=>({id:'draft-line-'+index+'-'+n,purchase_order_id:'draft-'+index,item_sku:line.sku,quantity_purchase:line.qty,quantity_received_purchase:0,unit_price_purchase:line.price}))));
     }else if(action==='inventory_review'){
      snapshot.inventoryReviews.unshift({id:'review-'+snapshot.inventoryReviews.length,notes:String(payload.notes??''),created_at:'2026-11-17T12:00:00Z',created_by:'fixture-manager'});
     }

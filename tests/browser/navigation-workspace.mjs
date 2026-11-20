@@ -55,6 +55,11 @@ try{
  await page.getByText('Ordering options saved. Shared Inventory Review will use these values.').waitFor();
  let writes=await page.evaluate(()=>window.qaCalls.filter(call=>call.name==='erp_purchasing_write'));
  assert.deepEqual(writes.at(-1).args.p_payload,{revision:1,orderCost:25,holdingRate:.125,safetyDays:2,reviewDays:7});
+ assert.equal(await page.getByLabel('Safety stock coverage',{exact:true}).count(),1,'one authoritative ordering form');
+ assert.equal(await page.getByLabel('Inventory review interval',{exact:true}).count(),1);
+ assert.equal(await page.getByLabel('Estimated sales tax rate',{exact:true}).inputValue(),'7.25','tax estimate has no floating point tail');
+ for(const width of [1366,768,390]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'Settings overflows at '+width);await page.screenshot({path:output+'/settings-'+width+'.png',fullPage:true});}
+ await page.setViewportSize({width:1366,height:720});
  await page.getByRole('button',{name:'Go to dashboard'}).click();
  await page.getByRole('heading',{name:'Good morning, Manager',exact:true}).waitFor();
 
