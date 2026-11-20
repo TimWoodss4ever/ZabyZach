@@ -88,7 +88,7 @@ begin
  update public.items set supplier_id='00000000-0000-0000-0000-000000000010' where sku='MRP-F';
  select quoted_lead_days into lead from public.suppliers where id='00000000-0000-0000-0000-000000000010' and erp_active;
  if lead is null then raise exception 'MRP test supplier is missing an active quoted lead time'; end if;
- review_day:=(now() at time zone 'America/Denver')::date+1;required_day:=review_day+lead;order_day:=required_day-lead;
+ review_day:=(now() at time zone 'America/Denver')::date;required_day:=review_day+lead;order_day:=required_day-lead;
  snapshot:=public.erp_planning_snapshot();
  payload:=jsonb_build_object('revision',snapshot->>'revision','orders',jsonb_build_array(jsonb_build_object('supplierId','00000000-0000-0000-0000-000000000010','locationId',loc,'date',review_day,'requiredOn',required_day,'orderBy',order_day,'send',false,'notes','MRP confirmed requirements test','lines','[{"sku":"MRP-F","qty":1,"price":10}]'::jsonb)));
  request:=gen_random_uuid();answer:=public.erp_mrp_purchase_drafts(request,'create_orders',payload);again:=public.erp_mrp_purchase_drafts(request,'create_orders',payload);
