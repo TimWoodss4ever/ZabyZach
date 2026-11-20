@@ -12,7 +12,7 @@ select public.ci_assert(not has_function_privilege('anon','public.erp_planning_s
 select public.ci_assert(not has_function_privilege('authenticated','public.erp_plan_post_sale(uuid,jsonb,numeric,numeric,uuid)','execute'),'internal posting helper exposed');
 do $$declare
  loc uuid; other_loc uuid; request uuid:=gen_random_uuid(); rejected boolean; payload jsonb; answer jsonb; again jsonb; snapshot jsonb;
- ledger_count integer; sales_count integer; role_id uuid; prod uuid; sold uuid; customer_stock numeric; post_count integer;
+ ledger_count integer; sales_count integer; role_id uuid; prod uuid; sold uuid; customer_stock numeric; post_count integer; lead integer; review_day date; required_day date; order_day date;
 begin
  select id into loc from public.locations where can_sell order by name limit 1;
  select id into other_loc from public.locations where id<>loc order by name limit 1;
@@ -86,9 +86,14 @@ begin
  perform public.erp_schedule_production(prod,(now() at time zone 'America/Denver')::date+1);
  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
  update public.items set supplier_id='00000000-0000-0000-0000-000000000010' where sku='MRP-F';
- payload:=jsonb_build_object('orders',jsonb_build_array(jsonb_build_object('supplierId','00000000-0000-0000-0000-000000000010','locationId',loc,'date',(now() at time zone 'America/Denver')::date,'send',false,'notes','MRP confirmed requirements test','lines','[{"sku":"MRP-F","qty":1,"price":10}]'::jsonb)));
+ select quoted_lead_days into lead from public.suppliers where id='00000000-0000-0000-0000-000000000010' and erp_active;
+ if lead is null then raise exception 'MRP test supplier is missing an active quoted lead time'; end if;
+ review_day:=(now() at time zone 'America/Denver')::date+1;required_day:=review_day+lead;order_day:=required_day-lead;
+ snapshot:=public.erp_planning_snapshot();
+ payload:=jsonb_build_object('revision',snapshot->>'revision','orders',jsonb_build_array(jsonb_build_object('supplierId','00000000-0000-0000-0000-000000000010','locationId',loc,'date',review_day,'requiredOn',required_day,'orderBy',order_day,'send',false,'notes','MRP confirmed requirements test','lines','[{"sku":"MRP-F","qty":1,"price":10}]'::jsonb)));
  request:=gen_random_uuid();answer:=public.erp_mrp_purchase_drafts(request,'create_orders',payload);again:=public.erp_mrp_purchase_drafts(request,'create_orders',payload);
  perform public.ci_assert(answer=again,'MRP draft retry duplicated an order');
+ snapshot:=public.erp_planning_snapshot();payload:=jsonb_set(payload,'{revision}',to_jsonb(snapshot->>'revision'));
  rejected:=false;begin perform public.erp_mrp_purchase_drafts(gen_random_uuid(),'create_orders',payload);exception when others then rejected:=true;end;
  perform public.ci_assert(rejected,'duplicate item/location MRP draft accepted');
  snapshot:=public.erp_planning_snapshot();
