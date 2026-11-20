@@ -38,3 +38,5 @@ assert.equal(results.filter(r => !r.error).length, 1, JSON.stringify(results));
 assert.equal(sync(`select sum(quantity) from public.inventory_transactions where item_sku='MRP-RACE-C' and location_id='${store}';`), '0');
 assert.equal(sync(`select count(*) from public.sales_orders where id in ('${second}','${third}') and status='Order Placed' and erp_sale_id is null and erp_prepared_at is null;`), '1');
 console.log('PASS: concurrent confirmation creates one demand; prepare/fulfill across both endpoints consumes once; competing preparations cannot overdraw and preserve the losing order as MRP demand.');
+
+await import('./stock-visibility-concurrency.mjs');

@@ -49,7 +49,7 @@ function isRecordSaleResult(value:unknown):value is RecordSaleResult{
   ['subtotal','discount','tax','total','cogs'].every(key=>typeof result[key]==='number'&&Number.isFinite(result[key]));
 }
 function App(){
- const [state,setState]=useState<AppState>(()=>loadState());const [page,setPage]=useState<Page>('Dashboard');const pageHistory=useRef<Page[]>([]);const [profile,setProfile]=useState<AuthProfile|null>(null);const [authLoading,setAuthLoading]=useState(true);const [authError,setAuthError]=useState('');const [location,setLocation]=useState<Location>('Provo Campus Store');const [toast,setToast]=useState('');const [search,setSearch]=useState('');const [collapsed,setCollapsed]=useState(true);const [navHovered,setNavHovered]=useState(false),[navFocused,setNavFocused]=useState(false);const navExpanded=!collapsed||navHovered||navFocused;
+ const [state,setState]=useState<AppState>(()=>loadState());const [page,setPage]=useState<Page>('Dashboard');const [receivingCode,setReceivingCode]=useState('');const pageHistory=useRef<Page[]>([]);const [profile,setProfile]=useState<AuthProfile|null>(null);const [authLoading,setAuthLoading]=useState(true);const [authError,setAuthError]=useState('');const [location,setLocation]=useState<Location>('Provo Campus Store');const [toast,setToast]=useState('');const [search,setSearch]=useState('');const [collapsed,setCollapsed]=useState(true);const [navHovered,setNavHovered]=useState(false),[navFocused,setNavFocused]=useState(false);const navExpanded=!collapsed||navHovered||navFocused;
  const role=profile?.role??null,login=profile?.email??'';
  const globalSearchRef=useRef<HTMLInputElement>(null);
  const [searchOpen,setSearchOpen]=useState(false);
@@ -86,13 +86,13 @@ function App(){
     {page==='Sales Orders'&&<SharedOrdersScreen flash={flash}/>}
     {page==='Returns'&&<ReturnsPageView flash={flash}/>}
     {page==='Inventory'&&<ConnectedInventoryPage userId={profile.userId} canManage={role==='Manager'} search={search} onSearchChange={setSearch} flash={flash} safetyDays={state.settings.safetyDays} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
-    {page==='Barcode Labels'&&<ConnectedBarcodeLabels state={state} flash={flash}/>}
+    {page==='Barcode Labels'&&<ConnectedBarcodeLabels state={state} flash={flash} onReceive={role==='Manager'?code=>{setReceivingCode(code);navigatePage('Purchase Orders');}:undefined}/>}
     {page==='Transfers & Counts'&&<ConnectedMovements userId={profile.userId} flash={flash}/>}
     {page==='Production'&&<ConnectedProductionPage flash={flash}/>}
     {role==='Manager'&&page==='Suppliers'&&<SharedPurchasingScreen view="Suppliers" flash={flash}/> }
     {role==='Manager'&&page==='Inventory Review'&&<SharedPurchasingScreen view="Inventory Review" flash={flash} onOpenSettings={()=>navigatePage('Settings')}/> }
     {page==='Help & Support'&&<HelpSupportScreen role={role} onNavigate={helpNavigate}/> }
-    {role==='Manager'&&page==='Purchase Orders'&&<SharedPurchasingScreen view="Purchase Orders" flash={flash} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
+    {role==='Manager'&&page==='Purchase Orders'&&<SharedPurchasingScreen view="Purchase Orders" flash={flash} onOpenInventory={()=>navigatePage('Inventory')} onOpenFinancials={()=>navigatePage('Financials')} initialScan={receivingCode} onScanHandled={()=>setReceivingCode('')} onOpenLabels={()=>navigatePage('Barcode Labels')}/>}
     {role==='Manager'&&page==='Supplier Scorecards'&&<SharedPurchasingScreen view="Supplier Scorecards" flash={flash}/>}
     {page==='MRP'&&<SharedMrpScreen flash={flash} onPurchase={()=>navigatePage('Purchase Orders')} onTransfers={()=>navigatePage('Transfers & Counts')} onProduction={()=>navigatePage('Production')} onOrders={()=>navigatePage('Sales Orders')} onSuppliers={()=>navigatePage('Suppliers')}/>}
     {role==='Manager'&&page==='Financials'&&<><SharedReporting view="financials"/><SharedPurchasingScreen view="Payables" flash={flash}/></>}

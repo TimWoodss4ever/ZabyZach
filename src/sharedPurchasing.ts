@@ -1,3 +1,5 @@
+import {matchesItemQuery} from './itemSearch.ts';
+import {parsePurchasingQuery,purchaseOrderBarcode} from './purchaseOrderScanning.ts';
 import type {AppState,Location,PurchaseOrder} from './domain.ts';
 import {businessDate} from './domain.ts';
 import {supplierMetrics} from './purchasing.ts';
@@ -53,9 +55,9 @@ export function purchasingRule(d:PurchasingSnapshot,item:SharedItem){
  return{supplier,daily,onHand,onOrder,position,rop,rawEOQ,eoq,target,packs,belowROP:position<rop,packExceedsShelf:!!item.shelf_life_days&&packs*factor+position>daily*item.shelf_life_days};
 }
 export function searchSharedOrders(d:PurchasingSnapshot,query:string){
- const q=query.trim().toLowerCase();if(!q)return{orders:d.orders,items:[] as SharedItem[]};
- const matched=d.items.filter(i=>i.sku.toLowerCase()===q||i.barcode.toLowerCase()===q),skus=new Set(matched.map(i=>i.sku));
- const orders=d.orders.filter(p=>(p.po_no+' '+(d.suppliers.find(s=>s.id===p.supplier_id)?.name??'')).toLowerCase().includes(q)||poLines(d,p.id).some(l=>skus.has(l.item_sku)||(d.items.find(i=>i.sku===l.item_sku)?.name.toLowerCase().includes(q))));
+ const parsed=parsePurchasingQuery(query),q=parsed.query.toLowerCase();if(!q)return{orders:d.orders,items:[] as SharedItem[]};
+ const matched=d.items.filter(i=>matchesItemQuery(i,query)),skus=new Set(matched.map(i=>i.sku));
+ const orders=d.orders.filter(p=>(!parsed.skuOnly&&(p.id.toLowerCase()===q||purchaseOrderBarcode(p).toLowerCase()===q||(p.po_no+' '+(d.suppliers.find(s=>s.id===p.supplier_id)?.name??'')).toLowerCase().includes(q)))||poLines(d,p.id).some(l=>skus.has(l.item_sku)));
  return{orders,items:matched};
 }
 

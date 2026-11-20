@@ -50,3 +50,6 @@ try{
 // Run native IndexedDB migration/reload checks with the browser tools already
 // installed by this job. Existing POS assertions above remain unchanged.
 await import('./workspace-storage.mjs');
+
+await import('./po-receiving.mjs');
+await import('./label-redesign.mjs');

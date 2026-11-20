@@ -6,6 +6,9 @@ create temporary table mrp_fix_preserved as
  union all select 'stock',md5(coalesce(string_agg(to_jsonb(t)::text,'' order by id),'')) from public.inventory_transactions t;
 \ir ../../supabase/migrations/202611190001_mrp_confirmed_demand.sql
 \ir ../../supabase/migrations/202611190001_mrp_confirmed_demand.sql
+-- Availability must include deductions committed while an older request waited.
+\ir ../../supabase/migrations/202611200001_stock_visibility_guard.sql
+\ir ../../supabase/migrations/202611200001_stock_visibility_guard.sql
 select public.ci_assert(not exists(
  select * from mrp_fix_preserved except
  (select 'orders',md5(coalesce(string_agg(to_jsonb(t)::text,'' order by id),'')) from public.sales_orders t
