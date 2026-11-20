@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {calculateMrp} from '../src/sharedMrp.ts';
 import {buildMrpDrafts,mrpPurchaseChoice,purchaseBlocker} from '../src/mrpWorkspaceLogic.ts';
-import {purchasingRule,purchasingDrafts} from '../src/sharedPurchasing.ts';
+import {purchasingRule,purchasingDrafts,purchasePackPrice} from '../src/sharedPurchasing.ts';
 import {replenishmentPolicy} from '../src/replenishmentPolicy.ts';
 const options={order_cost:25,holding_rate:.25,safety_days:2,review_days:7};
 const item={sku:'CHEESE',name:'Cheese',category:'Ingredient',base_unit:'oz',purchase_unit:'bag',conversion_factor:64,lead_days:3,supplier_id:'supplier',active:true,selling_price:1,unit_cost:1,shelf_life_days:null};
@@ -24,4 +24,5 @@ d.purchaseDrafts[0].location_id='A';assert.match(purchaseBlocker(d,row()),/purch
 purchasing.orders.push({id:'manual',po_no:'PO-MANUAL',status:'Draft',ship_to_location_id:'A'});purchasing.lines.push({purchase_order_id:'manual',item_sku:'CHEESE'});assert.equal(purchasingDrafts(purchasing,'A','CHEESE')[0].po_no,'PO-MANUAL');assert.equal(purchasingDrafts(purchasing,'B','CHEESE').length,0);
 delete d.purchasePolicy;d.purchaseDrafts=[];assert.equal(mrpPurchaseChoice(d,row()).routine,null);assert.throws(()=>mrpPurchaseChoice(d,row(),'replenish'),/update/);
 assert.throws(()=>replenishmentPolicy({daily:1,onHand:0,onOrder:0,factor:0,cost:1,lead:1,shelfLife:null,options}),/pack size/);
+assert.equal(purchasePackPrice(.2675,10),2.68,'shared purchase-pack rounding is consistent at half cents');
 console.log('PASS: unchanged MRP minimum, location EOQ, one replenishment top-up, later-date credit, deadline preservation, pack costs, shelf cap, no-history fallback, cross-workflow drafts and shared policy parity.');

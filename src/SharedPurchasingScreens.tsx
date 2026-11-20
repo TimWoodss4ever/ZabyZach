@@ -8,7 +8,7 @@ import type {FormEvent,ReactNode} from 'react';
 import {supabase} from './supabase';
 import {fmt} from './domain';
 import {formatSupplierPercent,formatSupplierScore} from './purchasing';
-import {purchaseOrderEmail,dateOnly,invoiceOwedShared,invoicePaidShared,poLines,purchasingMetrics,purchasingRule,purchasingDrafts,readPurchasingSnapshot,searchSharedOrders} from './sharedPurchasing';
+import {purchaseOrderEmail,dateOnly,invoiceOwedShared,invoicePaidShared,poLines,purchasingMetrics,purchasingRule,purchasingDrafts,purchasePackPrice,readPurchasingSnapshot,searchSharedOrders} from './sharedPurchasing';
 import type {PurchasingSnapshot,SharedAudit,SharedInvoice,SharedItem,SharedLine,SharedPO,SharedSupplier} from './sharedPurchasing';
 type View='Suppliers'|'Purchase Orders'|'Supplier Scorecards'|'Inventory Review'|'Payables'|'Ordering options';
 type Request={id:string;action:string;payload:Record<string,unknown>;userId:string};
@@ -112,7 +112,7 @@ export function SharedPurchasingScreen({view,flash,onOpenLabels,onOpenSettings,o
   const locationId=destination||d.locations[0]?.id;
   for(const sku of Object.keys(selected)){const drafts=purchasingDrafts(d,locationId,sku);if(drafts.length){const po=d.orders.find(p=>p.id===drafts[0].id);if(po)open({kind:'detail',po});flash('Review existing '+(drafts[0].po_no??'purchase draft')+' before ordering this item again.');return;}}
   for(const [sku,qty]of Object.entries(selected)){if(!Number.isFinite(qty)||qty<=0||!Number.isInteger(qty)){flash('Enter whole purchase packs greater than zero for every selected item.');return;}const i=item(sku);if(!i?.supplier_id||!d.suppliers.find(s=>s.id===i.supplier_id)?.erp_active){flash('Assign an active supplier to '+(i?.name??sku));return;}
-   grouped.set(i.supplier_id,[...(grouped.get(i.supplier_id)??[]),{sku,qty,price:Number((Number(i.unit_cost)*Number(i.conversion_factor)).toFixed(2))}]);}
+   grouped.set(i.supplier_id,[...(grouped.get(i.supplier_id)??[]),{sku,qty,price:purchasePackPrice(Number(i.unit_cost),Number(i.conversion_factor))}]);}
   if(!grouped.size)return;
   if(await save('create_orders',{orders:[...grouped].map(([supplierId,lines])=>({supplierId,lines,locationId,date:d.today,send:false,notes:'Created during shared inventory review'}))}))setSelected({});
  };
