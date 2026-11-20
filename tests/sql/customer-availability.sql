@@ -58,10 +58,15 @@ begin
   'lines',jsonb_build_array(jsonb_build_object('sku','CA-DRINK','qty',1)));
  checkout_answer:=public.erp_checkout_order(request_id,checkout_payload);
  checkout_again:=public.erp_checkout_order(request_id,checkout_payload);
- perform public.ci_assert(checkout_answer->>'sale_id'=checkout_again->>'sale_id','customer checkout retry posted a second sale');
+ perform public.ci_assert(checkout_answer->>'orderNo'=checkout_again->>'orderNo'
+  and checkout_answer->>'total'=checkout_again->>'total'
+  and checkout_answer->>'sale_id' is null and checkout_again->>'sale_id' is null,
+  'customer checkout retry changed its unprepared order');
+ perform public.ci_assert((select count(*)=1 from public.sales_order_lines where order_id=request_id),
+  'customer checkout retry duplicated its order lines');
  after_checkout:=public.erp_customer_availability('Availability test B');
  perform public.ci_assert((select (x->>'available_units')::int=1 from jsonb_array_elements(after_checkout->'products') x where x->>'sku'='CA-DRINK'),
-  'posted customer checkout was not reflected in current stock exactly once');
+  'confirmed customer order was not reserved from available stock exactly once');
  bad:=false;begin perform public.erp_customer_availability_options_read();exception when insufficient_privilege then bad:=true;end;
  perform public.ci_assert(bad,'Customer could read manager availability settings');
  bad:=false;begin perform public.post_adjustment('CA-CHEESE',loc_a,10,'customer permission probe');exception when insufficient_privilege then bad:=true;end;
