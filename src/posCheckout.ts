@@ -2,7 +2,7 @@ import type {Location} from './domain.ts';
 import {normalizeCustomerPhone} from './domain.ts';
 
 export type PosCustomer={id:string;name:string;phone:string;enrolled:boolean;points:number};
-export type PosTicket={location:Location;lines:{sku:string;qty:number}[];discount:number;phone:string;name:string;redeem:boolean;paymentMethod:'Cash'|'Card (simulated)'};
+export type PosTicket={location:Location;lines:{sku:string;qty:number}[];discount:number;phone:string;name:string;redeem:boolean;paymentMethod:'Cash'|'Card (simulated)';cardBrand?:string;cardLast4?:string};
 export type PosResult={sale_id:string;receipt_no:string;subtotal:number;discount:number;tax:number;total:number;cogs:number;rewards_earned:number;rewards_redeemed:number;rewards_balance:number|null;payment_method?:string};
 type Pending=PosTicket&{request:string;locationId:string};
 const key='zbz-shared-pos-pending-v1';
@@ -24,6 +24,13 @@ export function createPosCheckout(api:any,storage:Storage){
   return data;
  };
  const send=async(pending:Pending):Promise<PosResult>=>{
+  // Only the card type and last 4 digits are ever sent. Saved under the same request ID as the sale, so a retry is safe.
+  if(pending.paymentMethod==='Card (simulated)'&&pending.cardBrand&&pending.cardLast4){
+   let saved;
+   try{saved=await api.rpc('erp_save_order_card',{p_order:pending.request,p_brand:pending.cardBrand,p_last4:pending.cardLast4});}
+   catch{throw Error('Connection lost. Recover checkout confirmation to check the same sale safely.');}
+   if(saved.error){storage.removeItem(key);throw Error(`Card details could not be saved: ${saved.error.message}`);}
+  }
   let response;
   try{response=await api.rpc('erp_pos_sale',{p_request:pending.request,p_location:pending.locationId,p_lines:pending.lines,p_discount_percent:pending.discount,p_phone:pending.phone||null,p_name:pending.name||null,p_redeem:pending.redeem,p_payment_method:pending.paymentMethod});}
   catch{throw Error('Connection lost. Recover checkout confirmation to check the same sale safely.');}
