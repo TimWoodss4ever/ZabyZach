@@ -286,7 +286,7 @@ export function ConnectedProductionPage({flash,userId}:{flash:(message:string)=>
   catch(error){const message=error instanceof Error?error.message:'Unable to load production data from Supabase.';setLoadError(message);return message;}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{void load();},[load]);
+ useEffect(() => {   void load();    const refresh = () => {     if (document.visibilityState === 'visible') void load();   };    const channel = supabase     .channel(`production-live-${userId}`)     .on(       'postgres_changes',       { event: '*', schema: 'public', table: 'production_orders' },       refresh     )     .on(       'postgres_changes',       { event: '*', schema: 'public', table: 'inventory_transactions' },       refresh     )     .subscribe();    window.addEventListener('focus', refresh);   document.addEventListener('visibilitychange', refresh);    return () => {     window.removeEventListener('focus', refresh);     document.removeEventListener('visibilitychange', refresh);     void supabase.removeChannel(channel);   }; }, [load, userId]);
  useEffect(()=>{
   if(!snapshot)return;
   const makeItems=snapshot.items.filter(item=>item.active&&item.hasBom);
