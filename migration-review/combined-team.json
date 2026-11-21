@@ -4,7 +4,7 @@
   "files": {
     "src/posCheckout.ts": "395be3d95451e9e5d41b6b2791ae28f395b9cce0f0a21d8cb4d2d15b281967a3",
     "src/posCheckoutData.ts": "863cb023160c62747af06e7d3d16bd167a43028ba243ccf4b54f49dfb6deed84",
-    "src/style.css": "6bc2d1a8fd456267d667be5a5cf1c469dd475596fe71f8c2a9a9350f486e69b6",
+    "src/style.css": "981fed885530054cde4c0c31a73b0b2bb0b2e581ca2ec993a0f18fe3b670747c",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
     "supabase/migrations/202611170003_pos_loyalty.sql": "6e569e2e26fb27a5ab15b4f6167e638928591a7e68df3a390704144c90cbbc82",
     "tests/sql/pos-loyalty.sql": "8a3415a4f62dc680fb3c04cfe6eb5302332380a3ae2a4b5d9bd1abf4ece784d0",
@@ -28,5 +28,5 @@
       "src/SharedPlanningScreens.tsx": "e94b09f18a13bfcec86574532de46d03b0def70d4199813722d5be7740536c68"
     }
   },
-  "pos_checkout_compact_review": "Updated from current supplied main d0ec0eaec1e09ba914d14a1acc96470765f1524f. Compact desktop layouts let the order list shrink and scroll so the checkout control remains visible. The empty-cart state now reserves its measured 64px height to prevent clipping. POS component baseline matches the supplied main snapshot; no POS transaction behavior changed."
+  "pos_checkout_compact_review": "Updated from current supplied main d0ec0eaec1e09ba914d14a1acc96470765f1524f. Compact desktop layouts keep the checkout control visible. The empty-cart state reserves its measured 64px height; at compact desktop heights, surrounding POS spacing is reduced while the checkout button remains at least 40px tall. No POS transaction behavior changed."
 }
