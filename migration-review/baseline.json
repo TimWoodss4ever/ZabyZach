@@ -1,6 +1,6 @@
 {
   "repository": "TimWoodss4ever/ZabyZach",
-  "main_commit": "da36f010340fd6af3cff4bdc599585700319c5a2",
+  "main_commit": "88c723771233a5d246a7381f85bc36b7f383d5c5",
   "supersedes_package": "Za-by-Zack-reviewed-code.zip",
   "review_branch": "erp-customer-rewards-current",
   "reporting_update": "Reporting-only quality update based on the latest supplied main b5d0b6281fea0bb2b00f4be4f1010e23ba7965cf: supplier history, cost diagnostics, replenishment date display and warning details. New reporting RPC only; checkout, shared staff logic, historical records and original reporting RPCs are unchanged. Review and incorporate newer main work before changing this baseline.",
