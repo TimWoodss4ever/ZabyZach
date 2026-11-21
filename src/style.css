@@ -388,3 +388,36 @@
   font-size:14px;
   color:#d1ddec;
 }
+.login-art-oven .login-oven-image{
+  inset:auto;
+  top:0;
+  left:0;
+  width:100%;
+  height:70%;
+  object-fit:cover;
+  object-position:center 15%;
+  opacity:.95;
+}
+.login-art-oven::before{
+  content:"";
+  position:absolute;
+  z-index:1;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(9,46,83,.30) 0%,rgba(9,46,83,.20) 35%,rgba(9,46,83,.24) 52%,rgba(9,46,83,.55) 64%,rgba(9,46,83,.92) 73%,#092e53 82%,#092e53 100%),
+    linear-gradient(90deg,rgba(9,46,83,.16),transparent 48%,rgba(9,46,83,.16));
+}
+.login-art-oven .art-copy{
+  top:auto;
+  bottom:12%;
+  left:5%;
+  right:5%;
+  margin:0;
+  text-align:center;
+  z-index:2;
+}
+.login-art-oven .art-copy h2,
+.login-art-oven .art-copy p{
+  text-shadow:0 2px 14px rgba(0,0,0,.55);
+}
