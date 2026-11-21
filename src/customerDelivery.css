@@ -1,0 +1,37 @@
+.fulfillment-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px;margin:14px 0;background:#f2f4f6;border:1px solid #e0e5e9;border-radius:12px}
+.fulfillment-choice button{min-height:42px;border:0;border-radius:9px;background:transparent;color:#52606d;font:inherit;font-weight:700;cursor:pointer}
+.fulfillment-choice button.active{background:#fff;color:#153f54;box-shadow:0 1px 5px #193b551a}
+.delivery-fields{display:grid;gap:8px;margin:14px 0 18px;padding:14px;background:#fbfcfc;border:1px solid #e4e9eb;border-radius:13px}
+.delivery-fields>label,.delivery-address-row label{display:block;margin-top:4px;color:#3e5965;font-size:14px;font-weight:700}
+.delivery-fields input{width:100%;min-width:0;min-height:42px;padding:9px 11px;border:1px solid #d6dee2;border-radius:8px;background:#fff;color:#22333a;font:inherit}
+.delivery-fields input:focus{outline:2px solid #4c9ca5;outline-offset:1px}
+.delivery-address-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(48px,.55fr) minmax(76px,.8fr);gap:8px}
+.delivery-estimate-button{min-height:44px;margin-top:3px;border:1px solid #b4d2ce;border-radius:9px;background:#eaf5f0;color:#174f47;font:inherit;font-weight:700;cursor:pointer}
+.delivery-estimate-button:disabled{opacity:.55;cursor:wait}
+.delivery-quote{display:grid;gap:5px;padding:12px;border:1px solid #c9ddd3;border-radius:10px;background:#f0f8f3;color:#244b3f;font-size:14px;line-height:1.45}
+.delivery-quote>b{font-size:16px}
+.delivery-privacy-note,.delivery-demo-note{margin:4px 0 0;color:#63717a;font-size:13px;line-height:1.5}
+.store-info-trigger{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:7px 10px;border:1px solid #d8e1e2;border-radius:9px;background:#fff;color:#345662;font:inherit;font-weight:700;cursor:pointer}
+.delivery-info-backdrop{position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end;background:#102b3280}
+.delivery-info-drawer{position:relative;width:min(440px,100%);height:100%;overflow:auto;padding:32px 24px 24px;background:#fff;box-shadow:-12px 0 40px #102b3226}
+.delivery-info-drawer h2{margin:8px 0 5px;color:#233e48;font-family:Georgia,serif;font-size:28px}
+.delivery-store-card{display:grid;gap:4px;margin:18px 0;padding:16px;border:1px solid #e2e8e7;border-radius:12px;background:#fafcfb}
+.delivery-store-card h3{margin:0 0 6px;color:#243e48;font-size:17px}
+.delivery-store-card p{display:flex;align-items:flex-start;gap:8px;margin:3px 0;color:#415a62;font-size:14px;line-height:1.5}
+.delivery-store-card svg{flex:0 0 auto;margin-top:2px;color:#71959a}
+.delivery-store-card a{color:#245c70;text-decoration:underline;text-underline-offset:2px}
+.delivery-info-drawer>.store-checkout{margin-top:10px}
+.checkout-info-note{padding:10px 12px;border-radius:8px;background:#fff8e8;color:#715729;font-size:13px;line-height:1.5}
+.replacement-popup-backdrop{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;overflow:auto;padding:20px;background:#102b3280}
+.replacement-popup{position:relative;width:min(560px,100%);max-height:min(90vh,800px);overflow:auto;padding:28px 24px 22px;border:1px solid #e0e8e5;border-radius:18px;background:#fff;box-shadow:0 22px 70px #102b3233}
+.replacement-popup h2{max-width:440px;margin:7px 35px 8px 0;color:#233e48;font-family:Georgia,serif;font-size:27px;line-height:1.2}
+.replacement-popup>p{color:#596a70;font-size:14px;line-height:1.55}
+.replacement-choice{display:grid;gap:9px;margin:13px 0;padding:13px;border:1px solid #e2e8e7;border-radius:11px;background:#fbfdfc}
+.replacement-choice>span{display:grid;gap:3px;color:#314850;font-size:14px}
+.replacement-choice small{color:#68777c;font-size:13px;line-height:1.4}
+.replacement-choice select{width:100%;min-height:42px;padding:8px 10px;border:1px solid #d6dee2;border-radius:8px;background:#fff;color:#22333a;font:inherit}
+.replacement-choice .replacement-none,.replacement-dough-note{color:#815b23}
+.replacement-popup-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:17px}
+.replacement-popup-actions .store-checkout{width:auto;margin:0}
+@media(max-width:640px){.replacement-popup{padding:25px 17px 18px}.replacement-popup-actions{flex-direction:column-reverse}.replacement-popup-actions>*{width:100%}}
+@media(max-width:640px){.store-info-trigger{font-size:13px}.delivery-fields{padding:12px}.delivery-address-row{grid-template-columns:1fr 62px 92px}.delivery-info-drawer{padding:28px 18px 18px}}
