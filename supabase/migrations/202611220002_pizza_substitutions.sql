@@ -113,7 +113,7 @@ begin
     and exists(select 1 from public.bom_lines b join public.items p on p.sku=b.parent_sku where p.category='Pizza' and p.active and p.selling_price>0 and b.component_sku=r.sku);
    if not found or replacement_item.sku=source_item.sku then raise exception 'Invalid pizza ingredient replacement';end if;
   end loop;
-  if jsonb_object_length(subs)>0 then
+  if exists(select 1 from jsonb_object_keys(subs)) then
    if not exists(select 1 from public.bom_lines where parent_sku=it.sku) then raise exception 'Only pizzas can have ingredient replacements';end if;
    select sum(recipe.quantity*public.erp_plan_unit_cost(recipe.component_sku)) into cost from (
     select coalesce(swap.value,b.component_sku) component_sku,sum(b.quantity) quantity
@@ -123,7 +123,7 @@ begin
   else cost:=public.erp_plan_unit_cost(it.sku);end if;
   select greatest(0,coalesce(sum(quantity),0)) into have from public.inventory_transactions where item_sku=it.sku and location_id=p_location and occurred_at<=now();
   if exists(select 1 from public.bom_lines where parent_sku=it.sku)then
-   stocked:=case when jsonb_object_length(subs)>0 then 0 else least(qty,have) end;remainder:=qty-stocked;
+   stocked:=case when exists(select 1 from jsonb_object_keys(subs)) then 0 else least(qty,have) end;remainder:=qty-stocked;
    if stocked>0 then insert into public.inventory_transactions(item_sku,location_id,quantity,unit_cost,transaction_type,reference_document,user_id)values(it.sku,p_location,-stocked,cost,'Sale',receipt,auth.uid());end if;
    for part in
     select coalesce(swap.value,b.component_sku) component_sku,sum(b.quantity) quantity
