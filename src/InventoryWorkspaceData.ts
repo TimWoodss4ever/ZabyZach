@@ -64,20 +64,70 @@ export async function readInventoryWorkspaceUsage(today:string):Promise<Pick<Inv
 export function useInventoryWorkspace(userId:string){
  const [data,setData]=useState<InventoryWorkspaceData|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[updatedAt,setUpdatedAt]=useState<Date|null>(null);
  const refreshRef=useRef<()=>void>(()=>{});
- useEffect(()=>{
-  let active=true,running=false,queued=false;setData(null);setError('');setUpdatedAt(null);
-  const load=async(silent=false)=>{if(running){queued=true;return;}running=true;
-   do{queued=false;if(active&&!silent)setLoading(true);try{const next=await readInventoryWorkspace(userId);if(active){setData(current=>current&&current.usage?{...next,usage:current.usage,usageError:null,usageLoading:false}:next);setUpdatedAt(new Date());setError('');}
-     if(active)setLoading(false);
-     const usage=await readInventoryWorkspaceUsage(next.snapshot.today);if(active)setData(current=>current?{...current,...usage}:current);}
-    catch(e){if(active)setError(e instanceof Error?e.message:'Unable to refresh shared inventory.');}
-   }while(active&&queued);
-   running=false;if(active)setLoading(false);
+  useEffect(() => {
+  let active = true;
+  let running = false;
+  let queued = false;
+
+  setData(null);
+  setError('');
+  setUpdatedAt(null);
+
+  const load = async (silent = false) => {
+    if (running) {
+      queued = true;
+      return;
+    }
+
+    running = true;
+
+    do {
+      queued = false;
+      if (active && !silent) setLoading(true);
+
+      try {
+        const next = await readInventoryWorkspace(userId);
+
+        if (active) {
+          setData((current) =>
+            current && current.usage
+              ? { ...next, usage: current.usage, usageError: null, usageLoading: false }
+              : next
+          );
+          setUpdatedAt(new Date());
+          setError('');
+        }
+
+        if (active) setLoading(false);
+
+        const usage = await readInventoryWorkspaceUsage(next.snapshot.today);
+        if (active) setData((current) => (current ? { ...current, ...usage } : current));
+      } catch (e) {
+        if (active) setError(e instanceof Error ? e.message : 'Unable to refresh shared inventory.');
+      }
+    } while (active && queued);
+
+    running = false;
+    if (active) setLoading(false);
   };
-  const refresh=()=>{if(document.visibilityState!=='hidden')void load();};refreshRef.current=refresh;
-  void load();const timer=window.setInterval(()=>{if(!running&&document.visibilityState!=='hidden')void load(true);},15000);
-  window.addEventListener('erp-inventory-updated',refresh);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
-  return()=>{active=false;window.clearInterval(timer);window.removeEventListener('erp-inventory-updated',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);refreshRef.current=()=>{};};
- },[userId]);
- return{data,loading,error,updatedAt,refresh:()=>refreshRef.current()};
-}
+
+  const refresh = () => {
+    if (document.visibilityState !== 'hidden') void load();
+  };
+
+  refreshRef.current = refresh;
+
+  void load();
+
+  const timer = window.setInterval(() => {
+    if (!running && document.visibilityState !== 'hidden') void load(true);
+  }, 15000);
+
+  const channel = supabase
+  .channel(`inventory-live-${userId}`)
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'inventory_transactions' },
+    refresh
+  )
+  .subscribe();
