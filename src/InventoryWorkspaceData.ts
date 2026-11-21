@@ -131,3 +131,26 @@ export function useInventoryWorkspace(userId:string){
     refresh
   )
   .subscribe();
+  window.addEventListener('erp-inventory-updated', refresh);
+  window.addEventListener('focus', refresh);
+  document.addEventListener('visibilitychange', refresh);
+
+  return () => {
+    active = false;
+    window.clearInterval(timer);
+    window.removeEventListener('erp-inventory-updated', refresh);
+    window.removeEventListener('focus', refresh);
+    document.removeEventListener('visibilitychange', refresh);
+    void supabase.removeChannel(channel);
+    refreshRef.current = () => {};
+  };
+}, [userId]);
+
+return {
+  data,
+  loading,
+  error,
+  updatedAt,
+  refresh: () => refreshRef.current(),
+};
+}
