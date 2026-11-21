@@ -263,7 +263,17 @@ function CustomerStorefront({userId,state,onCommit,flash,onSignOut}:{userId:stri
   pendingOrders: loadData.pendingOrders!,
   pizzaCount,
   otherItemCount,
-}));
+}));   } catch (error) {
+    setDeliveryQuote(null);
+    setDeliveryError(
+      error instanceof Error
+        ? error.message
+        : 'We could not calculate delivery. Check the address and retry.'
+    );
+  } finally {
+    setDeliveryLoading(false);
+  }
+};
  const continueCheckout=()=>{setCheckoutError('');try{if(!cart.length){setCheckoutError('Add a favorite to your order first.');return;}if(cartConflict){setCheckoutError(cartConflict);return;}if(fulfillment==='delivery'){if(!deliveryQuote){setCheckoutError('Enter a delivery address and calculate the fee and time first.');return;}}else{const schedule=pickupSchedule(pickup);if(!pickup||pickup<schedule.minDate||!schedule.options.includes(pickupTime)){setCheckoutError('Please choose an available pickup date and time above.');return;}}if(cartPlan.shortages.length){setReplacementPopupOpen(true);return;}navigateCheckout('checkout');}catch{setCheckoutError('We couldn’t open checkout. Please try again; your cart is still here.');}};
  const closeReplacementPopup=()=>{setReplacementPopupOpen(false);setPendingPizzaSku(null);setCheckoutError('');};
  const confirmReplacements=()=>{setCheckoutError('');const plan=replacementPopupPlan;if(plan.hardIssue){setCartAvailabilityError(plan.hardIssue);setReplacementPopupOpen(false);setPendingPizzaSku(null);return;}if(plan.shortages.length){setCheckoutError('Choose an in-stock replacement for every unavailable ingredient.');return;}setReplacementPopupOpen(false);setCartAvailabilityError('');if(pendingPizzaSku){setCartAvailabilityError('');setDeliveryQuote(null);setDeliveryError('');keepChoicesFor(pendingPizzaCart);setCart(pendingPizzaCart);setPendingPizzaSku(null);return;}navigateCheckout('checkout');};
