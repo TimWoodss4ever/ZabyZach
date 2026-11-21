@@ -421,3 +421,25 @@
 .login-art-oven .art-copy p{
   text-shadow:0 2px 14px rgba(0,0,0,.55);
 }
+.login-art-oven .login-oven-image{
+  inset:auto;
+  top:38%;
+  left:0;
+  width:100%;
+  height:62%;
+  object-fit:cover;
+  object-position:center top;
+  opacity:.95;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 32%,#000 100%);
+  mask-image:linear-gradient(to bottom,transparent 0%,#000 32%,#000 100%);
+}
+.login-art-oven::before{
+  content:"";
+  position:absolute;
+  z-index:1;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg,#092e53 0%,#092e53 31%,rgba(9,46,83,.94) 39%,rgba(9,46,83,.62) 48%,rgba(9,46,83,.18) 61%,transparent 76%),
+    linear-gradient(90deg,rgba(9,46,83,.16),transparent 48%,rgba(9,46,83,.16));
+}
