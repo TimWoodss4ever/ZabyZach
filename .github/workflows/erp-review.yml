@@ -62,7 +62,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/purchasing-bootstrap.sql
           for migration in supabase/migrations/*.sql; do
             # Install customer rewards only after the newest availability/lifecycle suites.
-            if [ "$(basename "$migration")" = 202611210002_customer_rewards.sql ]; then continue; fi
+            if [ "$(basename "$migration")" = 202611210002_customer_rewards.sql ] || [ "$(basename "$migration")" = 202611220001_delivery_orders.sql ] || [ "$(basename "$migration")" = 202611220002_pizza_substitutions.sql ]; then continue; fi
             # New history wrappers depend on the reporting/inventory suites below.
             if [ "$(basename "$migration")" = 202611170001_menu_history_contacts.sql ] || [ "$(basename "$migration")" = 202611170002_inventory_usage_performance.sql ] || [ "$(basename "$migration")" = 202611170004_erp_completion.sql ] || [ "$(basename "$migration")" = 202611180001_sales_orders_pos.sql ] || [ "$(basename "$migration")" = 202611210001_customer_availability.sql ]; then
               continue
@@ -133,6 +133,9 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/sql/customer-availability.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611210001_customer_availability.sql
           psql -v ON_ERROR_STOP=1 -c "select public.ci_assert((select count(*)=1 from public.erp_customer_availability_options),'availability migration rerun duplicated options'); select public.ci_assert(not has_function_privilege('anon','public.erp_customer_availability(text)','execute'),'availability RPC exposed to anon after rerun');"
+          # Delivery and topping substitutions depend on the numbered-order, MRP, and availability migrations above.
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611220001_delivery_orders.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611220002_pizza_substitutions.sql
           psql -v ON_ERROR_STOP=1 -f tests/sql/customer-rewards.sql
           node tests/sql/customer-rewards-concurrency.mjs
       - name: Publish database diagnostic on failure
