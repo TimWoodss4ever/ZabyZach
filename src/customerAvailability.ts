@@ -2,6 +2,8 @@ export type CustomerStockStatus='Available'|'Low stock'|'Unavailable';
 export type CustomerIngredient={sku:string;name:string;category:string;unit:string;quantity_per_item?:number;available_units:number;status:CustomerStockStatus;used_in?:string[]};
 export type CustomerProduct={sku:string;name:string;category:string;unit:string;status:CustomerStockStatus;available_units:number;finished_units:number;makeable_units:number;components:CustomerIngredient[]};
 export type CustomerAvailability={location:string;as_of:string;refresh_seconds:number;products:CustomerProduct[];ingredients:CustomerIngredient[];low_rule:string};
+export type CustomerCartShortage={productSku:string;productName:string;componentSku:string;componentName:string;required:number;available:number;unit:string};
+export type CustomerCartPlan={hardIssue:string|null;shortages:CustomerCartShortage[]};
 
 const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>=0;
 export function isCustomerAvailability(value:unknown):value is CustomerAvailability{
@@ -57,4 +59,53 @@ export function customerCartCapacityIssue(
   if(!stock||needed>stock.available+1e-8)return `Your cart needs more ${stock?.name??sku} than is currently available at ${location}. Reduce the quantity or choose another pickup store; your cart is unchanged.`;
  }
  return null;
+}
+
+// For customer ordering, missing pizza ingredients can be replaced before
+// checkout. Dough and non-ingredient materials (such as pizza boxes) remain
+// hard stops. Finished pizzas are counted first unless a replacement was
+// selected for that pizza, in which case it must be made to the new recipe.
+export function customerCartPlan(
+ lines:{sku:string;qty:number;substitutions?:Record<string,string>}[],
+ products:CustomerProduct[],
+ location:string,
+ itemName:(sku:string)=>string=sku=>sku,
+):CustomerCartPlan{
+ const bySku=new Map(products.map(product=>[product.sku,product]));
+ const required=new Map<string,{name:string;unit:string;available:number;category:string;perProduct:Map<string,{name:string;qty:number}>}>();
+ for(const line of lines){
+  if(!Number.isFinite(line.qty)||line.qty<=0)return{hardIssue:'Review the quantities in your cart.',shortages:[]};
+  const product=bySku.get(line.sku);
+  if(!product)return{hardIssue:`Current availability for ${itemName(line.sku)} is not confirmed at ${location}. Refresh and try again.`,shortages:[]};
+  const customized=Object.keys(line.substitutions??{}).length>0;
+  const pizzaHasMissingIngredient=product.category==='Pizza'&&product.components.some(component=>component.category==='Ingredient'&&component.sku!=='1030'&&component.status==='Unavailable');
+  const makeQty=customized||pizzaHasMissingIngredient?line.qty:Math.max(0,line.qty-product.finished_units);
+  if(makeQty<=0)continue;
+  if(!product.components.length)return{hardIssue:`Only ${product.finished_units} ${product.unit} of ${product.name} are currently available at ${location}.`,shortages:[]};
+  for(const component of product.components){
+   const amount=component.quantity_per_item;
+   if(!finite(amount)||amount<=0)return{hardIssue:`Current recipe availability for ${product.name} is incomplete at ${location}. Refresh before continuing.`,shortages:[]};
+   const selected=line.substitutions?.[component.sku];
+   const targetSku=selected??component.sku;
+   const target=product.components.find(part=>part.sku===targetSku)??products.flatMap(p=>p.components).find(part=>part.sku===targetSku);
+   // The selected substitute must come from the trusted ingredient snapshot.
+   if(selected&&!target)return{hardIssue:'A selected topping replacement is no longer available. Refresh stock and choose again.',shortages:[]};
+   const info=required.get(targetSku)??{name:target?.name??component.name,unit:target?.unit??component.unit,available:target?.available_units??component.available_units,category:target?.category??component.category,perProduct:new Map<string,{name:string;qty:number}>()};
+   const amountNeeded=amount*makeQty;
+   info.perProduct.set(line.sku,{name:product.name,qty:(info.perProduct.get(line.sku)?.qty??0)+amountNeeded});
+   required.set(targetSku,{...info,available:target?.available_units??info.available});
+  }
+ }
+ const shortages:CustomerCartShortage[]=[];
+ for(const[componentSku,stock]of required){
+  const total=[...stock.perProduct.values()].reduce((sum,x)=>sum+x.qty,0);
+  if(total<=stock.available+1e-8)continue;
+  if(componentSku==='1030')return{hardIssue:`There isn’t enough house-made dough for this order at ${location}. Reduce the pizza quantity or choose another store.`,shortages:[]};
+  if(stock.category!=='Ingredient')return{hardIssue:`There isn’t enough ${stock.name} for this order at ${location}.`,shortages:[]};
+  for(const[productSku,product]of stock.perProduct){
+   const productNeed=[...stock.perProduct].length===1?total:product.qty;
+   shortages.push({productSku,productName:product.name,componentSku,componentName:stock.name,required:productNeed,available:stock.available,unit:stock.unit});
+  }
+ }
+ return{hardIssue:null,shortages};
 }
