@@ -1,4 +1,5 @@
 export type CustomerStockStatus='Available'|'Low stock'|'Unavailable';
+export const omittedIngredientChoice='__OMIT__';
 export type CustomerIngredient={sku:string;name:string;category:string;unit:string;quantity_per_item?:number;available_units:number;status:CustomerStockStatus;used_in?:string[]};
 export type CustomerProduct={sku:string;name:string;category:string;unit:string;status:CustomerStockStatus;available_units:number;finished_units:number;makeable_units:number;components:CustomerIngredient[]};
 export type CustomerAvailability={location:string;as_of:string;refresh_seconds:number;products:CustomerProduct[];ingredients:CustomerIngredient[];low_rule:string};
@@ -61,10 +62,9 @@ export function customerCartCapacityIssue(
  return null;
 }
 
-// For customer ordering, missing pizza ingredients can be replaced before
-// checkout. Dough and non-ingredient materials (such as pizza boxes) remain
-// hard stops. Finished pizzas are counted first unless a replacement was
-// selected for that pizza, in which case it must be made to the new recipe.
+// For customer ordering, missing pizza ingredients can be replaced or omitted
+// before checkout. Dough and non-ingredient materials (such as pizza boxes)
+// remain hard stops. Customized pizzas are made to the selected recipe.
 export function customerCartPlan(
  lines:{sku:string;qty:number;substitutions?:Record<string,string>}[],
  products:CustomerProduct[],
@@ -86,6 +86,10 @@ export function customerCartPlan(
    const amount=component.quantity_per_item;
    if(!finite(amount)||amount<=0)return{hardIssue:`Current recipe availability for ${product.name} is incomplete at ${location}. Refresh before continuing.`,shortages:[]};
    const selected=line.substitutions?.[component.sku];
+   if(selected===omittedIngredientChoice){
+    if(component.category!=='Ingredient'||component.sku==='1030')return{hardIssue:'Dough and non-ingredient materials cannot be left off a pizza.',shortages:[]};
+    continue;
+   }
    const targetSku=selected??component.sku;
    const target=product.components.find(part=>part.sku===targetSku)??products.flatMap(p=>p.components).find(part=>part.sku===targetSku);
    // The selected substitute must come from the trusted ingredient snapshot.
