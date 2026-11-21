@@ -50,7 +50,7 @@
     "src/reporting.ts": "3c1811cee4c27dab67c12d470ea46e9b71bd4eb19ad32cfd2d46f7ad8f94639a",
     "src/scanCode128.ts": "b52197185a819d9874280a23d122482f0350f1afb39c9751430a65c31c34fc85",
     "src/sharedMrp.ts": "a70e3753df9b20535a9de5d4f38a4561ff623bf48309039f3e5c7a01ed3b328e",
-    "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
+    "src/style.css": "981fed885530054cde4c0c31a73b0b2bb0b2e581ca2ec993a0f18fe3b670747c",
     "src/supabase.ts": "fe06f06950a6187eb47352ac645bd5ab3d9a31d6f9eeb36171157024296909e1",
     "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
     "src/workspaceDatabase.ts": "988d8194f20783a3197434faf93cb99cdba3e9c17646d36d0bb2989d6d4e50ee",
@@ -84,5 +84,6 @@
       "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
       "src/SharedPlanningScreens.tsx": "e94b09f18a13bfcec86574532de46d03b0def70d4199813722d5be7740536c68"
     }
-  }
+  },
+  "pos_checkout_compact_review": "Updated from current supplied main d0ec0eaec1e09ba914d14a1acc96470765f1524f. Compact desktop layouts keep the checkout control visible. The empty-cart state reserves its measured 64px height; at compact desktop heights, surrounding POS spacing is reduced while the checkout button remains at least 40px tall. No POS transaction behavior changed."
 }
