@@ -1,8 +1,8 @@
 {
   "main_commit": "2a87e7229de41386cc1aa95d7344392d7e91a379",
-  "pos_sha256": "0295f7fc86c91c711ca0c8aef711c66b28586060eb6ba8214d52b0afde66a13d",
+  "pos_sha256": "9c052a1a4fc3df368e43c07e95ef27b55d532a5f299b40c0de8e29fff94b1de5",
   "files": {
-    "src/posCheckout.ts": "58b5be15b08cde39ad83d89b1370caa02e012cb088db439914dd0f6c6847ceef",
+    "src/posCheckout.ts": "395be3d95451e9e5d41b6b2791ae28f395b9cce0f0a21d8cb4d2d15b281967a3",
     "src/posCheckoutData.ts": "863cb023160c62747af06e7d3d16bd167a43028ba243ccf4b54f49dfb6deed84",
     "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
@@ -11,7 +11,7 @@
     "tests/pos-checkout.mjs": "559c7db930316e42d14128b875e54c4b9349595547eabdd655580c0117950e6d",
     "tests/browser/navigation-workspace.mjs": "0eab3470ace1d7c5ed4c22e9e289dbe5f71d3bacc5a5a4485058c63fba48ae89",
     "src/MrpWorkspace.tsx": "b83ccf7003e5e1c3b4a336958b1108e1d0a84fe63ccccc9c70dc6e1da5f02f20",
-    "src/BarcodeLabels.tsx": "45ec20e716891e2fc95af92e72d9390560395d3ce8b616729a909cc5ae62de73"
+    "src/BarcodeLabels.tsx": "47d3c53448384edb5f4a8388e7bea7639c21713c40ca2511d7bea96b109ca1d9"
   },
   "sales_tax_preservation_review": "PizzaGuide.tsx and BarcodeLabels.tsx hashes refreshed to their exact, unchanged bytes in supplied main caeb0940f9ec8f03dc3010742158560ea1a26957. Prior hashes were stale. No source changes in these files; all other protected hashes and checks retained. POS component hash also refreshed to the identical supplied-main App.tsx component; App.tsx is not changed or included.",
   "navigation_greeting_review": "Test-only correction: the existing manager@example.test fixture renders Good morning, Manager. All three desktop/return/mobile heading waits now assert that exact personalized greeting. Navigation/purchasing assertions, fixtures and dashboard implementation unchanged. Updated only this test hash; all other preservation checks remain enabled.",
@@ -25,7 +25,7 @@
     "review_branch_archive": "fd6a2e7103ef6c1ffcb74b48fdbdaa9c8c789707",
     "files": {
       "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
-      "src/SharedPlanningScreens.tsx": "fc9987710b3fb297ce5cc73a62361a37ed1d2c33b783701d8e3b25117689ef96"
+      "src/SharedPlanningScreens.tsx": "e94b09f18a13bfcec86574532de46d03b0def70d4199813722d5be7740536c68"
     }
   }
 }
