@@ -3,7 +3,7 @@
   "package-lock.json": "ff10adab184bc6a08faf73d41f0ca53c57b79dd24eacea1be4b1e47a9acafa22",
   "vite.config.ts": "20f362e0a5e32e66712aebe1da8332d342085222ce771db1f0b7d5608d71c1a4",
   "index.html": "f2e1c8f17cd65ade8f0297febdf6a2e34daf7f3b2e0ccfc43218574323a0a32c",
-  "src/supabase.ts": "b5c8c6433e6d25f27b02c0781d5622ecc1d387c177cadf3065a8c20f7627ca41",
+  "src/supabase.ts": "fe06f06950a6187eb47352ac645bd5ab3d9a31d6f9eeb36171157024296909e1",
   "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
   ".github/workflows/deploy.yml": "7ac3a54b88d72792ab132a37bd836e2eee7e50af24884023c69812462763a017",
   "workflows/deploy.yml": "1fe918c13b791e4953282de21abcc9dc7daf4685be8f6eb6a4e225bf9ed5e25a",
@@ -18,7 +18,7 @@
   "src/inventoryWorkspaceLogic.ts": "e78f6f39c7827ce7dfd1319c0c00194ebfbabac426d909263a65c9e12a5efb1b",
   "src/InventoryWorkspace.tsx": "d6c8cbb8560b7c9e81f7f88e7a822b14ba2e8d784aad7fcfb602cc8bb9ea3914",
   "supabase/migrations/202611170002_inventory_usage_performance.sql": "c10d523d68a30acef62ec1e5060bf3b9e179ab2bcc0c30025f847e6537d56fbe",
-  "tests/inventory-workspace-ui.mjs": "4940285be1dbc6825364ea7fef3bd32c6b78ff828e72bf279acbada7816f57e8",
+  "tests/inventory-workspace-ui.mjs": "d00948b5d02552d5cd04560b16a7f9400619e1b17ea2ff36051c085e63ec8507",
   "tests/inventory-workspace.mjs": "4b73b827ef5a2a758cc8d438ab71e3e7a2a37bfc45dad1fd35520a9e2403fe27",
   "tests/sql/inventory-usage-performance.sql": "2bc99ad4db871d71661571638e598a240b0e603742f48f5866315cdbb170334d",
   "INVENTORY_MANAGEMENT.md": "e6282b8cac2613e29796b6cdce645d93b84e7230bf046249a606eaeb028c4a70"
