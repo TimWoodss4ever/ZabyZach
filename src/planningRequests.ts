@@ -26,11 +26,12 @@ export function sharedPickupConfirmation(payload:Record<string,unknown>,result:R
 }
 // A lost response must retry the SAME request ID and payload, including after a
 // refresh. Both server endpoints are idempotent. Never silently replace a save.
-export async function sendPlanningRequest(userId:string,scope:string,name:string,payload:Record<string,unknown>,invoke:Invoke){
+export async function sendPlanningRequest(userId:string,scope:string,name:string,payload:Record<string,unknown>,invoke:Invoke,beforeSend?:(requestId:string)=>Promise<void>){
  const key=requestKey(userId,scope);
  const request=pendingPlanningRequest(userId,scope)??{id:crypto.randomUUID(),payload};
  if(JSON.stringify(request.payload)!==JSON.stringify(payload))throw Error('An earlier save is awaiting confirmation. Retry it with the original order details before starting another.');
  localStorage.setItem(key,JSON.stringify(request));
+ if(beforeSend)await beforeSend(request.id);
  const result=await invoke(name,(name==='erp_create_pickup_order'||name==='erp_checkout_order'||name==='erp_checkout_delivery_order'||name==='erp_create_scheduled_production')?{p_request:request.id,p_payload:request.payload}:{p_request:request.id,p_action:'create_orders',p_payload:request.payload});
  if(result.error){if(/^(?:22|23|42|P0001)/.test(result.error.code??''))localStorage.removeItem(key);throw Error(result.error.message);}
  if(!result.data||typeof result.data!=='object')throw Error('Save confirmation was incomplete. Retry the same order details.');
