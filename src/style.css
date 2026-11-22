@@ -629,3 +629,16 @@
     rgba(9,46,83,.14)
   );
 }
+.login-art-oven .login-oven-image{
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  opacity:1;
+  -webkit-mask-image:none;
+  mask-image:none;
+}
+.login-art-oven::before{
+  background:none;
+}
