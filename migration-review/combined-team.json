@@ -1,10 +1,10 @@
 {
   "main_commit": "2a87e7229de41386cc1aa95d7344392d7e91a379",
-  "pos_sha256": "7e6b511ac9599c4024393048f0514f9c9f179079912c15b0702ab03ee4266460",
+  "pos_sha256": "4fde17284c66af26a6f70fe03ace37dd26c3dde4c60d2ca0fbd43b888f3d7883",
   "files": {
     "src/posCheckout.ts": "395be3d95451e9e5d41b6b2791ae28f395b9cce0f0a21d8cb4d2d15b281967a3",
     "src/posCheckoutData.ts": "863cb023160c62747af06e7d3d16bd167a43028ba243ccf4b54f49dfb6deed84",
-    "src/style.css": "981fed885530054cde4c0c31a73b0b2bb0b2e581ca2ec993a0f18fe3b670747c",
+    "src/style.css": "edfce9ec604ee26745a8eedc45a4e6f36422cbe748fe2314ab7870840fb0c66d",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
     "supabase/migrations/202611170003_pos_loyalty.sql": "6e569e2e26fb27a5ab15b4f6167e638928591a7e68df3a390704144c90cbbc82",
     "tests/sql/pos-loyalty.sql": "8a3415a4f62dc680fb3c04cfe6eb5302332380a3ae2a4b5d9bd1abf4ece784d0",
@@ -24,8 +24,8 @@
     "source_main_archive": "bb9716bb4149cab40107123807acea9fa61517b5",
     "review_branch_archive": "fd6a2e7103ef6c1ffcb74b48fdbdaa9c8c789707",
     "files": {
-      "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
-      "src/SharedPlanningScreens.tsx": "e94b09f18a13bfcec86574532de46d03b0def70d4199813722d5be7740536c68"
+      "src/style.css": "edfce9ec604ee26745a8eedc45a4e6f36422cbe748fe2314ab7870840fb0c66d",
+      "src/SharedPlanningScreens.tsx": "c6ac3353775bf42f744c98beac9710aead37af26be1e1262220ee159be7c7db5"
     }
   },
   "pos_checkout_compact_review": "Updated from current supplied main d0ec0eaec1e09ba914d14a1acc96470765f1524f. Compact desktop layouts keep the checkout control visible. The empty-cart state reserves its measured 64px height; at compact desktop heights, surrounding POS spacing is reduced while the checkout button remains at least 40px tall. No POS transaction behavior changed."
