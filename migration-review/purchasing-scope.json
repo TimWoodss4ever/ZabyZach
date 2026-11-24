@@ -5,14 +5,14 @@
     "src/CameraScanner.tsx": "a14f5cc7a5befde359c16dfaad1cdfa907bf0793db857f82305475ce21cc3b18",
     "src/InventoryAvailability.tsx": "7e38e155b1fcbe2d88809364b07bd464dfd5c087f6cd0ef6d856ecd63b1935d6",
     "src/InventoryDialog.tsx": "01bcf908c4c412bf4ab8a824917373c6704e32e1376783842449c0b14692cdcf",
-    "src/InventoryWorkspaceData.ts": "20c031d06e78beb530226aa18d0ef407e88fc087567ab10b16680ae6960f5780",
+    "src/InventoryWorkspaceData.ts": "2bebcd08842080ea943efe945fd15c98af43e863720a437aad44b40f50c599d8",
     "src/MrpWorkspace.tsx": "b83ccf7003e5e1c3b4a336958b1108e1d0a84fe63ccccc9c70dc6e1da5f02f20",
     "src/PizzaGuide.tsx": "5131126f70e33c33a09c0aa2d5fb57ed9d41be8e7da83be63ea0af649e2933a3",
     "src/PurchasingScreens.tsx": "4a96362b48d094f7068da0aba8aad45942e1c09cc096b84ca83195233e8f23ab",
     "src/SharedDashboard.tsx": "e9161be633e5d04b59476b4477559035d27f6cb3f830f8babf36c2bdf8ba222e",
-    "src/SharedPlanningData.ts": "9cdf08e329dc6b7d05f6fb13fcbbab8110eb5eccab27bde884309b608bf9ba95",
-    "src/SharedPlanningScreens.tsx": "e94b09f18a13bfcec86574532de46d03b0def70d4199813722d5be7740536c68",
-    "src/SharedReporting.tsx": "319fa5936727a60ad46d5ca9c3d9ef63378c6e097ee558991265f067da2c056c",
+    "src/SharedPlanningData.ts": "4f9b431237fbd6005e30b5aa0858c59774761a6a2e3470132724cddfb74ae65a",
+    "src/SharedPlanningScreens.tsx": "c6ac3353775bf42f744c98beac9710aead37af26be1e1262220ee159be7c7db5",
+    "src/SharedReporting.tsx": "4dd0606c6491a89d8c96cecabc2e4d427caa4206c3151d6340506f9294b6f7c8",
     "src/assets/avatar.png": "69d26e78244a096fa65f4074e21483b45c667ca0a88a2f564e19dba7956f78e2",
     "src/assets/pizzas/bbq-chicken.jpg": "2fb7697610412cde0cf9b6f5ee120ad3bc2f65a16ca44f54fd5ad22a416b71cc",
     "src/assets/pizzas/breadsticks.jpg": "36c29fde9210eafd75feb92ba24f357dfe05359310932ea673b0c829755901b5",
@@ -50,7 +50,7 @@
     "src/reporting.ts": "3c1811cee4c27dab67c12d470ea46e9b71bd4eb19ad32cfd2d46f7ad8f94639a",
     "src/scanCode128.ts": "b52197185a819d9874280a23d122482f0350f1afb39c9751430a65c31c34fc85",
     "src/sharedMrp.ts": "a70e3753df9b20535a9de5d4f38a4561ff623bf48309039f3e5c7a01ed3b328e",
-    "src/style.css": "981fed885530054cde4c0c31a73b0b2bb0b2e581ca2ec993a0f18fe3b670747c",
+    "src/style.css": "edfce9ec604ee26745a8eedc45a4e6f36422cbe748fe2314ab7870840fb0c66d",
     "src/supabase.ts": "fe06f06950a6187eb47352ac645bd5ab3d9a31d6f9eeb36171157024296909e1",
     "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
     "src/workspaceDatabase.ts": "988d8194f20783a3197434faf93cb99cdba3e9c17646d36d0bb2989d6d4e50ee",
@@ -73,7 +73,7 @@
     "supabase/migrations/202611180001_sales_orders_pos.sql": "da93428bb538cf113f2fbe03254e4958da67b3aa44336a1ee76415f11aeeaa4c",
     "supabase/migrations/202611190001_mrp_confirmed_demand.sql": "0541e748c8a4c36dcffbfe74184a72c950931e499c7fcde0ac16d4230aa8462e"
   },
-  "connectedPrefix": "8d9fb34bc5b60e1227e9ca60d3bc4426e7c48808656a6b6304dcc2c004807bd4",
+  "connectedPrefix": "db9eb1e469591cc66a3372df805d49662a240320e2eab6bc3f4e39fe8a3b8ece",
   "mrp_hardening_review": "MRP files and production-creation prefix intentionally updated for reviewed quote/recovery, dated planning and scheduled-production changes. Current PR21 receiving, labels, name search, unrelated inventory/returns loaders and historical migrations remain protected.",
   "pos_viewport_review": "Reviewed scoped POS viewport, checkout grid and empty-state CSS changes against main 3233296; other styles and POS component preserved, browser coverage checks ancestor clipping.",
   "accepted_current_main_baseline": {
@@ -81,8 +81,8 @@
     "source_main_archive": "bb9716bb4149cab40107123807acea9fa61517b5",
     "review_branch_archive": "fd6a2e7103ef6c1ffcb74b48fdbdaa9c8c789707",
     "files": {
-      "src/style.css": "41a36508b8b0ac1d992f115204e90067cda0e94ca2ba768ed3c9f9fdd7a9850d",
-      "src/SharedPlanningScreens.tsx": "e94b09f18a13bfcec86574532de46d03b0def70d4199813722d5be7740536c68"
+      "src/style.css": "edfce9ec604ee26745a8eedc45a4e6f36422cbe748fe2314ab7870840fb0c66d",
+      "src/SharedPlanningScreens.tsx": "c6ac3353775bf42f744c98beac9710aead37af26be1e1262220ee159be7c7db5"
     }
   },
   "pos_checkout_compact_review": "Updated from current supplied main d0ec0eaec1e09ba914d14a1acc96470765f1524f. Compact desktop layouts keep the checkout control visible. The empty-cart state reserves its measured 64px height; at compact desktop heights, surrounding POS spacing is reduced while the checkout button remains at least 40px tall. No POS transaction behavior changed."
