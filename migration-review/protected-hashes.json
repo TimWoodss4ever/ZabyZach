@@ -14,12 +14,12 @@
   "supabase/migrations/202611150001_returns_exchanges.sql": "b1ae41037df123b3b5fa0651a24833314dbc30c07e40dd9a3557ad1a3eb2502a",
   "supabase/migrations/202611110001_sales_order_time_discounts.sql": "b24f45ee68f9428e11991b5cf485fef9cbed8994f3a7d356b6c2f2590ff277ef",
   "supabase/migrations/202611140001_production_backend.sql": "a1eddc0e1c920a65042f4afa2f87e1059070040b4acbaae24c365b1e135d7a1a",
-  "src/InventoryWorkspaceData.ts": "20c031d06e78beb530226aa18d0ef407e88fc087567ab10b16680ae6960f5780",
+  "src/InventoryWorkspaceData.ts": "2bebcd08842080ea943efe945fd15c98af43e863720a437aad44b40f50c599d8",
   "src/inventoryWorkspaceLogic.ts": "e78f6f39c7827ce7dfd1319c0c00194ebfbabac426d909263a65c9e12a5efb1b",
   "src/InventoryWorkspace.tsx": "d6c8cbb8560b7c9e81f7f88e7a822b14ba2e8d784aad7fcfb602cc8bb9ea3914",
   "supabase/migrations/202611170002_inventory_usage_performance.sql": "c10d523d68a30acef62ec1e5060bf3b9e179ab2bcc0c30025f847e6537d56fbe",
   "tests/inventory-workspace-ui.mjs": "d00948b5d02552d5cd04560b16a7f9400619e1b17ea2ff36051c085e63ec8507",
-  "tests/inventory-workspace.mjs": "4b73b827ef5a2a758cc8d438ab71e3e7a2a37bfc45dad1fd35520a9e2403fe27",
+  "tests/inventory-workspace.mjs": "f6170fc37d99edc2efa9c79befd8b9175bc8c458c35960d8038f3635d2e7828c",
   "tests/sql/inventory-usage-performance.sql": "2bc99ad4db871d71661571638e598a240b0e603742f48f5866315cdbb170334d",
   "INVENTORY_MANAGEMENT.md": "e6282b8cac2613e29796b6cdce645d93b84e7230bf046249a606eaeb028c4a70"
 }
