@@ -13,8 +13,8 @@ STEP 2 - WEBSITE FILES (GitHub)
   Wait 1-2 minutes, then refresh the site (Ctrl+Shift+R).
 
 STEP 3 - TELL YOUR TEAM
-  The files in migration-review/ and the tests were updated to approve these
-  changes. Please have a teammate review them before merging.
+   Files in migration-review/ and a few tests were updated to approve these changes
+  (and to fix two tests that were already failing). Please have a teammate review them.
 
 WHAT CHANGED
   - POS: pay by Card asks for name + card details; only the card type and last 4 are saved and shown on the receipt
